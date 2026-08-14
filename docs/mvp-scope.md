@@ -64,7 +64,7 @@
 | 真实直播平台接入 | 评论来自界面模拟输入，不接抖音/快手/淘宝等平台 API 或 Webhook |
 | WebSocket / 实时评论流 | 无实时推送，评论回复为手动触发 |
 | 直播场次管理 | 没有场次模型；复盘基于商品维度全部已记录数据，不按场次聚合 |
-| Agent 扩展 | 保留早期 `/agent/analyze`，未与直播运营链路联动，不作为本 MVP 重点 |
+| Agent 扩展 | 已随旧 CRM 功能移除（`chore: remove legacy CRM` 系列提交），不再保留 `/agent/analyze` |
 | 向量检索改造 | 商品知识库固定使用 TF-IDF；通用 RAG 页支持向量检索但默认关闭（`VECTOR_SEARCH_ENABLED=false`） |
 | 多租户 / 复杂权限 | 仅管理员 + 普通用户两级，数据按 `user_id` 隔离；公开注册默认关闭 |
 | Redis / Celery / 消息队列 | 无异步任务，AI 调用同步执行 |

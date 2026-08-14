@@ -2,7 +2,7 @@
 
 AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示系统，当前交付重点是「商品知识库 RAG + 直播复盘 + 轻量运营看板」：运营人员可以为商品上传 PDF/TXT/MD/CSV 资料，基于资料进行 RAG 问答；基于商品信息生成直播话术、自动回复模拟观众评论、生成四模块直播复盘；并在轻量运营看板中查看商品、话术、评论回复、复盘等统计。
 
-项目同时保留了早期版本的客户管理、RAG 知识库和 Agent 跟进能力，以及安全加固、数据库工程化、pytest 自动化测试和 Docker 部署支持，适合作为 AI 应用工程师方向的综合展示项目。
+项目同时保留了通用 RAG 知识库（独立于商品维度的知识库问答），以及安全加固、数据库工程化、pytest 自动化测试和 Docker 部署支持，适合作为 AI 应用工程师方向的综合展示项目。旧版 CRM（客户管理、跟进分析、待跟进、Agent 跟进助手）已在 `chore: remove legacy CRM features` 系列提交中下线。
 
 ## 当前 MVP 功能（直播运营）
 
@@ -16,11 +16,7 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 ## 核心功能
 
 - **商品管理**：支持商品新增、列表查看、详情查看、修改和删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持关键词搜索、直播状态筛选、分页和 CSV 导入导出。
-- **客户管理**：支持客户新增、列表查看、详情查看、修改和删除。
-- **跟进记录**：支持为客户维护历史跟进记录和下一步动作。
-- **AI 跟进分析**：基于客户资料和跟进记录生成客户总结与下一步销售建议。
-- **RAG 知识库问答**：支持上传 PDF、TXT、MD、CSV 资料，基于 TF-IDF 检索相关片段后调用大模型回答问题。
-- **Agent 跟进助手**：自动组合客户资料、历史跟进记录和知识库内容，生成完整客户跟进方案。
+- **通用 RAG 知识库问答**（辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，基于 TF-IDF 检索相关片段后调用大模型回答问题；商品维度的知识库问答见「当前 MVP 功能（直播运营）」。
 - **安全加固**：支持 CORS 白名单、访问密码登录页 + HttpOnly Cookie 登录态、上传文件大小限制。
 - **测试体系**：使用 pytest + FastAPI TestClient 覆盖核心接口、鉴权逻辑和上传限制。
 - **Docker 部署**：支持通过 Dockerfile 和 docker-compose.yml 在云服务器上部署运行。
@@ -50,8 +46,7 @@ app/
 ├── database.py      # 数据库引擎与会话
 ├── db_init.py       # 数据库建表、字段升级、索引补建
 ├── llm.py           # LLM 调用封装
-├── rag.py           # 文档解析、文本分块、TF-IDF 检索
-└── agent.py         # Agent 自动跟进方案
+└── rag.py           # 文档解析、文本分块、TF-IDF 检索
 
 static/
 └── index.html       # 前端单页应用
@@ -415,26 +410,27 @@ docker compose down
 | `/auth/register` | POST | 公开注册（默认关闭） | 否 |
 | `/auth/logout` | POST | 退出登录 | 否 |
 | `/auth/me` | GET | 当前登录状态 | 否 |
-| `/customers` | GET | 客户列表 | 是 |
-| `/customers` | POST | 新增客户 | 是 |
-| `/customers/{id}` | GET | 客户详情 | 是 |
-| `/customers/{id}` | PUT | 修改客户 | 是 |
-| `/customers/{id}` | DELETE | 删除客户 | 是 |
-| `/customers/{id}/followups` | POST | 新增跟进记录 | 是 |
-| `/customers/{id}/followups` | GET | 跟进记录列表 | 是 |
-| `/customers/{id}/ai/summary` | POST | AI 跟进总结 | 是 |
-| `/customers/{id}/ai/suggestion` | POST | AI 下一步建议 | 是 |
 | `/products` | GET / POST | 商品列表 / 新增商品 | 是 |
 | `/products/search` | GET | 商品搜索、筛选、分页 | 是 |
 | `/products/import` | POST | 商品 CSV 导入（支持中英文表头） | 是 |
 | `/products/export` | GET | 商品 CSV 导出（仅当前用户） | 是 |
 | `/products/{id}` | GET / PUT / DELETE | 商品详情 / 修改 / 删除 | 是 |
-| `/rag/upload` | POST | 上传知识库文档 | 是 |
-| `/rag/documents` | GET | 知识库文档列表 | 是 |
+| `/products/{id}/knowledge/upload` | POST | 上传商品知识库文档（PDF/TXT/MD/CSV） | 是 |
+| `/products/{id}/knowledge/documents` | GET | 商品知识库文档列表 | 是 |
+| `/products/{id}/knowledge/documents/{filename}/chunks` | GET | 查看文档片段 | 是 |
+| `/products/{id}/knowledge/documents/{filename}/reindex` | POST | 重建该文件索引 | 是 |
+| `/products/{id}/knowledge/documents/{filename}` | DELETE | 删除商品知识库文档 | 是 |
+| `/products/{id}/knowledge/ask` | POST | 基于商品资料问答（RAG） | 是 |
+| `/products/{id}/live-scripts` | GET / POST | 直播话术列表 / 生成直播话术 | 是 |
+| `/products/{id}/comment-replies` | GET / POST | 评论回复历史 / 生成评论回复 | 是 |
+| `/products/{id}/live-reviews` | GET / POST | 复盘历史 / 生成直播复盘 | 是 |
+| `/live-ops/dashboard` | GET | 轻量运营看板 | 是 |
+| `/dashboard/stats` | GET | 旧版统计（前端回退兼容） | 是 |
+| `/rag/upload` | POST | 上传通用知识库文档 | 是 |
+| `/rag/documents` | GET | 通用知识库文档列表 | 是 |
 | `/rag/documents/{filename}` | DELETE | 删除指定文档 | 是 |
-| `/rag/documents` | DELETE | 清空知识库 | 是 |
-| `/rag/ask` | POST | 基于知识库问答 | 是 |
-| `/agent/analyze` | POST | Agent 自动跟进分析 | 是 |
+| `/rag/documents` | DELETE | 清空通用知识库 | 是 |
+| `/rag/ask` | POST | 基于通用知识库问答 | 是 |
 
 登录方式：打开页面后输入访问密码，登录成功后通过 HttpOnly Cookie 自动携带登录态。
 
@@ -462,7 +458,7 @@ V4 版本加入了基础安全加固能力：
 
 - 生产环境建议设置 `APP_ADMIN_USERNAME`、`APP_ACCESS_PASSWORD` 和 `SESSION_SECRET`；
 - 首次启动自动创建管理员账号，管理员可创建普通用户；
-- 客户、跟进记录和知识库资料按用户隔离；
+- 商品、直播运营数据与知识库资料按用户隔离；
 - 所有业务接口需要先通过登录页认证，基于 HMAC-SHA256 签名 Cookie；
 - Cookie 使用 HttpOnly 标志，防止 XSS 窃取；
 - Cookie Secure 标志可通过 `COOKIE_SECURE` 配置；
@@ -494,9 +490,10 @@ python -m pytest
 
 测试覆盖内容：
 
-- 客户新增；
-- 客户列表查询；
-- 跟进记录新增；
+- 商品新增、列表查询、搜索、CSV 导入导出；
+- 商品知识库上传、片段查看、重建索引、删除与 RAG 问答；
+- 直播话术、评论回复、直播复盘与本地兜底；
+- 轻量运营看板字段、计数与用户隔离；
 - 未登录请求业务接口返回 401；
 - 错误密码登录返回 401；
 - 正确密码登录成功并返回 HttpOnly Cookie；
@@ -506,7 +503,7 @@ python -m pytest
 - 首页 / 和静态资源不需要登录；
 - 上传超大文件返回 413；
 - 上传小 TXT 文件成功；
-- RAG 问答、Agent 分析等接口受登录保护。
+- RAG 问答、直播运营接口等受登录保护。
 
 测试说明：
 
@@ -518,21 +515,21 @@ python -m pytest
 
 | 版本 | 能力 | 说明 |
 |---|---|---|
-| V1 | 客户管理 + AI 跟进建议 | 实现客户信息维护、跟进记录和基础 AI 建议 |
+| V1 | 客户管理 + AI 跟进建议 | 实现客户信息维护、跟进记录和基础 AI 建议（已下线） |
 | V2 | RAG 知识库问答 | 增加资料上传、文本切分、知识库检索和资料问答 |
-| V3 | Agent 跟进助手 | 自动组合客户信息、跟进记录和知识库资料生成跟进方案 |
+| V3 | Agent 跟进助手 | 自动组合客户信息、跟进记录和知识库资料生成跟进方案（已下线） |
 | V4 | 企业增强版 | 增加安全加固、数据库工程化、索引优化、测试体系和 Docker 部署 |
+| V5 | 直播运营 MVP（当前） | 商品知识库 RAG、直播话术、评论回复、直播复盘、轻量运营看板；旧 CRM 功能下线 |
 
 ## 后续规划
 
 - 引入 Alembic 管理正式数据库迁移；
 - 增加 GitHub Actions 自动测试；
-- 增加 JWT 登录和多用户权限系统；
-- 将 TF-IDF 检索升级为 Embedding + 向量数据库；
-- 增加跟进任务表、客户优先级评分和销售日报；
-- 接入飞书、企业微信等消息通知渠道；
+- 将 TF-IDF 检索升级为 Embedding + 向量数据库（含商品知识库真实重建索引）；
+- 增加直播场次模型，按场次聚合复盘与看板数据；
+- 接入真实直播平台评论流；
 - 支持 Nginx 反向代理和域名部署。
 
 ## 项目说明
 
-本项目为 AI 直播运营助手 MVP，基于 AI 客户跟进助手系列的 V4 企业增强版基线建立，重点展示从基础 AI 功能到工程化 AI 应用的升级过程。项目不仅包含客户管理、AI 分析、RAG 和 Agent 能力，也补充了安全、测试、配置、数据库和 Docker 部署等工程实践内容，适合作为 AI 应用工程师方向的综合项目展示。
+本项目为 AI 直播运营助手 MVP，当前聚焦「商品知识库 RAG + 直播复盘 + 轻量运营看板」演示链路，同时保留了安全、测试、配置、数据库和 Docker 部署等工程实践内容，适合作为 AI 应用工程师方向的综合项目展示。旧版 CRM 客户管理 / 跟进分析 / 待跟进 / Agent 跟进助手相关代码、页面与测试已在 `chore: remove legacy CRM` 系列提交中移除，历史实现可查看 Git 历史。
