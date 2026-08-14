@@ -5,7 +5,7 @@ import json
 import base64
 import logging
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
@@ -19,8 +19,6 @@ from pydantic import BaseModel, ValidationError
 from app.database import get_db
 from app.config import settings
 from app.models import (
-    Customer,
-    FollowUp,
     Product,
     LiveScript,
     LiveCommentReply,
@@ -31,11 +29,6 @@ from app.models import (
 )
 from app.auth import create_user, verify_password, hash_password, utc_timestamp
 from app.schemas import (
-    CustomerCreate,
-    CustomerOut,
-    CustomerSearchResult,
-    FollowUpCreate,
-    FollowUpOut,
     ProductCreate,
     ProductOut,
     ProductSearchResult,
@@ -50,15 +43,12 @@ from app.schemas import (
     DashboardStats,
     HotQuestion,
     LiveOpsDashboard,
-    AIResult,
     RagAsk,
     RagAnswer,
     RagSource,
     RagDocument,
     RagChunkOut,
     RagChunkList,
-    AgentAnalyzeRequest,
-    AgentAnalyzeResult,
     UserOut,
     UserCreateRequest,
     UserStatusUpdate,
@@ -66,7 +56,6 @@ from app.schemas import (
 )
 from app.llm import (
     FALLBACK_MESSAGE,
-    build_customer_context,
     build_live_comment_reply_fallback,
     build_live_comment_reply_prompt,
     build_live_review_fallback,
@@ -84,7 +73,6 @@ from app.rag import (
     retrieve_chunks_vector,
     build_rag_prompt,
 )
-from app.agent import run_customer_followup_agent
 from app.db_init import init_database
 
 logger = logging.getLogger(__name__)
@@ -105,7 +93,7 @@ init_database()
 
 app = FastAPI(
     title="AI 直播运营助手 MVP",
-    description="客户管理 + AI 跟进分析 + RAG 知识库问答 + Agent 自动跟进方案",
+    description="商品知识库 RAG + 直播复盘 + 轻量运营看板",
     version="4.0.0"
 )
 
@@ -359,469 +347,6 @@ def health_check():
 
 # ─── Business routes (all require login) ───
 
-def get_customer_for_user(db: Session, customer_id: int, user: User) -> Customer:
-    customer = (
-        db.query(Customer)
-        .filter(Customer.id == customer_id, Customer.user_id == user.id)
-        .first()
-    )
-    if not customer:
-        raise HTTPException(status_code=404, detail="客户不存在")
-    return customer
-
-
-@app.post("/customers", response_model=CustomerOut)
-def create_customer(
-    data: CustomerCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    customer_data = data.model_dump()
-    if not customer_data.get("followup_status"):
-        customer_data["followup_status"] = "待跟进"
-    customer = Customer(user_id=current_user.id, **customer_data)
-    db.add(customer)
-    db.commit()
-    db.refresh(customer)
-    return customer
-
-
-@app.get("/customers", response_model=List[CustomerOut])
-def list_customers(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return (
-        db.query(Customer)
-        .filter(Customer.user_id == current_user.id)
-        .order_by(Customer.id.desc())
-        .all()
-    )
-
-
-# ─── CSV Import / Export / Due (must be before parameterized routes) ───
-
-
-def _parse_optional_datetime(value: str) -> Optional[datetime]:
-    """解析常见 ISO 日期格式，失败返回 None。"""
-    if not value:
-        return None
-    formats = [
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S.%f",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M:%S.%f",
-        "%Y-%m-%d",
-        "%Y/%m/%d",
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%dT%H:%M:%S.%f%z",
-    ]
-    for fmt in formats:
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            continue
-    return None
-
-
-@app.post("/customers/import")
-def import_customers_csv(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """导入客户 CSV 文件，只导入到当前用户。"""
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="请上传 CSV 文件")
-
-    try:
-        raw = file.file.read()
-    except Exception:
-        raise HTTPException(status_code=400, detail="无法读取文件内容")
-
-    # 尝试 UTF-8-SIG 和 UTF-8 解码
-    content = None
-    for encoding in ("utf-8-sig", "utf-8"):
-        try:
-            content = raw.decode(encoding)
-            break
-        except UnicodeDecodeError:
-            continue
-    if content is None:
-        raise HTTPException(status_code=400, detail="文件编码不支持，请使用 UTF-8 编码的 CSV 文件")
-
-    reader = csv.DictReader(io.StringIO(content))
-    if reader.fieldnames is None:
-        raise HTTPException(status_code=400, detail="CSV 文件没有任何列")
-
-    created = 0
-    skipped = 0
-    errors: list[dict] = []
-
-    # 批量内去重追踪（导入过程中尚未提交到数据库的记录）
-    batch_seen: set[tuple] = set()
-
-    for row_num, row in enumerate(reader, start=2):
-        try:
-            name = (row.get("name") or "").strip()
-            company = (row.get("company") or "").strip()
-
-            if not name or not company:
-                errors.append({"row": row_num, "reason": "name 和 company 为必填项"})
-                continue
-
-            phone = (row.get("phone") or "").strip() or None
-
-            # 重复检测：优先 phone，其次 name + company
-            if phone:
-                duplicate_key = ("phone", phone)
-                existing_in_db = (
-                    db.query(Customer)
-                    .filter(
-                        Customer.user_id == current_user.id,
-                        Customer.phone == phone,
-                    )
-                    .first()
-                )
-            else:
-                duplicate_key = ("name_company", name, company)
-                existing_in_db = (
-                    db.query(Customer)
-                    .filter(
-                        Customer.user_id == current_user.id,
-                        Customer.name == name,
-                        Customer.company == company,
-                    )
-                    .first()
-                )
-
-            if existing_in_db or duplicate_key in batch_seen:
-                skipped += 1
-                continue
-
-            raw_next_followup = (row.get("next_followup_at") or "").strip()
-            next_followup_at = _parse_optional_datetime(raw_next_followup)
-            if raw_next_followup and next_followup_at is None:
-                errors.append({"row": row_num, "reason": "next_followup_at 日期格式不正确"})
-                continue
-
-            # 只有通过所有校验、确定要创建的行才加入去重集合
-            batch_seen.add(duplicate_key)
-
-            customer = Customer(
-                user_id=current_user.id,
-                name=name,
-                company=company,
-                phone=phone,
-                email=(row.get("email") or "").strip() or None,
-                industry=(row.get("industry") or "").strip() or None,
-                level=(row.get("level") or "").strip() or None,
-                intention=(row.get("intention") or "").strip() or None,
-                cooperation_status=(row.get("cooperation_status") or "").strip() or None,
-                source=(row.get("source") or "").strip() or None,
-                remark=(row.get("remark") or "").strip() or None,
-                next_followup_at=next_followup_at,
-                followup_status=(row.get("followup_status") or "").strip() or "待跟进",
-            )
-            db.add(customer)
-            created += 1
-        except Exception as exc:
-            errors.append({"row": row_num, "reason": str(exc)})
-
-    db.commit()
-
-    return {
-        "created": created,
-        "skipped": skipped,
-        "errors": errors,
-    }
-
-
-@app.get("/customers/export")
-def export_customers_csv(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """导出当前用户客户为 CSV 文件（UTF-8-SIG）。"""
-    customers = (
-        db.query(Customer)
-        .filter(Customer.user_id == current_user.id)
-        .order_by(Customer.id.asc())
-        .all()
-    )
-
-    output = io.StringIO()
-    output.write("﻿")  # UTF-8 BOM
-
-    fieldnames = [
-        "name", "company", "phone", "email", "industry", "level",
-        "intention", "cooperation_status", "source", "remark",
-        "last_followup_at", "next_followup_at", "followup_status", "created_at",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
-    writer.writeheader()
-
-    for c in customers:
-        writer.writerow({
-            "name": c.name,
-            "company": c.company,
-            "phone": c.phone or "",
-            "email": c.email or "",
-            "industry": c.industry or "",
-            "level": c.level or "",
-            "intention": c.intention or "",
-            "cooperation_status": c.cooperation_status or "",
-            "source": c.source or "",
-            "remark": c.remark or "",
-            "last_followup_at": c.last_followup_at.isoformat() if c.last_followup_at else "",
-            "next_followup_at": c.next_followup_at.isoformat() if c.next_followup_at else "",
-            "followup_status": c.followup_status or "",
-            "created_at": c.created_at.isoformat() if c.created_at else "",
-        })
-
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv; charset=utf-8-sig",
-        headers={
-            "Content-Disposition": "attachment; filename=customers_export.csv",
-        },
-    )
-
-
-@app.get("/customers/due", response_model=List[CustomerOut])
-def list_due_customers(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """返回当前用户需要跟进的客户（next_followup_at <= 当前时间 且状态非终态）。"""
-    now = datetime.now()
-    excluded_statuses = ["成交", "流失", "暂停"]
-
-    return (
-        db.query(Customer)
-        .filter(
-            Customer.user_id == current_user.id,
-            Customer.next_followup_at <= now,
-            Customer.followup_status.notin_(excluded_statuses),
-        )
-        .order_by(Customer.next_followup_at.asc())
-        .all()
-    )
-
-
-@app.get("/customers/search", response_model=CustomerSearchResult)
-def search_customers(
-    q: Optional[str] = None,
-    industry: Optional[str] = None,
-    level: Optional[str] = None,
-    intention: Optional[str] = None,
-    cooperation_status: Optional[str] = None,
-    followup_status: Optional[str] = None,
-    source: Optional[str] = None,
-    due_only: bool = False,
-    page: int = 1,
-    page_size: int = 10,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """搜索/筛选/分页 查询当前用户客户。"""
-    query = db.query(Customer).filter(Customer.user_id == current_user.id)
-
-    # 关键词搜索
-    if q:
-        q_like = f"%{q}%"
-        query = query.filter(or_(
-            Customer.name.ilike(q_like),
-            Customer.company.ilike(q_like),
-            Customer.phone.ilike(q_like),
-            Customer.email.ilike(q_like),
-            Customer.industry.ilike(q_like),
-            Customer.source.ilike(q_like),
-            Customer.remark.ilike(q_like),
-        ))
-
-    # 精确筛选
-    if industry:
-        query = query.filter(Customer.industry == industry)
-    if level:
-        query = query.filter(Customer.level == level)
-    if intention:
-        query = query.filter(Customer.intention == intention)
-    if cooperation_status:
-        query = query.filter(Customer.cooperation_status == cooperation_status)
-    if followup_status:
-        query = query.filter(Customer.followup_status == followup_status)
-    if source:
-        query = query.filter(Customer.source == source)
-
-    # 只看到期待跟进客户
-    if due_only:
-        now = datetime.now()
-        excluded_statuses = ["成交", "流失", "暂停"]
-        query = query.filter(
-            Customer.next_followup_at <= now,
-            Customer.followup_status.notin_(excluded_statuses),
-        )
-
-    # 总数
-    total = query.count()
-
-    # 分页参数修正
-    page = max(page, 1)
-    page_size = max(min(page_size, 100), 1)
-
-    # 排序
-    if due_only:
-        query = query.order_by(Customer.next_followup_at.asc())
-    else:
-        query = query.order_by(Customer.id.desc())
-
-    # 总页数
-    pages = max(1, (total + page_size - 1) // page_size) if total > 0 else 0
-    if page > pages and total > 0:
-        page = pages
-
-    offset = (page - 1) * page_size
-    items = query.offset(offset).limit(page_size).all()
-
-    return CustomerSearchResult(
-        items=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=pages,
-    )
-
-
-@app.get("/customers/{customer_id}", response_model=CustomerOut)
-def get_customer(
-    customer_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return get_customer_for_user(db, customer_id, current_user)
-
-
-@app.put("/customers/{customer_id}", response_model=CustomerOut)
-def update_customer(
-    customer_id: int,
-    data: CustomerCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    customer = get_customer_for_user(db, customer_id, current_user)
-
-    customer_data = data.model_dump()
-    if not customer_data.get("followup_status"):
-        customer_data["followup_status"] = "待跟进"
-
-    for key, value in customer_data.items():
-        setattr(customer, key, value)
-
-    db.commit()
-    db.refresh(customer)
-    return customer
-
-
-@app.delete("/customers/{customer_id}")
-def delete_customer(
-    customer_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    customer = get_customer_for_user(db, customer_id, current_user)
-
-    db.delete(customer)
-    db.commit()
-    return {"message": "客户已删除"}
-
-
-@app.post("/customers/{customer_id}/followups", response_model=FollowUpOut)
-def create_followup(
-    customer_id: int,
-    data: FollowUpCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    customer = get_customer_for_user(db, customer_id, current_user)
-
-    followup_data = {"content": data.content, "next_action": data.next_action}
-    followup = FollowUp(customer_id=customer_id, **followup_data)
-    db.add(followup)
-
-    # 同步更新 Customer 跟进状态
-    customer.last_followup_at = datetime.now()
-    if data.next_followup_at is not None:
-        customer.next_followup_at = data.next_followup_at
-    if data.followup_status is not None:
-        customer.followup_status = data.followup_status
-
-    db.commit()
-    db.refresh(followup)
-    return followup
-
-
-@app.get("/customers/{customer_id}/followups", response_model=List[FollowUpOut])
-def list_followups(
-    customer_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    get_customer_for_user(db, customer_id, current_user)
-
-    return (
-        db.query(FollowUp)
-        .filter(FollowUp.customer_id == customer_id)
-        .order_by(FollowUp.created_at.desc())
-        .all()
-    )
-
-
-@app.get("/followups/export")
-def export_followups_csv(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """导出当前用户客户相关的跟进记录为 CSV 文件（UTF-8-SIG）。"""
-    followups = (
-        db.query(FollowUp)
-        .join(Customer, FollowUp.customer_id == Customer.id)
-        .filter(Customer.user_id == current_user.id)
-        .order_by(FollowUp.id.asc())
-        .all()
-    )
-
-    output = io.StringIO()
-    output.write("﻿")  # UTF-8 BOM
-
-    fieldnames = [
-        "customer_name", "company", "content", "next_action",
-        "next_followup_at", "followup_status", "created_at",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
-    writer.writeheader()
-
-    for f in followups:
-        writer.writerow({
-            "customer_name": f.customer.name if f.customer else "",
-            "company": f.customer.company if f.customer else "",
-            "content": f.content or "",
-            "next_action": f.next_action or "",
-            "next_followup_at": f.customer.next_followup_at.isoformat() if f.customer and f.customer.next_followup_at else "",
-            "followup_status": f.customer.followup_status if f.customer else "",
-            "created_at": f.created_at.isoformat() if f.created_at else "",
-        })
-
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv; charset=utf-8-sig",
-        headers={
-            "Content-Disposition": "attachment; filename=followups_export.csv",
-        },
-    )
 
 
 # ─── Product routes (live ops — 商品管理) ───
@@ -1843,51 +1368,6 @@ def delete_product(
     return {"message": "商品已删除"}
 
 
-@app.post("/customers/{customer_id}/ai/summary", response_model=AIResult)
-def ai_summary(
-    customer_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    customer = get_customer_for_user(db, customer_id, current_user)
-
-    followups = db.query(FollowUp).filter(FollowUp.customer_id == customer_id).order_by(FollowUp.created_at.asc()).all()
-    context = build_customer_context(customer, followups)
-
-    prompt = f"""
-请根据下面的客户信息和历史跟进记录，生成一份客户跟进总结。
-要求：
-1. 判断客户当前阶段；
-2. 总结客户需求和风险点；
-3. 语言简洁，适合销售人员查看。
-
-{context}
-"""
-    return AIResult(result=call_llm(prompt, feature="summary", user_id=current_user.id, db=db))
-
-
-@app.post("/customers/{customer_id}/ai/suggestion", response_model=AIResult)
-def ai_suggestion(
-    customer_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    customer = get_customer_for_user(db, customer_id, current_user)
-
-    followups = db.query(FollowUp).filter(FollowUp.customer_id == customer_id).order_by(FollowUp.created_at.asc()).all()
-    context = build_customer_context(customer, followups)
-
-    prompt = f"""
-你是一个 ToB 销售顾问。请根据下面客户资料，生成下一步跟进建议。
-要求：
-1. 给出下一步要问客户的问题；
-2. 给出一段可以直接复制使用的销售话术；
-3. 给出跟进优先级判断；
-4. 不要空泛，要具体。
-
-{context}
-"""
-    return AIResult(result=call_llm(prompt, feature="suggestion", user_id=current_user.id, db=db))
 
 
 @app.post("/rag/upload")
@@ -2338,29 +1818,6 @@ def rag_reindex(
         raise HTTPException(status_code=500, detail=f"重新索引失败：{exc}")
 
 
-@app.post("/agent/analyze", response_model=AgentAnalyzeResult)
-def agent_analyze(
-    data: AgentAnalyzeRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    task = (data.task or "帮我分析这个客户下一步怎么跟进").strip()
-
-    try:
-        steps, result, sources = run_customer_followup_agent(
-            db=db,
-            customer_id=data.customer_id,
-            user_id=current_user.id,
-            task=task,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-
-    return AgentAnalyzeResult(
-        steps=steps,
-        result=result,
-        sources=sources,
-    )
 
 
 # ─── Admin: AI call logs ───

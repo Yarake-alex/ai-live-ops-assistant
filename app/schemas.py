@@ -5,44 +5,6 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class CustomerCreate(BaseModel):
-    name: str
-    company: str
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    industry: Optional[str] = None
-    level: Optional[str] = None
-    intention: Optional[str] = None
-    cooperation_status: Optional[str] = None
-    source: Optional[str] = None
-    remark: Optional[str] = None
-    next_followup_at: Optional[datetime] = None
-    followup_status: Optional[str] = "待跟进"
-
-
-class CustomerOut(CustomerCreate):
-    id: int
-    last_followup_at: Optional[datetime] = None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class FollowUpCreate(BaseModel):
-    content: str
-    next_action: Optional[str] = None
-    next_followup_at: Optional[datetime] = None
-    followup_status: Optional[str] = None
-
-
-class FollowUpOut(FollowUpCreate):
-    id: int
-    customer_id: int
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 # ─── Product schemas ───
 
 
@@ -222,10 +184,6 @@ class LiveOpsDashboard(BaseModel):
     recent_live_reviews: List[LiveReviewOut]
 
 
-class AIResult(BaseModel):
-    result: str
-
-
 class RagAsk(BaseModel):
     question: str
 
@@ -239,25 +197,6 @@ class RagSource(BaseModel):
 class RagAnswer(BaseModel):
     answer: str
     sources: List[RagSource]
-
-
-class AgentAnalyzeRequest(BaseModel):
-    customer_id: int
-    task: Optional[str] = "帮我分析这个客户下一步怎么跟进"
-
-
-class AgentAnalyzeResult(BaseModel):
-    steps: List[str]
-    result: str
-    sources: List[RagSource]
-
-
-class CustomerSearchResult(BaseModel):
-    items: List[CustomerOut]
-    total: int
-    page: int
-    page_size: int
-    pages: int
 
 
 class RagDocument(BaseModel):

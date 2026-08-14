@@ -143,31 +143,33 @@ class TestCallLlmFallback:
         )
 
     def test_fallback_not_500_on_interface(self, client, monkeypatch):
-        """AI summary endpoint does NOT 500 when LLM is unavailable."""
+        """直播话术接口在 LLM 不可用时返回 200 与本地兜底，不会 500。"""
+        from fastapi.routing import APIRoute
+        from app.llm import FALLBACK_MESSAGE
+
         login(client)
-        monkeypatch.setattr("app.config.settings.LLM_PROVIDER", "openai_compatible")
-        monkeypatch.setattr("app.config.settings.OPENAI_API_KEY", "sk-fake-key")
-        monkeypatch.setattr("app.config.settings.OPENAI_BASE_URL", "http://127.0.0.1:19999/v1")
-        monkeypatch.setattr("app.config.settings.LLM_TIMEOUT_SECONDS", 2)
-        monkeypatch.setattr("app.config.settings.LLM_MAX_RETRIES", 0)
-
-        # Create a customer first
-        resp = client.post("/customers", json={
-            "name": "Fallback测试", "company": "Fallback公司",
-            "phone": "13800000101",
-        })
+        resp = client.post("/products", json={"name": "Fallback测试商品"})
         assert resp.status_code == 200
-        cid = resp.json()["id"]
+        pid = resp.json()["id"]
 
-        resp = client.post(f"/customers/{cid}/ai/summary")
+        # 直接让端点的 call_llm 返回兜底标记，避免依赖 settings 对象身份
+        # （test_api.py 的旧库升级测试会重载 app 模块，导致 settings monkeypatch 失效）
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/live-scripts"
+        )
+        monkeypatch.setitem(
+            route.endpoint.__globals__, "call_llm", lambda *a, **k: FALLBACK_MESSAGE
+        )
+
+        resp = client.post(f"/products/{pid}/live-scripts")
         assert resp.status_code == 200, (
             f"Expected 200 even when LLM fails, got {resp.status_code}: {resp.json()}"
         )
         data = resp.json()
-        assert "result" in data
-        # Should be the Chinese fallback message
-        assert "AI 服务暂时不可用" in data["result"], (
-            f"Expected fallback message, got: {data['result'][:200]}"
+        assert data["status"] == "fallback"
+        assert "开场引入" in data["content"], (
+            f"Expected local fallback script, got: {data['content'][:200]}"
         )
 
     def test_fallback_logs_status_fallback(self, monkeypatch):
@@ -309,77 +311,6 @@ class TestUsageLog:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Feature param propagation tests (API integration)
-# ═══════════════════════════════════════════════════════════════
-
-
-class TestFeatureParamPropagation:
-    """Verify feature params are passed through from API endpoints."""
-
-    CUSTOMER_DATA = {
-        "name": "AI测试客户",
-        "company": "AI测试公司",
-        "phone": "13800000201",
-        "industry": "汽车电子",
-        "level": "A",
-        "intention": "高",
-    }
-
-    def test_summary_endpoint_succeeds(self, client):
-        """AI summary endpoint returns 200 and result string."""
-        login(client)
-        resp = client.post("/customers", json=self.CUSTOMER_DATA)
-        assert resp.status_code == 200
-        cid = resp.json()["id"]
-
-        resp = client.post(f"/customers/{cid}/ai/summary")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "result" in data
-        assert "【AI模拟总结】" in data["result"]
-
-    def test_suggestion_endpoint_succeeds(self, client):
-        """AI suggestion endpoint returns 200 and result string."""
-        login(client)
-        resp = client.post("/customers", json={
-            **self.CUSTOMER_DATA,
-            "name": "建议测试客户",
-            "phone": "13800000202",
-        })
-        assert resp.status_code == 200
-        cid = resp.json()["id"]
-
-        resp = client.post(f"/customers/{cid}/ai/suggestion")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "result" in data
-        assert "【AI模拟" in data["result"]
-
-    def test_agent_analyze_endpoint_succeeds(self, client):
-        """Agent analyze endpoint returns 200 with steps, result, sources."""
-        login(client)
-        resp = client.post("/customers", json={
-            **self.CUSTOMER_DATA,
-            "name": "Agent测试客户",
-            "phone": "13800000203",
-        })
-        assert resp.status_code == 200
-        cid = resp.json()["id"]
-
-        resp = client.post("/agent/analyze", json={
-            "customer_id": cid,
-            "task": "分析客户",
-        })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "steps" in data
-        assert "result" in data
-        assert "sources" in data
-        assert len(data["steps"]) > 0
-        assert len(data["result"]) > 0
-
-
-# ═══════════════════════════════════════════════════════════════
 # Admin AI logs API tests
 # ═══════════════════════════════════════════════════════════════
 
@@ -421,11 +352,10 @@ class TestAdminAiLogs:
         """AI logs response must NOT contain prompt text or API keys."""
         login(client)
         # Trigger some AI calls first
-        client.post("/customers", json={
-            "name": "LogTest", "company": "LogCompany", "phone": "13800000301",
-        })
-        cid = client.get("/customers").json()[0]["id"]
-        client.post(f"/customers/{cid}/ai/summary")
+        resp = client.post("/products", json={"name": "LogTest商品"})
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+        client.post(f"/products/{pid}/live-scripts")
 
         resp = client.get("/admin/ai-logs")
         assert resp.status_code == 200

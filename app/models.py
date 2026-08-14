@@ -19,40 +19,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
-    customers: Mapped[List["Customer"]] = relationship(back_populates="owner")
     products: Mapped[List["Product"]] = relationship(back_populates="owner")
     live_scripts: Mapped[List["LiveScript"]] = relationship(back_populates="owner")
     live_comment_replies: Mapped[List["LiveCommentReply"]] = relationship(back_populates="owner")
     product_knowledge_chunks: Mapped[List["ProductKnowledgeChunk"]] = relationship(back_populates="owner")
     live_reviews: Mapped[List["LiveReview"]] = relationship(back_populates="owner")
     document_chunks: Mapped[List["DocumentChunk"]] = relationship(back_populates="owner")
-
-
-class Customer(Base):
-    __tablename__ = "customers"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
-    company: Mapped[str] = mapped_column(String(100), nullable=False)
-    phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
-    email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    intention: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    cooperation_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    source: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    remark: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    last_followup_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    next_followup_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    followup_status: Mapped[str] = mapped_column(String(20), default="待跟进", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-
-    followups: Mapped[List["FollowUp"]] = relationship(
-        back_populates="customer",
-        cascade="all, delete-orphan"
-    )
-    owner: Mapped["User"] = relationship(back_populates="customers")
 
 
 class Product(Base):
@@ -168,18 +140,6 @@ class LiveReview(Base):
 
     owner: Mapped["User"] = relationship(back_populates="live_reviews")
     product: Mapped["Product"] = relationship(back_populates="live_reviews")
-
-
-class FollowUp(Base):
-    __tablename__ = "followups"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False, index=True)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    next_action: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-
-    customer: Mapped[Customer] = relationship(back_populates="followups")
 
 
 class DocumentChunk(Base):

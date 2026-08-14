@@ -275,7 +275,7 @@ class TestSecurityHeaders:
         """Protected routes (requiring login) also get security headers."""
         from tests.test_api import login
         login(client)
-        resp = client.get("/customers")
+        resp = client.get("/products")
         assert resp.status_code == 200
         assert resp.headers.get("x-content-type-options") == "nosniff"
         assert resp.headers.get("x-frame-options") == "DENY"
@@ -290,7 +290,7 @@ class TestSecurityHeaders:
     def test_error_response_also_has_headers(self, client):
         """Error responses (401, 404) also get security headers."""
         client.cookies.clear()
-        resp = client.get("/customers")
+        resp = client.get("/products")
         assert resp.status_code == 401
         assert resp.headers.get("x-content-type-options") == "nosniff"
         assert resp.headers.get("x-frame-options") == "DENY"
@@ -564,7 +564,7 @@ class TestSecurityRegression:
     def test_protected_routes_still_require_auth(self, client):
         """Protected routes still return 401 when not authenticated."""
         client.cookies.clear()
-        resp = client.get("/customers")
+        resp = client.get("/products")
         assert resp.status_code == 401
 
     def test_admin_create_user_still_works(self, client):

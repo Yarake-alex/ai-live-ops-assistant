@@ -66,36 +66,6 @@ def upgrade_database() -> None:
     default_user_id = ensure_default_user()
 
     with engine.begin() as conn:
-        if not column_exists("customers", "cooperation_status"):
-            conn.execute(
-                text("ALTER TABLE customers ADD COLUMN cooperation_status VARCHAR(20)")
-            )
-
-        if not column_exists("customers", "source"):
-            conn.execute(text("ALTER TABLE customers ADD COLUMN source VARCHAR(100)"))
-
-        if not column_exists("customers", "remark"):
-            conn.execute(text("ALTER TABLE customers ADD COLUMN remark TEXT"))
-
-        if not column_exists("customers", "last_followup_at"):
-            conn.execute(text(f"ALTER TABLE customers ADD COLUMN last_followup_at {_dt_type}"))
-
-        if not column_exists("customers", "next_followup_at"):
-            conn.execute(text(f"ALTER TABLE customers ADD COLUMN next_followup_at {_dt_type}"))
-
-        if not column_exists("customers", "followup_status"):
-            conn.execute(text("ALTER TABLE customers ADD COLUMN followup_status VARCHAR(20) DEFAULT '待跟进'"))
-            conn.execute(
-                text("UPDATE customers SET followup_status = '待跟进' WHERE followup_status IS NULL")
-            )
-
-        if not column_exists("customers", "user_id"):
-            conn.execute(text("ALTER TABLE customers ADD COLUMN user_id INTEGER"))
-            conn.execute(
-                text("UPDATE customers SET user_id = :user_id WHERE user_id IS NULL"),
-                {"user_id": default_user_id},
-            )
-
         if not column_exists("document_chunks", "user_id"):
             conn.execute(text("ALTER TABLE document_chunks ADD COLUMN user_id INTEGER"))
             conn.execute(
@@ -138,13 +108,7 @@ def create_indexes() -> None:
     """为已有数据库幂等补建索引。"""
     with engine.begin() as conn:
         conn.execute(
-            text("CREATE INDEX IF NOT EXISTS ix_customers_user_id ON customers (user_id)")
-        )
-        conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_products_user_id ON products (user_id)")
-        )
-        conn.execute(
-            text("CREATE INDEX IF NOT EXISTS ix_followups_customer_id ON followups (customer_id)")
         )
         conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_document_chunks_user_id ON document_chunks (user_id)")

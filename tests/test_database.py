@@ -656,7 +656,16 @@ class TestPostgresEmptyDbInit:
             import app.models  # noqa: F401
             from app.database import Base
             table_names = sorted(Base.metadata.tables.keys())
-            expected_tables = {"users", "customers", "followups", "document_chunks", "ai_call_logs"}
+            expected_tables = {
+                "users",
+                "products",
+                "live_scripts",
+                "live_comment_replies",
+                "product_knowledge_chunks",
+                "live_reviews",
+                "document_chunks",
+                "ai_call_logs",
+            }
             missing = expected_tables - set(table_names)
             assert not missing, (
                 f"Expected tables {expected_tables} to be registered in Base.metadata, "
@@ -734,8 +743,11 @@ class TestPostgresEmptyDbInit:
             inspector = inspect(engine)
             tables = inspector.get_table_names()
             assert "users" in tables, "users table should exist after init"
-            assert "customers" in tables, "customers table should exist after init"
-            assert "followups" in tables, "followups table should exist after init"
+            assert "products" in tables, "products table should exist after init"
+            assert "live_scripts" in tables, "live_scripts table should exist after init"
+            assert "live_comment_replies" in tables, "live_comment_replies table should exist after init"
+            assert "product_knowledge_chunks" in tables, "product_knowledge_chunks table should exist after init"
+            assert "live_reviews" in tables, "live_reviews table should exist after init"
             assert "document_chunks" in tables, "document_chunks table should exist after init"
             assert "ai_call_logs" in tables, "ai_call_logs table should exist after init"
 
