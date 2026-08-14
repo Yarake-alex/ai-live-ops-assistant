@@ -139,6 +139,68 @@ class LiveCommentReplyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ─── Product knowledge base (商品知识库 RAG) ───
+
+
+class ProductKnowledgeAsk(BaseModel):
+    question: str = Field(max_length=500)
+
+    @field_validator("question")
+    @classmethod
+    def question_must_not_be_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("问题不能为空")
+        return v
+
+
+class ProductKnowledgeSource(BaseModel):
+    filename: str
+    chunk_index: int
+    content: str
+
+
+class ProductKnowledgeAnswer(BaseModel):
+    answer: str
+    sources: List[ProductKnowledgeSource]
+
+
+class ProductKnowledgeDocument(BaseModel):
+    filename: str
+    chunks: int
+    preview: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+# ─── Live review (直播复盘) ───
+
+
+class LiveReviewOut(BaseModel):
+    id: int
+    product_id: int
+    content: str
+    prompt: str
+    provider: str
+    model: str
+    status: str
+    error_message: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ─── Dashboard (轻量运营看板) ───
+
+
+class DashboardStats(BaseModel):
+    products: int
+    live_products: int
+    live_scripts: int
+    comment_replies: int
+    live_reviews: int
+    knowledge_documents: int
+
+
 class AIResult(BaseModel):
     result: str
 

@@ -23,6 +23,8 @@ from app.models import (
     Product,
     LiveScript,
     LiveCommentReply,
+    ProductKnowledgeChunk,
+    LiveReview,
     DocumentChunk,
     User,
 )
@@ -39,6 +41,12 @@ from app.schemas import (
     LiveScriptOut,
     CommentReplyCreate,
     LiveCommentReplyOut,
+    ProductKnowledgeAsk,
+    ProductKnowledgeAnswer,
+    ProductKnowledgeSource,
+    ProductKnowledgeDocument,
+    LiveReviewOut,
+    DashboardStats,
     AIResult,
     RagAsk,
     RagAnswer,
@@ -58,8 +66,11 @@ from app.llm import (
     build_customer_context,
     build_live_comment_reply_fallback,
     build_live_comment_reply_prompt,
+    build_live_review_fallback,
+    build_live_review_prompt,
     build_live_script_fallback,
     build_live_script_prompt,
+    build_product_rag_prompt,
     call_llm,
     resolve_llm_provider_model,
 )
@@ -1314,6 +1325,347 @@ def get_comment_reply(
     current_user: User = Depends(get_current_user),
 ):
     return get_comment_reply_for_user(db, reply_id, current_user)
+
+
+# ─── Product knowledge base routes (商品知识库 RAG) ───
+
+
+@app.post("/products/{product_id}/knowledge/upload")
+async def upload_product_knowledge(
+    product_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """上传商品知识库文档（PDF/TXT/MD/CSV），片段按商品隔离存储。"""
+    product = get_product_for_user(db, product_id, current_user)
+
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    parts = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=413, detail=f"文件过大，最大允许 {settings.MAX_UPLOAD_SIZE_MB}MB")
+        parts.append(chunk)
+    data = b"".join(parts)
+
+    text_content = extract_text_from_upload(file, data)
+    chunks = split_text(text_content)
+    if not chunks:
+        raise HTTPException(status_code=400, detail="文件内容为空，无法加入知识库")
+
+    filename = file.filename or "unnamed"
+    # 同名文件重新上传时，先删除该商品下的旧片段，避免重复检索
+    db.query(ProductKnowledgeChunk).filter(
+        ProductKnowledgeChunk.filename == filename,
+        ProductKnowledgeChunk.product_id == product.id,
+        ProductKnowledgeChunk.user_id == current_user.id,
+    ).delete()
+
+    for index, chunk in enumerate(chunks, start=1):
+        db.add(ProductKnowledgeChunk(
+            user_id=current_user.id,
+            product_id=product.id,
+            filename=filename,
+            chunk_index=index,
+            content=chunk,
+        ))
+
+    db.commit()
+    return {"filename": filename, "chunks": len(chunks)}
+
+
+@app.get("/products/{product_id}/knowledge/documents", response_model=List[ProductKnowledgeDocument])
+def list_product_knowledge_documents(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+    chunks = (
+        db.query(ProductKnowledgeChunk)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+        )
+        .order_by(ProductKnowledgeChunk.filename.asc(), ProductKnowledgeChunk.chunk_index.asc())
+        .all()
+    )
+
+    grouped: dict[str, list] = {}
+    for c in chunks:
+        grouped.setdefault(c.filename, []).append(c)
+
+    return [
+        ProductKnowledgeDocument(
+            filename=fn,
+            chunks=len(doc_chunks),
+            preview=(doc_chunks[0].content[:120] if doc_chunks else None),
+            updated_at=(max(c.created_at for c in doc_chunks).isoformat() if doc_chunks else None),
+        )
+        for fn, doc_chunks in grouped.items()
+    ]
+
+
+@app.delete("/products/{product_id}/knowledge/documents/{filename}")
+def delete_product_knowledge_document(
+    product_id: int,
+    filename: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+    deleted = (
+        db.query(ProductKnowledgeChunk)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+            ProductKnowledgeChunk.filename == filename,
+        )
+        .delete()
+    )
+    db.commit()
+    if not deleted:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    return {"message": "文档已删除"}
+
+
+@app.post("/products/{product_id}/knowledge/ask", response_model=ProductKnowledgeAnswer)
+def ask_product_knowledge(
+    product_id: int,
+    data: ProductKnowledgeAsk,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """基于商品知识库资料回答问题（SQL 过滤 product_id 后 TF-IDF 检索）。"""
+    product = get_product_for_user(db, product_id, current_user)
+
+    chunks = (
+        db.query(ProductKnowledgeChunk)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+        )
+        .order_by(ProductKnowledgeChunk.id.asc())
+        .all()
+    )
+    if not chunks:
+        return ProductKnowledgeAnswer(
+            answer="该商品还没有知识库资料，请先在商品详情页上传资料。",
+            sources=[],
+        )
+
+    top = retrieve_chunks(data.question, chunks, top_k=4)
+    if not top:
+        return ProductKnowledgeAnswer(
+            answer="没有检索到与问题相关的商品资料，建议补充相关资料或换个问法。",
+            sources=[],
+        )
+
+    prompt = build_product_rag_prompt(data.question, top)
+    answer = call_llm(
+        prompt,
+        feature="product_rag_ask",
+        user_id=current_user.id,
+        db=db,
+    )
+    if not answer or FALLBACK_MESSAGE in answer:
+        answer = "AI 服务暂时不可用，请稍后重试；可先查看资料列表确认已上传内容。"
+
+    sources = [
+        ProductKnowledgeSource(
+            filename=c.filename,
+            chunk_index=c.chunk_index,
+            content=c.content[:200],
+        )
+        for c in top
+    ]
+    return ProductKnowledgeAnswer(answer=answer, sources=sources)
+
+
+# ─── Live review routes (直播复盘) ───
+
+
+def get_live_review_for_user(db: Session, review_id: int, user: User) -> LiveReview:
+    review = (
+        db.query(LiveReview)
+        .filter(LiveReview.id == review_id, LiveReview.user_id == user.id)
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=404, detail="复盘记录不存在")
+    return review
+
+
+@app.post("/products/{product_id}/live-reviews", response_model=LiveReviewOut)
+def generate_live_review(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """基于商品资料与已记录运营数据生成直播复盘，不编造未统计指标。"""
+    product = get_product_for_user(db, product_id, current_user)
+
+    script_count = (
+        db.query(LiveScript)
+        .filter(LiveScript.product_id == product.id, LiveScript.user_id == current_user.id)
+        .count()
+    )
+    reply_count = (
+        db.query(LiveCommentReply)
+        .filter(
+            LiveCommentReply.product_id == product.id,
+            LiveCommentReply.user_id == current_user.id,
+        )
+        .count()
+    )
+    knowledge_docs = (
+        db.query(ProductKnowledgeChunk.filename)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+        )
+        .distinct()
+        .count()
+    )
+    recent = (
+        db.query(LiveCommentReply)
+        .filter(
+            LiveCommentReply.product_id == product.id,
+            LiveCommentReply.user_id == current_user.id,
+        )
+        .order_by(LiveCommentReply.id.desc())
+        .limit(10)
+        .all()
+    )
+    recent_comments = "\n".join(f"- {r.comment.strip()[:80]}" for r in recent)
+
+    prompt = build_live_review_prompt(
+        product,
+        script_count=script_count,
+        reply_count=reply_count,
+        knowledge_docs=knowledge_docs,
+        recent_comments=recent_comments,
+    )
+    provider, model = resolve_llm_provider_model()
+    status = "success"
+    error_message = None
+    content = ""
+
+    try:
+        content = call_llm(
+            prompt,
+            feature="live_review",
+            user_id=current_user.id,
+            db=db,
+        )
+    except Exception:
+        logger.exception(
+            "Live review AI call raised unexpectedly (user=%s, product=%s)",
+            current_user.id,
+            product_id,
+        )
+        content = ""
+
+    if content and FALLBACK_MESSAGE not in content:
+        status = "success"
+    else:
+        try:
+            content = build_live_review_fallback(
+                product,
+                script_count=script_count,
+                reply_count=reply_count,
+                knowledge_docs=knowledge_docs,
+                recent_comments=recent_comments,
+            )
+            status = "fallback"
+            error_message = "AI 服务暂时不可用，已返回本地兜底复盘"
+        except Exception:
+            logger.exception(
+                "Live review fallback generation failed (user=%s, product=%s)",
+                current_user.id,
+                product_id,
+            )
+            content = ""
+            status = "failed"
+            error_message = "AI 服务暂时不可用，且本地兜底复盘生成失败，请稍后重试"
+
+    review = LiveReview(
+        user_id=current_user.id,
+        product_id=product.id,
+        content=content,
+        prompt=prompt,
+        provider=provider,
+        model=model,
+        status=status,
+        error_message=error_message,
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+@app.get("/products/{product_id}/live-reviews", response_model=List[LiveReviewOut])
+def list_product_live_reviews(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+    return (
+        db.query(LiveReview)
+        .filter(
+            LiveReview.product_id == product.id,
+            LiveReview.user_id == current_user.id,
+        )
+        .order_by(LiveReview.created_at.desc(), LiveReview.id.desc())
+        .all()
+    )
+
+
+@app.get("/live-reviews/{review_id}", response_model=LiveReviewOut)
+def get_live_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_live_review_for_user(db, review_id, current_user)
+
+
+# ─── Dashboard stats (轻量运营看板) ───
+
+
+@app.get("/dashboard/stats", response_model=DashboardStats)
+def dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """返回当前用户的轻量运营统计（不涉及直播场次/销量等未记录指标）。"""
+    products = db.query(Product).filter(Product.user_id == current_user.id).count()
+    live_products = (
+        db.query(Product)
+        .filter(Product.user_id == current_user.id, Product.live_status == "直播中")
+        .count()
+    )
+    scripts = db.query(LiveScript).filter(LiveScript.user_id == current_user.id).count()
+    replies = db.query(LiveCommentReply).filter(LiveCommentReply.user_id == current_user.id).count()
+    reviews = db.query(LiveReview).filter(LiveReview.user_id == current_user.id).count()
+    docs = (
+        db.query(ProductKnowledgeChunk.filename)
+        .filter(ProductKnowledgeChunk.user_id == current_user.id)
+        .distinct()
+        .count()
+    )
+    return DashboardStats(
+        products=products,
+        live_products=live_products,
+        live_scripts=scripts,
+        comment_replies=replies,
+        live_reviews=reviews,
+        knowledge_documents=docs,
+    )
 
 
 @app.get("/products/{product_id}", response_model=ProductOut)

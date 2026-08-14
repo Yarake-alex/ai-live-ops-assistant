@@ -1339,7 +1339,53 @@
                     </div>
                 </div>
 
-                <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:14px;">快速入口</h3>
+                <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">运营概览</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+                        </div>
+                        <div class="stat-label">商品总数</div>
+                        <div class="stat-value" id="statOpsProducts">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                        </div>
+                        <div class="stat-label">直播中商品</div>
+                        <div class="stat-value" id="statOpsLiveProducts">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                        </div>
+                        <div class="stat-label">直播话术</div>
+                        <div class="stat-value" id="statOpsScripts">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </div>
+                        <div class="stat-label">评论回复</div>
+                        <div class="stat-value" id="statOpsReplies">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        </div>
+                        <div class="stat-label">直播复盘</div>
+                        <div class="stat-value" id="statOpsReviews">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <div class="stat-label">商品知识库文档</div>
+                        <div class="stat-value" id="statOpsDocs">0</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">快速入口</h3>
                 <div class="quick-grid">
                     <div class="quick-card" onclick="showPage('customer')">
                         <div class="qc-icon blue">
@@ -1568,6 +1614,43 @@
                                     <button class="light" onclick="loadProductLiveScripts()" style="font-size:12px;padding:4px 10px;">刷新</button>
                                 </div>
                                 <div id="liveScriptHistory" style="max-height:220px;overflow-y:auto;"></div>
+                            </div>
+                        </div>
+
+                        <!-- ── Live Review Card ── -->
+                        <div class="card" style="padding:16px;margin-top:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                <h3 style="margin:0;font-size:15px;">📋 直播复盘</h3>
+                                <div style="display:flex;gap:6px;">
+                                    <button id="generateReviewBtn" onclick="generateLiveReview()">生成复盘</button>
+                                    <button class="light" onclick="loadLiveReviewHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                </div>
+                            </div>
+                            <div id="liveReviewResult" class="result" style="min-height:100px;margin-bottom:10px;">
+                                <div class="result-empty">选择商品后可生成直播复盘。</div>
+                            </div>
+                            <div style="font-weight:700;font-size:13px;margin-bottom:6px;">历史复盘</div>
+                            <div id="liveReviewHistory" style="max-height:180px;overflow-y:auto;"></div>
+                        </div>
+
+                        <!-- ── Product Knowledge Card ── -->
+                        <div class="card" style="padding:16px;margin-top:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                <h3 style="margin:0;font-size:15px;">📚 商品知识库</h3>
+                                <div style="display:flex;gap:6px;">
+                                    <button class="light" onclick="triggerProductKnowledgeUpload()" style="font-size:12px;padding:4px 10px;">上传资料</button>
+                                    <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                </div>
+                            </div>
+                            <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" style="display:none;" onchange="handleProductKnowledgeUpload(event)">
+                            <div class="muted" style="font-size:12px;margin-bottom:8px;">支持 PDF / TXT / MD / CSV；检索基于商品维度 TF-IDF，不接向量索引。</div>
+                            <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
+                            <div style="display:flex;gap:6px;margin-bottom:10px;">
+                                <input id="productKnowledgeQuestion" placeholder="向商品资料提问，例如：这款商品怎么介绍卖点？" style="flex:1;font-size:13px;">
+                                <button onclick="askProductKnowledge()">提问</button>
+                            </div>
+                            <div id="productKnowledgeAnswer" class="result" style="min-height:60px;">
+                                <div class="result-empty">基于商品资料的回答会显示在这里。</div>
                             </div>
                         </div>
                     </div>
@@ -2153,6 +2236,24 @@ function updateDashboardStats() {
     if (following) following.textContent = _allCustomers.filter(c => c.cooperation_status === '跟进洽谈').length;
     if (docs) docs.textContent = _cachedDocs.length;
     if (badge) badge.textContent = _searchTotal;
+
+    loadOpsStats();
+}
+
+// ─── Dashboard ops stats (轻量运营看板) ───
+
+async function loadOpsStats() {
+    try {
+        const s = await request("/dashboard/stats");
+        document.getElementById("statOpsProducts").textContent = s.products;
+        document.getElementById("statOpsLiveProducts").textContent = s.live_products;
+        document.getElementById("statOpsScripts").textContent = s.live_scripts;
+        document.getElementById("statOpsReplies").textContent = s.comment_replies;
+        document.getElementById("statOpsReviews").textContent = s.live_reviews;
+        document.getElementById("statOpsDocs").textContent = s.knowledge_documents;
+    } catch (e) {
+        // request() 已处理错误
+    }
 }
 
 // ─── Request helper with 401 handling ───
@@ -3256,6 +3357,12 @@ async function selectProduct(id) {
     document.getElementById("liveScriptPanel").style.display = "block";
     _resetLiveScriptResult();
     await loadProductLiveScripts(id);
+    document.getElementById("liveReviewResult").innerHTML = '<div class="result-empty">选择商品后可生成直播复盘。</div>';
+    document.getElementById("liveReviewHistory").innerHTML = "";
+    await loadLiveReviewHistory();
+    document.getElementById("productKnowledgeDocs").innerHTML = "";
+    document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
+    await loadProductKnowledgeDocs();
     closeProductModal();
 }
 
@@ -3365,6 +3472,10 @@ function clearSelectedProduct() {
     document.getElementById("liveScriptPanel").style.display = "none";
     document.getElementById("liveScriptHistory").innerHTML = "";
     _resetLiveScriptResult();
+    document.getElementById("liveReviewResult").innerHTML = '<div class="result-empty">选择商品后可生成直播复盘。</div>';
+    document.getElementById("liveReviewHistory").innerHTML = "";
+    document.getElementById("productKnowledgeDocs").innerHTML = "";
+    document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
     closeProductModal();
 }
 
@@ -3587,6 +3698,185 @@ async function viewCommentReplyDetail(replyId) {
         _renderCommentReplyRecord(record);
     } catch (e) {
         // request() 已展示错误
+    }
+}
+
+// ─── Live Review (直播复盘) ───
+
+function _reviewStatusText(status) {
+    if (status === "fallback") return "本地兜底";
+    if (status === "failed") return "生成失败";
+    return "生成成功";
+}
+
+function _renderLiveReviewRecord(record) {
+    const warning = record.status !== "success" && record.error_message
+        ? `<div class="muted" style="margin-bottom:8px;">${escapeHtml(record.error_message)}</div>`
+        : "";
+    document.getElementById("liveReviewResult").innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <b>${escapeHtml(_reviewStatusText(record.status))}</b>
+            <span class="muted" style="font-size:12px;">${escapeHtml(record.created_at ? new Date(record.created_at).toLocaleString() : "")}</span>
+        </div>
+        ${warning}
+        ${renderAIText(record.content)}
+    `;
+}
+
+async function generateLiveReview() {
+    if (!selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+    const btn = document.getElementById("generateReviewBtn");
+    const box = document.getElementById("liveReviewResult");
+    btn.disabled = true;
+    box.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>AI 正在生成复盘...</span></div>';
+    try {
+        const record = await request(`/products/${selectedProductId}/live-reviews`, { method: "POST" });
+        _renderLiveReviewRecord(record);
+        await loadLiveReviewHistory();
+    } catch (e) {
+        box.innerHTML = '<div class="result-empty">生成失败，请稍后重试。</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function loadLiveReviewHistory() {
+    if (!selectedProductId) return;
+    const box = document.getElementById("liveReviewHistory");
+    try {
+        const records = await request(`/products/${selectedProductId}/live-reviews`);
+        if (!records.length) {
+            box.innerHTML = '<div class="muted" style="font-size:12px;">暂无复盘记录。</div>';
+            return;
+        }
+        box.innerHTML = records.map(item => {
+            const created = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+            return `
+                <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div>
+                        <b>${escapeHtml(_reviewStatusText(item.status))}</b>
+                        <div class="muted" style="font-size:11px;">${escapeHtml(created)}</div>
+                    </div>
+                    <button class="light" onclick="viewLiveReviewDetail(${item.id})" style="font-size:12px;padding:4px 10px;">查看</button>
+                </div>
+            `;
+        }).join("");
+    } catch (e) {
+        box.innerHTML = '<div class="result-empty">历史复盘加载失败。</div>';
+    }
+}
+
+async function viewLiveReviewDetail(reviewId) {
+    try {
+        const record = await request(`/live-reviews/${reviewId}`);
+        _renderLiveReviewRecord(record);
+    } catch (e) {
+        // request() 已处理错误
+    }
+}
+
+// ─── Product Knowledge Base (商品知识库) ───
+
+function triggerProductKnowledgeUpload() {
+    if (!selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+    document.getElementById("productKnowledgeFile").click();
+}
+
+async function handleProductKnowledgeUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+        const res = await fetch(`/products/${selectedProductId}/knowledge/upload`, {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+        });
+        if (res.status === 401) {
+            showLogin("登录已失效，请重新登录");
+            return;
+        }
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.detail || "上传失败");
+            return;
+        }
+        alert(`上传成功！共 ${data.chunks} 个片段。`);
+        await loadProductKnowledgeDocs();
+    } catch (err) {
+        alert("网络错误，上传失败");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+async function loadProductKnowledgeDocs() {
+    if (!selectedProductId) return;
+    const box = document.getElementById("productKnowledgeDocs");
+    try {
+        const docs = await request(`/products/${selectedProductId}/knowledge/documents`);
+        if (!docs.length) {
+            box.innerHTML = '<div class="muted" style="font-size:12px;">暂无资料，可上传 PDF / TXT / MD / CSV。</div>';
+            return;
+        }
+        box.innerHTML = docs.map(d => `
+            <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <div style="min-width:0;">
+                    <b style="font-size:13px;">📄 ${escapeHtml(d.filename)}</b>
+                    <div class="muted" style="font-size:11px;">${d.chunks} 个片段${d.preview ? " · " + escapeHtml(d.preview.slice(0, 40)) + "…" : ""}</div>
+                </div>
+                <button class="light" onclick="deleteProductKnowledgeDoc('${escapeHtml(d.filename)}')" style="font-size:12px;padding:4px 10px;">删除</button>
+            </div>
+        `).join("");
+    } catch (e) {
+        box.innerHTML = '<div class="result-empty">资料列表加载失败。</div>';
+    }
+}
+
+async function deleteProductKnowledgeDoc(filename) {
+    if (!selectedProductId) return;
+    if (!confirm(`确定删除资料「${filename}」吗？`)) return;
+    try {
+        await request(`/products/${selectedProductId}/knowledge/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+        await loadProductKnowledgeDocs();
+    } catch (e) {
+        // request() 已处理错误
+    }
+}
+
+async function askProductKnowledge() {
+    if (!selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+    const question = document.getElementById("productKnowledgeQuestion").value.trim();
+    if (!question) {
+        alert("请输入问题");
+        return;
+    }
+    const box = document.getElementById("productKnowledgeAnswer");
+    box.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>检索资料中...</span></div>';
+    try {
+        const data = await request(`/products/${selectedProductId}/knowledge/ask`, {
+            method: "POST",
+            body: JSON.stringify({ question }),
+        });
+        let html = renderAIText(data.answer);
+        if (data.sources && data.sources.length) {
+            html += '<div class="muted" style="font-size:12px;margin-top:8px;">参考片段：'
+                + data.sources.map(s => `${escapeHtml(s.filename)}#${s.chunk_index}`).join("、")
+                + '</div>';
+        }
+        box.innerHTML = html;
+    } catch (e) {
+        box.innerHTML = '<div class="result-empty">提问失败，请稍后重试。</div>';
     }
 }
 

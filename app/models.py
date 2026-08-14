@@ -23,6 +23,8 @@ class User(Base):
     products: Mapped[List["Product"]] = relationship(back_populates="owner")
     live_scripts: Mapped[List["LiveScript"]] = relationship(back_populates="owner")
     live_comment_replies: Mapped[List["LiveCommentReply"]] = relationship(back_populates="owner")
+    product_knowledge_chunks: Mapped[List["ProductKnowledgeChunk"]] = relationship(back_populates="owner")
+    live_reviews: Mapped[List["LiveReview"]] = relationship(back_populates="owner")
     document_chunks: Mapped[List["DocumentChunk"]] = relationship(back_populates="owner")
 
 
@@ -80,6 +82,14 @@ class Product(Base):
         back_populates="product",
         cascade="all, delete-orphan",
     )
+    knowledge_chunks: Mapped[List["ProductKnowledgeChunk"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
+    live_reviews: Mapped[List["LiveReview"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
 
 
 class LiveScript(Base):
@@ -121,6 +131,43 @@ class LiveCommentReply(Base):
 
     owner: Mapped["User"] = relationship(back_populates="live_comment_replies")
     product: Mapped["Product"] = relationship(back_populates="live_comment_replies")
+
+
+class ProductKnowledgeChunk(Base):
+    """商品知识库片段 — 独立于通用 RAG 的 DocumentChunk，按商品维度隔离。"""
+
+    __tablename__ = "product_knowledge_chunks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    owner: Mapped["User"] = relationship(back_populates="product_knowledge_chunks")
+    product: Mapped["Product"] = relationship(back_populates="knowledge_chunks")
+
+
+class LiveReview(Base):
+    """直播复盘生成记录。"""
+
+    __tablename__ = "live_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    provider: Mapped[str] = mapped_column(String(50), default="mock", nullable=False)
+    model: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="success", nullable=False, index=True)
+    error_message: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    owner: Mapped["User"] = relationship(back_populates="live_reviews")
+    product: Mapped["Product"] = relationship(back_populates="live_reviews")
 
 
 class FollowUp(Base):

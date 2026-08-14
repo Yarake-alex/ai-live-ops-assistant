@@ -122,6 +122,16 @@ def upgrade_database() -> None:
         from app.models import LiveCommentReply
         LiveCommentReply.__table__.create(bind=engine, checkfirst=True)
 
+    # ── Phase 9: product knowledge chunks + live review records ──
+    inspector = inspect(engine)
+    if "product_knowledge_chunks" not in inspector.get_table_names():
+        from app.models import ProductKnowledgeChunk
+        ProductKnowledgeChunk.__table__.create(bind=engine, checkfirst=True)
+    inspector = inspect(engine)
+    if "live_reviews" not in inspector.get_table_names():
+        from app.models import LiveReview
+        LiveReview.__table__.create(bind=engine, checkfirst=True)
+
 
 
 def create_indexes() -> None:
@@ -177,6 +187,27 @@ def create_indexes() -> None:
         )
         conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_live_comment_replies_status ON live_comment_replies (status)")
+        )
+
+    # ── Phase 9: product knowledge + live review indexes ──
+    with engine.begin() as conn:
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_product_knowledge_chunks_user_id ON product_knowledge_chunks (user_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_product_knowledge_chunks_product_id ON product_knowledge_chunks (product_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_product_knowledge_chunks_filename ON product_knowledge_chunks (filename)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_reviews_user_id ON live_reviews (user_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_reviews_product_id ON live_reviews (product_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_reviews_status ON live_reviews (status)")
         )
 
 
