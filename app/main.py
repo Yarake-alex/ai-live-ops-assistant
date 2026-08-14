@@ -49,6 +49,7 @@ from app.llm import (
     build_live_script_fallback,
     build_live_script_prompt,
     call_llm,
+    resolve_llm_provider_model,
 )
 from app.rag import (
     extract_text_from_upload,
@@ -839,12 +840,6 @@ def get_live_script_for_user(db: Session, script_id: int, user: User) -> LiveScr
     return script
 
 
-def _current_llm_provider_model() -> tuple[str, str]:
-    if settings.LLM_PROVIDER == "openai_compatible" and settings.OPENAI_API_KEY:
-        return "openai_compatible", settings.OPENAI_MODEL
-    return "mock", "mock"
-
-
 def _format_validation_error(exc: ValidationError) -> str:
     """把 Pydantic 校验错误格式化为可读的行级原因，例如「price: Input should be a valid decimal」。"""
     parts = []
@@ -1117,9 +1112,10 @@ def generate_live_script(
 ):
     product = get_product_for_user(db, product_id, current_user)
     prompt = build_live_script_prompt(product)
-    provider, model = _current_llm_provider_model()
+    provider, model = resolve_llm_provider_model()
     status = "success"
     error_message = None
+    content = ""
 
     try:
         content = call_llm(
@@ -1128,20 +1124,33 @@ def generate_live_script(
             user_id=current_user.id,
             db=db,
         )
-        if not content or FALLBACK_MESSAGE in content:
-            error_message = "AI 服务暂时不可用，已返回本地兜底话术"
-            content = build_live_script_fallback(product)
-            status = "fallback"
     except Exception:
-        # 未知异常细节只进日志，用户侧只看到通用提示
+        # call_llm 内部已兜底，正常情况下不会抛异常；保险起见统一走兜底路径
         logger.exception(
-            "Live script generation failed (user=%s, product=%s)",
+            "Live script AI call raised unexpectedly (user=%s, product=%s)",
             current_user.id,
             product_id,
         )
-        content = build_live_script_fallback(product)
-        status = "fallback"
-        error_message = "AI 服务暂时不可用，已返回本地兜底话术"
+        content = ""
+
+    if content and FALLBACK_MESSAGE not in content:
+        status = "success"
+    else:
+        # AI 不可用 → 尝试本地兜底话术
+        try:
+            content = build_live_script_fallback(product)
+            status = "fallback"
+            error_message = "AI 服务暂时不可用，已返回本地兜底话术"
+        except Exception:
+            # 兜底也失败 → 记录 failed 状态（可追踪），细节只进日志
+            logger.exception(
+                "Live script fallback generation failed (user=%s, product=%s)",
+                current_user.id,
+                product_id,
+            )
+            content = ""
+            status = "failed"
+            error_message = "AI 服务暂时不可用，且本地兜底话术生成失败，请稍后重试"
 
     script = LiveScript(
         user_id=current_user.id,

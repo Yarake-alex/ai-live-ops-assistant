@@ -209,6 +209,17 @@ def build_live_script_fallback(product) -> str:
 最后再帮大家总结一下：{name} 适合关注「{selling_points}」的用户，补充备注为：{notes}。确认需要的朋友可以查看直播间商品卡，犹豫的朋友可以先收藏或留言补充问题。"""
 
 
+def resolve_llm_provider_model() -> tuple[str, str]:
+    """返回 call_llm 实际会使用的 (provider, model) 组合。
+
+    与 call_llm 内部的 mock / 真实 API 分支判断保持一致，供生成记录的
+    provider/model 字段复用，避免两处逻辑漂移。
+    """
+    if settings.LLM_PROVIDER == "openai_compatible" and settings.OPENAI_API_KEY:
+        return "openai_compatible", settings.OPENAI_MODEL
+    return "mock", "mock"
+
+
 def call_llm(
     prompt: str,
     *,
@@ -241,10 +252,9 @@ def call_llm(
 
     # ── Mock path ──
     if settings.LLM_PROVIDER != "openai_compatible" or not settings.OPENAI_API_KEY:
-        provider = "mock"
-        model = "mock"
+        provider, model = resolve_llm_provider_model()
         try:
-            response_text = mock_llm_response(prompt)
+            response_text = mock_llm_response(prompt, feature=feature)
             status = "success"
         except Exception:
             status = "error"
@@ -263,8 +273,7 @@ def call_llm(
         return response_text
 
     # ── Real API path ──
-    provider = "openai_compatible"
-    model = settings.OPENAI_MODEL
+    provider, model = resolve_llm_provider_model()
 
     import httpx
 
@@ -328,8 +337,9 @@ def call_llm(
     return response_text
 
 
-def mock_llm_response(prompt: str) -> str:
-    if "直播带货话术" in prompt or "直播电商主播" in prompt:
+def mock_llm_response(prompt: str, feature: str = "unknown") -> str:
+    # 直播话术通过显式 feature 分发，不再依赖 prompt 关键词
+    if feature == "live_script_generation":
         return """开场引入
 欢迎来到直播间，今天这款商品适合正在认真对比、想快速抓住重点的朋友。先别急着划走，我会按价格、卖点、适用人群和优惠信息帮你讲清楚。
 
