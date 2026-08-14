@@ -2244,15 +2244,26 @@ function updateDashboardStats() {
 
 async function loadOpsStats() {
     try {
-        const s = await request("/dashboard/stats");
-        document.getElementById("statOpsProducts").textContent = s.products;
-        document.getElementById("statOpsLiveProducts").textContent = s.live_products;
-        document.getElementById("statOpsScripts").textContent = s.live_scripts;
-        document.getElementById("statOpsReplies").textContent = s.comment_replies;
-        document.getElementById("statOpsReviews").textContent = s.live_reviews;
-        document.getElementById("statOpsDocs").textContent = s.knowledge_documents;
+        // 优先使用直播运营看板接口；/dashboard/stats 保留为兼容旧端
+        const s = await request("/live-ops/dashboard");
+        document.getElementById("statOpsProducts").textContent = s.product_count;
+        document.getElementById("statOpsLiveProducts").textContent = s.live_product_count;
+        document.getElementById("statOpsScripts").textContent = s.live_script_count;
+        document.getElementById("statOpsReplies").textContent = s.comment_reply_count;
+        document.getElementById("statOpsReviews").textContent = s.live_review_count;
+        document.getElementById("statOpsDocs").textContent = s.knowledge_document_count;
     } catch (e) {
-        // request() 已处理错误
+        try {
+            const s = await request("/dashboard/stats");
+            document.getElementById("statOpsProducts").textContent = s.products;
+            document.getElementById("statOpsLiveProducts").textContent = s.live_products;
+            document.getElementById("statOpsScripts").textContent = s.live_scripts;
+            document.getElementById("statOpsReplies").textContent = s.comment_replies;
+            document.getElementById("statOpsReviews").textContent = s.live_reviews;
+            document.getElementById("statOpsDocs").textContent = s.knowledge_documents;
+        } catch (e2) {
+            // 两个接口都失败时保持旧值
+        }
     }
 }
 

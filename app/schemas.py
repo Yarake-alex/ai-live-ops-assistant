@@ -193,12 +193,33 @@ class LiveReviewOut(BaseModel):
 
 
 class DashboardStats(BaseModel):
+    """旧版统计（兼容保留），新前端优先使用 LiveOpsDashboard。"""
+
     products: int
     live_products: int
     live_scripts: int
     comment_replies: int
     live_reviews: int
     knowledge_documents: int
+
+
+class HotQuestion(BaseModel):
+    comment: str
+    count: int
+
+
+class LiveOpsDashboard(BaseModel):
+    """直播运营看板：当前用户的数据统计、高频评论与最近记录。"""
+
+    product_count: int
+    live_product_count: int
+    live_script_count: int
+    comment_reply_count: int
+    live_review_count: int
+    knowledge_document_count: int
+    hot_questions: List[HotQuestion]
+    recent_comment_replies: List[LiveCommentReplyOut]
+    recent_live_reviews: List[LiveReviewOut]
 
 
 class AIResult(BaseModel):

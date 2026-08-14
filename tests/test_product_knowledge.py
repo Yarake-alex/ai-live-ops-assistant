@@ -81,6 +81,33 @@ class TestProductKnowledge:
         assert docs[0]["chunks"] == 1
         assert "更新后" in docs[0]["preview"]
 
+    def test_ask_prompt_contains_product_and_chunks(self, client, kb_product_id, monkeypatch):
+        """问答 prompt 必须包含商品信息与检索到的知识片段（不真实调用外部 AI）。"""
+        from fastapi.routing import APIRoute
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/knowledge/ask"
+        )
+
+        captured = {}
+
+        def fake_llm(prompt, *args, **kwargs):
+            captured["prompt"] = prompt
+            return "回答内容"
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", fake_llm)
+
+        resp = client.post(
+            f"/products/{kb_product_id}/knowledge/ask",
+            json={"question": "什么人群？"},
+        )
+        assert resp.status_code == 200
+        prompt = captured["prompt"]
+        assert "知识库测试商品" in prompt          # 商品名称
+        assert "补水保湿" in prompt                  # 知识片段内容
+        assert "什么人群？" in prompt                # 用户问题
+
     def test_other_user_cannot_access(self, client, kb_product_id):
         other = _create_second_user(client, "kb-other-user")
         assert other.get(f"/products/{kb_product_id}/knowledge/documents").status_code == 404
@@ -102,6 +129,61 @@ class TestProductKnowledge:
             other.delete(f"/products/{kb_product_id}/knowledge/documents/manual.txt").status_code
             == 404
         )
+
+
+class TestLiveOpsDashboard:
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    def test_dashboard_counts_and_lists(self, client):
+        resp = client.post(
+            "/products",
+            json={"name": "看板新接口商品", "live_status": "直播中"},
+        )
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+
+        client.post(f"/products/{pid}/live-scripts")
+        client.post(f"/products/{pid}/comment-replies", json={"comment": "高频问题唯一标记"})
+        client.post(f"/products/{pid}/comment-replies", json={"comment": "高频问题唯一标记"})
+        client.post(f"/products/{pid}/live-reviews")
+
+        data = client.get("/live-ops/dashboard").json()
+        assert data["product_count"] >= 1
+        assert data["live_product_count"] >= 1
+        assert data["live_script_count"] >= 1
+        assert data["comment_reply_count"] >= 2
+        assert data["live_review_count"] >= 1
+        assert len(data["recent_comment_replies"]) >= 2
+        assert len(data["recent_live_reviews"]) >= 1
+        hot = {h["comment"]: h["count"] for h in data["hot_questions"]}
+        assert hot.get("高频问题唯一标记") == 2
+
+    def test_dashboard_empty_for_new_user(self, client):
+        other = _create_second_user(client, "dashboard-new-user")
+        data = other.get("/live-ops/dashboard").json()
+        assert data["product_count"] == 0
+        assert data["live_script_count"] == 0
+        assert data["comment_reply_count"] == 0
+        assert data["live_review_count"] == 0
+        assert data["knowledge_document_count"] == 0
+        assert data["hot_questions"] == []
+        assert data["recent_comment_replies"] == []
+        assert data["recent_live_reviews"] == []
+
+    def test_dashboard_scoped_by_user(self, client):
+        login(client)
+        resp = client.post("/products", json={"name": "看板隔离商品"})
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+        client.post(f"/products/{pid}/comment-replies", json={"comment": "隔离评论标记"})
+
+        other = _create_second_user(client, "dashboard-iso-user")
+        data = other.get("/live-ops/dashboard").json()
+        assert data["product_count"] == 0
+        assert data["comment_reply_count"] == 0
+        assert data["recent_comment_replies"] == []
 
 
 class TestDashboardStats:

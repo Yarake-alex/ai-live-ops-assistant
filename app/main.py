@@ -4,6 +4,7 @@ import hmac
 import json
 import base64
 import logging
+from collections import Counter
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -47,6 +48,8 @@ from app.schemas import (
     ProductKnowledgeDocument,
     LiveReviewOut,
     DashboardStats,
+    HotQuestion,
+    LiveOpsDashboard,
     AIResult,
     RagAsk,
     RagAnswer,
@@ -1463,7 +1466,7 @@ def ask_product_knowledge(
             sources=[],
         )
 
-    prompt = build_product_rag_prompt(data.question, top)
+    prompt = build_product_rag_prompt(product, data.question, top)
     answer = call_llm(
         prompt,
         feature="product_rag_ask",
@@ -1539,7 +1542,10 @@ def generate_live_review(
         .limit(10)
         .all()
     )
-    recent_comments = "\n".join(f"- {r.comment.strip()[:80]}" for r in recent)
+    recent_comments = "\n".join(
+        f"- 评论：{r.comment.strip()[:80]}\n  回复：{(r.reply or '（无回复）').strip()[:120]}"
+        for r in recent
+    )
 
     prompt = build_live_review_prompt(
         product,
@@ -1665,6 +1671,68 @@ def dashboard_stats(
         comment_replies=replies,
         live_reviews=reviews,
         knowledge_documents=docs,
+    )
+
+
+@app.get("/live-ops/dashboard", response_model=LiveOpsDashboard)
+def live_ops_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """直播运营看板：当前用户的统计、高频评论与最近记录（不涉及未记录的直播指标）。"""
+    product_count = db.query(Product).filter(Product.user_id == current_user.id).count()
+    live_product_count = (
+        db.query(Product)
+        .filter(Product.user_id == current_user.id, Product.live_status == "直播中")
+        .count()
+    )
+    live_script_count = (
+        db.query(LiveScript).filter(LiveScript.user_id == current_user.id).count()
+    )
+    comment_reply_count = (
+        db.query(LiveCommentReply).filter(LiveCommentReply.user_id == current_user.id).count()
+    )
+    live_review_count = (
+        db.query(LiveReview).filter(LiveReview.user_id == current_user.id).count()
+    )
+    knowledge_document_count = (
+        db.query(ProductKnowledgeChunk.filename)
+        .filter(ProductKnowledgeChunk.user_id == current_user.id)
+        .distinct()
+        .count()
+    )
+
+    # 高频评论：简单按 comment.strip() 计数，不做 NLP
+    all_replies = (
+        db.query(LiveCommentReply)
+        .filter(LiveCommentReply.user_id == current_user.id)
+        .order_by(LiveCommentReply.id.desc())
+        .all()
+    )
+    hot_questions = [
+        HotQuestion(comment=comment, count=count)
+        for comment, count in Counter(r.comment.strip() for r in all_replies).most_common(5)
+    ]
+
+    recent_comment_replies = all_replies[:10]
+    recent_live_reviews = (
+        db.query(LiveReview)
+        .filter(LiveReview.user_id == current_user.id)
+        .order_by(LiveReview.id.desc())
+        .limit(10)
+        .all()
+    )
+
+    return LiveOpsDashboard(
+        product_count=product_count,
+        live_product_count=live_product_count,
+        live_script_count=live_script_count,
+        comment_reply_count=comment_reply_count,
+        live_review_count=live_review_count,
+        knowledge_document_count=knowledge_document_count,
+        hot_questions=hot_questions,
+        recent_comment_replies=recent_comment_replies,
+        recent_live_reviews=recent_live_reviews,
     )
 
 

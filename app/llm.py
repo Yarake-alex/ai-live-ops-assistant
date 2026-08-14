@@ -268,8 +268,8 @@ def build_live_comment_reply_fallback(product, comment: str) -> str:
     return f"亲，感谢关注！{name} 价格 {price} 元，优惠方面是：{promotion}。想看更多细节可以戳商品卡，也可以在评论区继续问我～"
 
 
-def build_product_rag_prompt(question: str, retrieved_chunks) -> str:
-    """Build a prompt for product knowledge base QA (直播商品资料问答)."""
+def build_product_rag_prompt(product, question: str, retrieved_chunks) -> str:
+    """Build a prompt for product knowledge base QA (直播商品资料问答)。"""
     references = []
     for idx, chunk in enumerate(retrieved_chunks, start=1):
         references.append(
@@ -280,10 +280,21 @@ def build_product_rag_prompt(question: str, retrieved_chunks) -> str:
 
     return f"""
 你是一个谨慎、专业的直播电商商品资料问答助手。
-请严格根据下面的“商品知识库资料”回答用户问题。
+请严格根据下面的“商品知识库资料”并参考商品基础资料回答用户问题。
+
+商品资料：
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["name"]}：{_safe_product_value(product.name)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["price"]}：{_safe_product_value(product.price)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["selling_points"]}：{_safe_product_value(product.selling_points)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["target_audience"]}：{_safe_product_value(product.target_audience)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["pain_points"]}：{_safe_product_value(product.pain_points)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["promotion"]}：{_safe_product_value(product.promotion)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["stock"]}：{_safe_product_value(product.stock)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["live_status"]}：{_safe_product_value(product.live_status)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["notes"]}：{_safe_product_value(product.notes)}
 
 要求：
-1. 优先基于资料回答，不要脱离资料编造功效、参数或承诺。
+1. 优先基于商品知识库资料回答，不要脱离资料编造功效、参数或承诺。
 2. 如果资料中没有明确答案，要说明“资料中未明确提到”，并建议补充相关资料。
 3. 回答要适合直播主播在口播和答疑时直接使用，尽量具体、可执行。
 4. 不使用“全网最低”“百分百有效”“永久解决”等绝对化表述。
@@ -327,15 +338,16 @@ def build_live_review_prompt(
 {recent_comments or "暂无评论记录"}
 
 复盘输出要求（必须包含以下四个模块标题）：
-1. 数据概览：总结当前商品的直播准备情况。
-2. 亮点：基于已有资料和运营动作指出做得好的地方。
-3. 问题：指出资料缺失、风险点或准备不足的地方。
-4. 改进建议：给出具体可执行的下一步动作。
+1. 用户关注点：从近期评论归纳观众最关心的问题。
+2. 常见异议：指出观众可能提出的疑虑与资料风险点。
+3. 高频问题：列出高频问题并给出标准回答方向。
+4. 下场直播优化建议：给出具体可执行的下一步动作。
 
 要求：
-1. 只使用上面给出的资料与数据，不编造直播场次、销量、观看人数等不存在的指标。
-2. 不使用绝对化表述；对资料未覆盖的内容要说明"暂未明确"。
-3. 建议要具体、可执行，适合直播运营人员直接使用。
+1. 只使用上面给出的资料与数据，不编造直播场次、销量、GMV、转化率、观看人数等不存在的指标。
+2. 评论样本较少时（例如不足 3 条），要明确说明“当前评论样本较少”。
+3. 不使用绝对化表述；对资料未覆盖的内容要说明“暂未明确”。
+4. 建议要具体、可执行，适合直播运营人员直接使用。
 """
 
 
@@ -353,35 +365,43 @@ def build_live_review_fallback(
     target_audience = _safe_product_value(product.target_audience, "建议补充适用人群")
     pain_points = _safe_product_value(product.pain_points, "建议补充用户痛点")
     promotion = _safe_product_value(product.promotion, "暂无明确优惠信息")
-    live_status = _safe_product_value(product.live_status)
 
+    # 缺失字段判断基于原始字段，避免 _safe_product_value 的默认文案干扰判断
     missing = []
-    if not _safe_product_value(product.selling_points):
+    if not str(product.selling_points or "").strip():
         missing.append("核心卖点")
-    if not _safe_product_value(product.target_audience):
+    if not str(product.target_audience or "").strip():
         missing.append("适用人群")
-    if not _safe_product_value(product.pain_points):
+    if not str(product.pain_points or "").strip():
         missing.append("用户痛点")
     missing_text = "、".join(missing) if missing else "无明显缺失"
 
-    comments_text = recent_comments.strip() if recent_comments.strip() else "暂无评论记录"
+    if recent_comments.strip():
+        comments_text = recent_comments.strip()
+        focus_text = "观众近期在评论中提出的问题已整理如下，建议结合资料逐条准备标准回答。"
+    else:
+        comments_text = "暂无评论记录"
+        focus_text = "当前评论样本较少，暂无法归纳用户关注点，建议积累更多评论后再复盘。"
 
-    return f"""数据概览
-商品「{name}」当前直播状态为「{live_status}」。截至复盘时：已生成直播话术 {script_count} 份，模拟评论回复 {reply_count} 条，商品知识库文档 {knowledge_docs} 份。
+    return f"""用户关注点
+{focus_text}
 
-亮点
-商品已有卖点「{selling_points}」、适用人群「{target_audience}」与优惠「{promotion}」等基础资料，具备基本的直播讲解素材。
+常见异议
+观众可能对质量与效果存在疑虑；商品资料未明确的内容不做推断，建议以商品页信息为准，不夸大承诺。
 
-问题
-资料完整度方面：{missing_text}。近期评论情况如下（如有）：
-{comments_text}
-以上仅为已记录数据，不推断未记录的场次或销量指标。
+高频问题
+1. 价格与优惠：可参考优惠信息「{promotion}」回答。
+2. 适用人群：可参考「{target_audience}」回答。
+3. 质量与效果：仅介绍资料确认过的卖点「{selling_points}」，不夸大。
 
-改进建议
-1. 补齐缺失的商品资料（核心卖点、适用人群、用户痛点、优惠信息）。
+下场直播优化建议
+1. 资料完整度方面：{missing_text}，请优先补齐缺失字段。
 2. 围绕用户痛点「{pain_points}」准备话术，并在评论回复中主动引导。
-3. 若知识库文档不足，可上传商品手册、FAQ 等资料辅助答疑。
-4. 建议以已记录数据为复盘依据，避免使用未统计的直播指标。"""
+3. 若知识库文档不足（当前 {knowledge_docs} 份），可上传商品手册、FAQ 等资料辅助答疑。
+4. 复盘依据已记录数据（话术 {script_count} 份、评论回复 {reply_count} 条），不推断未记录的直播指标。
+
+近期评论与回复：
+{comments_text}"""
 
 
 def resolve_llm_provider_model() -> tuple[str, str]:
@@ -580,20 +600,22 @@ def mock_llm_response(prompt: str, feature: str = "unknown") -> str:
 注意：当前为 mock 模式，如需真实回答，请在 .env 中配置 DeepSeek API。"""
 
     if feature == "live_review":
-        return """数据概览
-本商品已具备基础运营素材：话术、评论回复与知识库文档均有记录，直播准备度处于可用状态。
+        return """用户关注点
+根据近期评论，观众主要关注价格、优惠与适用人群；如果评论样本较少，应先说明"当前评论样本较少"，不强行归纳。
 
-亮点
-已围绕商品卖点准备话术，并能结合评论内容生成回复，运营动作相对完整。
+常见异议
+观众可能对质量与效果存在疑虑，商品资料未明确的内容不做推断，建议以商品页信息为准。
 
-问题
-部分商品资料可能仍需补充（如卖点、人群、痛点不完整时），知识库素材数量有限。
+高频问题
+1. 价格与优惠：结合优惠信息回答，以页面实际活动为准。
+2. 适用人群：结合商品资料中的适用人群回答。
+3. 质量与效果：仅介绍资料确认过的卖点，不夸大承诺。
 
-改进建议
-1. 补齐缺失的商品资料字段；
-2. 针对高频评论问题整理标准回复；
+下场直播优化建议
+1. 补齐缺失的商品资料字段（核心卖点、适用人群、用户痛点、优惠信息）。
+2. 针对高频评论问题整理标准回复。
 3. 上传商品手册、FAQ 等资料到商品知识库，提升答疑准确度。
-（注意：以上为 mock 复盘，仅基于已记录数据，不包含未统计的直播指标。）"""
+（注意：以上为 mock 复盘，仅基于已记录数据，不包含直播场次、销量、GMV、转化率、观看人数等未统计指标。）"""
 
     if feature == "live_comment_reply":
         # 从 prompt 中解析商品字段与评论，生成 1-3 句结合商品信息的主播口吻回复
