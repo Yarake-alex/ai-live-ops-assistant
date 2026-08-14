@@ -384,6 +384,53 @@ def call_llm(
     return response_text
 
 
+def _extract_live_comment_reply_fields(prompt: str) -> dict[str, str]:
+    """从评论回复 prompt 中解析商品字段与观众评论。
+
+    简单按行匹配「字段名：值」格式（兼容「- 字段名：值」），不做复杂解析；
+    未找到的字段返回空字符串。观众评论的正文在标题行的下一行。
+    """
+    labels = {
+        "商品名称": "name",
+        "价格": "price",
+        "核心卖点": "selling_points",
+        "适用人群": "target_audience",
+        "用户痛点": "pain_points",
+        "优惠信息": "promotion",
+        "库存": "stock",
+        "直播状态": "live_status",
+        "备注": "notes",
+        "观众评论": "comment",
+    }
+    fields: dict[str, str] = {}
+    lines = prompt.splitlines()
+    for i, raw in enumerate(lines):
+        line = raw.strip()
+        if line.startswith("- "):
+            line = line[2:]
+        for label, key in labels.items():
+            prefix = label + "："
+            if line.startswith(prefix):
+                fields[key] = line[len(prefix):].strip()
+                if key == "comment" and not fields[key]:
+                    # 评论正文在「观众评论：」标题的下一行
+                    for nxt in lines[i + 1:]:
+                        candidate = nxt.strip()
+                        if candidate:
+                            fields[key] = candidate
+                            break
+                break
+    return fields
+
+
+def _mock_context_value(value: str) -> str:
+    """把 prompt 中的字段值转成可用值；「未填写」等占位视为缺失。"""
+    value = (value or "").strip()
+    if not value or value == "未填写":
+        return ""
+    return value
+
+
 def mock_llm_response(prompt: str, feature: str = "unknown") -> str:
     # 直播话术通过显式 feature 分发，不再依赖 prompt 关键词
     if feature == "live_script_generation":
@@ -409,7 +456,41 @@ def mock_llm_response(prompt: str, feature: str = "unknown") -> str:
 最后总结一下，这款商品适合对当前卖点有明确需求的用户。确认需要的朋友可以查看商品卡，下单前也可以继续留言确认关键信息。"""
 
     if feature == "live_comment_reply":
-        return """亲，感谢你的提问～这款商品的具体信息我按商品资料再跟你确认一下：价格、优惠和适用人群都可以在商品卡里看到，也可以告诉我你的使用场景，我帮你一起看看合不合适。"""
+        # 从 prompt 中解析商品字段与评论，生成 1-3 句结合商品信息的主播口吻回复
+        f = _extract_live_comment_reply_fields(prompt)
+        name = _mock_context_value(f.get("name", ""))
+        price = _mock_context_value(f.get("price", ""))
+        promotion = _mock_context_value(f.get("promotion", ""))
+        audience = _mock_context_value(f.get("target_audience", ""))
+        selling = _mock_context_value(f.get("selling_points", ""))
+        pain = _mock_context_value(f.get("pain_points", ""))
+        comment = f.get("comment", "").strip()
+
+        if not name:
+            return "亲，这款商品的具体信息以商品页为准，价格、优惠和适用人群都可以在商品卡里确认，有疑问继续问我～"
+
+        # 第 1 句：名称 + 价格 + 优惠（缺失时不编造）
+        s1 = f"亲，这款是{name}" + (f"，价格{price}元" if price else "") + (
+            f"，优惠是：{promotion}" if promotion else ""
+        ) + "。"
+
+        # 第 2 句：适用人群 / 核心卖点 / 用户痛点（有则说，缺失则以商品页为准）
+        s2_parts = []
+        if audience:
+            s2_parts.append(f"适用人群是：{audience}")
+        if selling:
+            s2_parts.append(f"核心卖点是：{selling}")
+        if pain:
+            s2_parts.append(f"主要针对的痛点是：{pain}")
+        s2 = "，".join(s2_parts) + "。" if s2_parts else "具体信息以商品页为准。"
+
+        # 第 3 句：评论回答方向 + 转化收尾；质量/效果/敏感肌等问题保持保守表达
+        s3 = ""
+        if any(k in comment for k in ("质量", "效果", "敏感", "怎么样")):
+            s3 = "关于质量和效果，我们只介绍资料里确认过的信息，不夸大承诺；"
+        s3 += "喜欢的朋友可以点商品卡看看，拿不准的继续问我～"
+
+        return s1 + s2 + s3
 
     if "知识库资料" in prompt or "参考资料" in prompt:
         return """【AI模拟RAG回答】

@@ -34,6 +34,64 @@ class TestCommentReplyGeneration:
         assert "评论测试商品-保湿精华" in data["prompt"]
         assert "多少钱？" in data["prompt"]
 
+    def test_mock_success_reply_contains_product_context(self, client, comment_reply_product_id):
+        """mock 成功路径的回复必须结合商品信息，而不是固定通用文案。"""
+        resp = client.post(
+            f"/products/{comment_reply_product_id}/comment-replies",
+            json={"comment": "多少钱？"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "success"
+        reply = data["reply"]
+        assert "评论测试商品-保湿精华" in reply          # 商品名称
+        assert "99.50" in reply                            # 价格
+        assert PRODUCT_DATA["promotion"] in reply          # 优惠信息
+        assert (
+            PRODUCT_DATA["target_audience"] in reply
+            or PRODUCT_DATA["selling_points"] in reply
+        )                                                   # 适用人群或核心卖点
+        for banned in ["全网最低", "百分百", "永久解决"]:
+            assert banned not in reply
+
+    def test_mock_reply_conservative_for_sensitive_question(self, client, comment_reply_product_id):
+        """敏感肌/效果类问题必须保守表达，不夸大承诺。"""
+        resp = client.post(
+            f"/products/{comment_reply_product_id}/comment-replies",
+            json={"comment": "敏感肌能用吗？"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "success"
+        reply = data["reply"]
+        assert "资料里确认过" in reply
+        for banned in ["全网最低", "百分百", "永久解决", "绝对有效"]:
+            assert banned not in reply
+
+    def test_extract_fields_from_prompt(self):
+        """字段解析 helper：能从 prompt 中提取商品字段与评论正文。"""
+        from app.llm import _extract_live_comment_reply_fields
+
+        prompt = (
+            "商品资料：\n"
+            "- 商品名称：测试商品甲\n"
+            "- 价格：99.5\n"
+            "- 核心卖点：补水保湿\n"
+            "- 适用人群：干性皮肤人群\n"
+            "- 用户痛点：未填写\n"
+            "- 优惠信息：买二送一\n"
+            "观众评论：\n"
+            "多少钱？\n"
+        )
+        fields = _extract_live_comment_reply_fields(prompt)
+        assert fields["name"] == "测试商品甲"
+        assert fields["price"] == "99.5"
+        assert fields["selling_points"] == "补水保湿"
+        assert fields["target_audience"] == "干性皮肤人群"
+        assert fields["pain_points"] == "未填写"
+        assert fields["promotion"] == "买二送一"
+        assert fields["comment"] == "多少钱？"
+
     def test_reply_record_is_saved(self, client, comment_reply_product_id):
         create_resp = client.post(
             f"/products/{comment_reply_product_id}/comment-replies",
