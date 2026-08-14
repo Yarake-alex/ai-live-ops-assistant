@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Fast-token-estimate heuristics
 FALLBACK_MESSAGE = (
-    "AI 服务暂时不可用，请稍后重试。你仍可以先记录本次跟进内容。"
+    "AI 服务暂时不可用，请稍后重试。你可以稍后重试，或使用本地兜底内容继续演示。"
 )
 RETRYABLE_HTTP_STATUS = {429, 500, 502, 503, 504}
 LIVE_SCRIPT_SECTION_TITLES = [

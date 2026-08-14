@@ -189,7 +189,7 @@ def build_rag_prompt(question: str, retrieved_chunks: List[DocumentChunk]) -> st
 2. 如果资料中没有明确答案，要说明“资料中未明确提到”，并给出合理的销售追问建议。
 3. 回答要适合销售人员使用，尽量具体、可执行。
 4. 如果涉及产品推荐，请说明推荐依据。
-5. 最后给出“可直接对客户说的话术”。
+5. 最后给出“可直接对用户/观众说的话术”。
 
 用户问题：
 {question}

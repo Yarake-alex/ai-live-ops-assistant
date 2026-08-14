@@ -538,18 +538,18 @@
         }
 
         /* ═══════════════════════════════════════════
-           CRM 3-Column Layout
+           Product Page 3-Column Layout
            ═══════════════════════════════════════════ */
-        .crm-grid {
+        .product-grid {
             display: grid;
             grid-template-columns: 320px 1fr 360px;
             gap: 16px;
             align-items: start;
         }
-        .crm-grid > div > .card:last-child { margin-bottom: 0; }
+        .product-grid > div > .card:last-child { margin-bottom: 0; }
 
         /* ═══════════════════════════════════════════
-           AI / RAG / Agent Grid
+           AI / RAG Grid
            ═══════════════════════════════════════════ */
         .ai-grid {
             display: grid;
@@ -754,9 +754,9 @@
         }
 
         /* ═══════════════════════════════════════════
-           Customer Items
+           List Items
            ═══════════════════════════════════════════ */
-        .customer-item {
+        .list-item {
             padding: 14px 16px;
             border: 1.5px solid var(--border-light);
             border-radius: var(--radius);
@@ -765,16 +765,16 @@
             background: #fafbfc;
             transition: all 0.15s ease;
         }
-        .customer-item:hover {
+        .list-item:hover {
             background: #eff6ff;
             border-color: #bfdbfe;
         }
-        .customer-item.selected {
+        .list-item.selected {
             background: #eff6ff;
             border-color: var(--primary);
             border-left: 3px solid var(--primary);
         }
-        .customer-item b {
+        .list-item b {
             color: var(--text-primary);
             font-size: 15px;
         }
@@ -977,7 +977,7 @@
 
         /* Tablet & below: collapse sidebar */
         @media (max-width: 1024px) {
-            .crm-grid {
+            .product-grid {
                 grid-template-columns: 1fr;
             }
             .stats-grid {
@@ -1042,7 +1042,7 @@
             .stat-card {
                 padding: 16px 18px;
             }
-            .crm-grid {
+            .product-grid {
                 grid-template-columns: 1fr;
                 gap: 12px;
             }
@@ -1339,7 +1339,7 @@
                 </div>
 
                 <!-- ── Two-Column Layout ── -->
-                <div class="crm-grid">
+                <div class="product-grid">
                     <!-- Left: Product List -->
                     <div>
                         <div class="card" style="padding:16px;">
@@ -1553,7 +1553,7 @@
                             <div class="card-header">
                                 <h2>产品资料问答</h2>
                             </div>
-                            <textarea id="ragQuestion" placeholder="例如：客户做车载中控屏，应该推荐哪些显示方案？需要追问哪些参数？"></textarea>
+                            <textarea id="ragQuestion" placeholder="例如：这款商品适合什么人群？敏感肌能不能用？售后规则是什么？"></textarea>
                             <button class="success" onclick="askRag()">基于资料回答</button>
                             <div id="ragResult" class="result">
                                 <div class="result-empty">上传资料后，可以在这里提问。</div>
@@ -2002,7 +2002,7 @@ async function loadRagDocuments() {
             ? `<div class="muted" style="font-size:0.85em;margin:4px 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(d.preview)}…</div>`
             : "";
         return `
-            <div class="customer-item">
+            <div class="list-item">
                 <b>${escapeHtml(d.filename)}</b>
                 <div class="muted">片段：${d.chunks} 个 · ${vecInfo}${updatedInfo}</div>
                 ${previewHtml}
@@ -2291,7 +2291,7 @@ function _renderProductList(products) {
     box.innerHTML = products.map(p => {
         const points = (p.selling_points || "").slice(0, 40);
         return `
-        <div class="customer-item" data-product-id="${p.id}" onclick="selectProduct(${p.id})">
+        <div class="list-item" data-product-id="${p.id}" onclick="selectProduct(${p.id})">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <b>${escapeHtml(p.name)}</b>
                 <span class="status-tag">${escapeHtml(p.live_status || "未上播")}</span>
@@ -2304,7 +2304,7 @@ function _renderProductList(products) {
 }
 
 function _updateProductHighlight() {
-    document.querySelectorAll("#productList .customer-item").forEach(item => {
+    document.querySelectorAll("#productList .list-item").forEach(item => {
         const id = Number(item.dataset.productId);
         item.classList.toggle("selected", id === selectedProductId);
     });
@@ -2413,7 +2413,7 @@ function _renderLiveScriptHistory(records) {
     box.innerHTML = records.map(item => {
         const created = item.created_at ? new Date(item.created_at).toLocaleString() : "";
         return `
-            <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
                 <div>
                     <b>${escapeHtml(_formatLiveScriptStatus(item))}</b>
                     <span class="tag">${escapeHtml(item.provider || "mock")}</span>
@@ -2683,7 +2683,7 @@ async function loadCommentReplyHistory() {
         box.innerHTML = records.map(item => {
             const created = item.created_at ? new Date(item.created_at).toLocaleString() : "";
             return `
-                <div class="customer-item">
+                <div class="list-item">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
                         <b style="font-size:13px;">💬 ${escapeHtml((item.comment || "").slice(0, 40))}</b>
                         <span class="status-tag">${escapeHtml(_commentReplyStatusText(item.status))}</span>
@@ -2764,7 +2764,7 @@ async function loadLiveReviewHistory() {
         box.innerHTML = records.map(item => {
             const created = item.created_at ? new Date(item.created_at).toLocaleString() : "";
             return `
-                <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div>
                         <b>${escapeHtml(_reviewStatusText(item.status))}</b>
                         <div class="muted" style="font-size:11px;">${escapeHtml(created)}</div>
@@ -2836,7 +2836,7 @@ async function loadProductKnowledgeDocs() {
             return;
         }
         box.innerHTML = docs.map(d => `
-            <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
                 <div style="min-width:0;">
                     <b style="font-size:13px;">📄 ${escapeHtml(d.filename)}</b>
                     <div class="muted" style="font-size:11px;">${d.chunks} 个片段${d.preview ? " · " + escapeHtml(d.preview.slice(0, 40)) + "…" : ""}</div>
@@ -2942,7 +2942,7 @@ async function loadUserList() {
         }
 
         box.innerHTML = users.map(u => `
-            <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                 <div>
                     <b>${escapeHtml(u.username)}</b>
                     <span class="tag">${escapeHtml(u.role)}</span>
