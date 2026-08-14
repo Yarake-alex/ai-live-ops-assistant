@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+pydantic-settings
+python-dotenv
+openai>=1.0,<3  # app/llm.py 使用 httpx.Timeout，openai 3.x 已切换到 httpx2，不兼容
+python-multipart
+pypdf
+scikit-learn
+# -- Optional dependencies (see requirements-*.txt) --
+# chromadb             -> requirements-vector.txt (SQLite vector search)
+# sentence-transformers -> requirements-embedding-local.txt (local embedding)
+# psycopg[binary]      -> requirements-db-pg.txt (PostgreSQL)
+# pgvector             -> requirements-db-pg.txt (PostgreSQL vector search)
