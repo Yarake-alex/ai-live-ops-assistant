@@ -503,7 +503,7 @@ class TestProductCsv:
             r for r in client.app.routes
             if isinstance(r, APIRoute) and r.path == "/products/import"
         )
-        monkeypatch.setitem(route.endpoint.__globals__, "_parse_decimal_field", boom)
+        monkeypatch.setitem(route.endpoint.__globals__, "ProductCreate", boom)
 
         resp = _csv_upload(client, "boom.csv", "name,price\n未知异常商品,9.9\n")
         assert resp.status_code == 200
@@ -512,6 +512,47 @@ class TestProductCsv:
         assert len(data["errors"]) == 1
         assert data["errors"][0]["reason"] == "该行数据格式不正确"
         assert "internal-secret-detail" not in resp.text
+
+    def test_import_name_over_100_chars_reports_row_error(self, client):
+        csv_content = f"name,price\n{'长' * 101},10\n"
+        resp = _csv_upload(client, "longname.csv", csv_content)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 0
+        assert len(data["errors"]) == 1
+        assert "name" in data["errors"][0]["reason"]
+
+    def test_import_live_status_over_20_chars_reports_row_error(self, client):
+        csv_content = f"name,live_status\n状态超长商品,{'x' * 21}\n"
+        resp = _csv_upload(client, "longstatus.csv", csv_content)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 0
+        assert len(data["errors"]) == 1
+        assert "live_status" in data["errors"][0]["reason"]
+
+    def test_import_long_text_field_reports_row_error(self, client):
+        csv_content = f"name,selling_points\n卖点超长商品,{'卖' * 2001}\n"
+        resp = _csv_upload(client, "longtext.csv", csv_content)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 0
+        assert len(data["errors"]) == 1
+        assert "selling_points" in data["errors"][0]["reason"]
+
+    def test_import_trims_name_whitespace(self, client):
+        csv_content = "name,price\n  首尾空格商品  ,10\n"
+        resp = _csv_upload(client, "trimname.csv", csv_content)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 1
+
+        resp = client.get("/products/search", params={"q": "首尾空格商品"})
+        products = resp.json()["items"]
+        assert len(products) == 1
+        assert products[0]["name"] == "首尾空格商品"
+        # 清理测试数据
+        client.delete(f"/products/{products[0]['id']}")
 
     def test_export_contains_headers_and_rows(self, client):
         resp = client.post("/products", json={"name": "导出内容测试商品", "price": 39.9, "stock": 7})

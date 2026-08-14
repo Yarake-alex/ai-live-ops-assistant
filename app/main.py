@@ -5,7 +5,6 @@ import json
 import base64
 import logging
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
@@ -14,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.database import get_db
 from app.config import settings
@@ -822,32 +821,14 @@ def get_product_for_user(db: Session, product_id: int, user: User) -> Product:
     return product
 
 
-def _parse_decimal_field(value: str, field_label: str) -> Decimal:
-    """解析 CSV 价格列：空值返回 0，非法或负数报错。"""
-    value = (value or "").strip()
-    if not value:
-        return Decimal("0")
-    try:
-        parsed = Decimal(value)
-    except InvalidOperation:
-        raise ValueError(f"{field_label} 格式不正确")
-    if parsed < 0:
-        raise ValueError(f"{field_label} 不能为负数")
-    return parsed
-
-
-def _parse_int_field(value: str, field_label: str) -> int:
-    """解析 CSV 库存列：空值返回 0，非法或负数报错。"""
-    value = (value or "").strip()
-    if not value:
-        return 0
-    try:
-        parsed = int(value)
-    except ValueError:
-        raise ValueError(f"{field_label} 格式不正确")
-    if parsed < 0:
-        raise ValueError(f"{field_label} 不能为负数")
-    return parsed
+def _format_validation_error(exc: ValidationError) -> str:
+    """把 Pydantic 校验错误格式化为可读的行级原因，例如「price: Input should be a valid decimal」。"""
+    parts = []
+    for err in exc.errors():
+        loc = ".".join(str(x) for x in err.get("loc", ()))
+        msg = err.get("msg", "字段格式不正确")
+        parts.append(f"{loc}: {msg}" if loc else msg)
+    return "; ".join(parts)
 
 
 @app.post("/products", response_model=ProductOut)
@@ -998,13 +979,23 @@ def import_products_csv(
         # 中文表头 → 英文字段名
         row = {_PRODUCT_CSV_HEADER_ALIASES.get(k, k): v for k, v in row.items()}
         try:
-            name = (row.get("name") or "").strip()
+            # 复用 ProductCreate schema 校验，与 JSON API 规则保持一致：
+            # name trim 非空且 <=100、price >=0、stock >=0 整数、
+            # live_status <=20、长文本字段 <=2000
+            product_data = ProductCreate(
+                name=(row.get("name") or "").strip(),
+                price=(row.get("price") or "").strip() or "0",
+                selling_points=(row.get("selling_points") or "").strip() or None,
+                target_audience=(row.get("target_audience") or "").strip() or None,
+                pain_points=(row.get("pain_points") or "").strip() or None,
+                promotion=(row.get("promotion") or "").strip() or None,
+                stock=(row.get("stock") or "").strip() or "0",
+                live_status=(row.get("live_status") or "").strip() or "未上播",
+                notes=(row.get("notes") or "").strip() or None,
+            )
+            name = product_data.name
 
-            if not name:
-                errors.append({"row": row_num, "reason": "name（商品名称）为必填项"})
-                continue
-
-            # 重复检测：当前用户名下同名字段视为重复
+            # 重复检测：当前用户名下同名商品视为重复
             existing_in_db = (
                 db.query(Product)
                 .filter(
@@ -1017,28 +1008,17 @@ def import_products_csv(
                 skipped += 1
                 continue
 
-            price = _parse_decimal_field(row.get("price") or "", "price（价格）")
-            stock = _parse_int_field(row.get("stock") or "", "stock（库存）")
-
             # 只有通过所有校验、确定要创建的行才加入去重集合
             batch_seen.add(name)
 
-            product = Product(
-                user_id=current_user.id,
-                name=name,
-                price=price,
-                selling_points=(row.get("selling_points") or "").strip() or None,
-                target_audience=(row.get("target_audience") or "").strip() or None,
-                pain_points=(row.get("pain_points") or "").strip() or None,
-                promotion=(row.get("promotion") or "").strip() or None,
-                stock=stock,
-                live_status=(row.get("live_status") or "").strip() or "未上播",
-                notes=(row.get("notes") or "").strip() or None,
-            )
+            product = Product(user_id=current_user.id, **product_data.model_dump())
             db.add(product)
             created += 1
+        except ValidationError as exc:
+            # 可预期的 Pydantic 校验错误——按行返回清晰原因（ValidationError 是 ValueError 子类，须先捕获）
+            errors.append({"row": row_num, "reason": _format_validation_error(exc)})
         except ValueError as exc:
-            # 可预期错误（价格/库存格式、负数等）——返回清晰原因
+            # 其他可预期错误——返回清晰原因
             errors.append({"row": row_num, "reason": str(exc)})
         except Exception:
             # 未知异常——只返回通用行级错误，内部细节记录到日志
