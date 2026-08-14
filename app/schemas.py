@@ -98,6 +98,20 @@ class ProductSearchResult(BaseModel):
     pages: int
 
 
+class LiveScriptOut(BaseModel):
+    id: int
+    product_id: int
+    content: str
+    prompt: str
+    provider: str
+    model: str
+    status: str
+    error_message: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AIResult(BaseModel):
     result: str
 

@@ -1544,7 +1544,22 @@
                             </div>
                             <div id="productDetailActions" class="detail-actions" style="display:none;">
                                 <button onclick="openProductModal(true)">✏️ 编辑商品</button>
+                                <button class="secondary" id="generateLiveScriptBtn" onclick="generateLiveScript()">🎙 生成直播话术</button>
                                 <button class="danger" onclick="deleteSelectedProduct()">🗑 删除商品</button>
+                            </div>
+                            <div id="liveScriptPanel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                                    <h3 style="margin:0;font-size:15px;">AI 直播话术</h3>
+                                    <span id="liveScriptStatus" class="muted" style="font-size:12px;"></span>
+                                </div>
+                                <div id="liveScriptResult" class="result" style="min-height:120px;margin-bottom:12px;">
+                                    <div class="result-empty">选择商品后可生成直播带货话术。</div>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                    <span style="font-weight:700;font-size:14px;">历史话术</span>
+                                    <button class="light" onclick="loadProductLiveScripts()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                </div>
+                                <div id="liveScriptHistory" style="max-height:220px;overflow-y:auto;"></div>
                             </div>
                         </div>
                     </div>
@@ -3174,7 +3189,107 @@ async function selectProduct(id) {
     `;
 
     document.getElementById("productDetailActions").style.display = "flex";
+    document.getElementById("liveScriptPanel").style.display = "block";
+    _resetLiveScriptResult();
+    await loadProductLiveScripts(id);
     closeProductModal();
+}
+
+function _resetLiveScriptResult() {
+    document.getElementById("liveScriptStatus").textContent = "";
+    document.getElementById("liveScriptResult").innerHTML = '<div class="result-empty">点击“生成直播话术”后，结果会显示在这里。</div>';
+}
+
+function _formatLiveScriptStatus(script) {
+    if (script.status === "fallback") return "本地兜底";
+    if (script.status === "failed") return "生成失败";
+    return "生成成功";
+}
+
+function _renderLiveScript(script) {
+    const statusText = _formatLiveScriptStatus(script);
+    const created = script.created_at ? new Date(script.created_at).toLocaleString() : "";
+    const warning = script.status === "fallback" && script.error_message
+        ? `<div class="muted" style="margin-bottom:8px;">AI 暂时不可用，已返回本地兜底话术。</div>`
+        : "";
+
+    document.getElementById("liveScriptResult").innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <b>${escapeHtml(statusText)}</b>
+            <span class="muted" style="font-size:12px;">${escapeHtml(created)}</span>
+        </div>
+        ${warning}
+        ${renderAIText(script.content)}
+    `;
+}
+
+function _renderLiveScriptHistory(records) {
+    const box = document.getElementById("liveScriptHistory");
+    if (!records.length) {
+        box.innerHTML = '<div class="empty-state"><p>暂无历史话术。</p></div>';
+        return;
+    }
+
+    box.innerHTML = records.map(item => {
+        const created = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+        return `
+            <div class="customer-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <div>
+                    <b>${escapeHtml(_formatLiveScriptStatus(item))}</b>
+                    <span class="tag">${escapeHtml(item.provider || "mock")}</span>
+                    <div class="muted" style="font-size:11px;">${escapeHtml(created)}</div>
+                </div>
+                <button class="light" onclick="viewLiveScript(${item.id})" style="font-size:12px;padding:4px 10px;">查看</button>
+            </div>
+        `;
+    }).join("");
+}
+
+async function generateLiveScript() {
+    if (!selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+
+    const btn = document.getElementById("generateLiveScriptBtn");
+    const statusEl = document.getElementById("liveScriptStatus");
+    btn.disabled = true;
+    statusEl.textContent = "生成中...";
+    document.getElementById("liveScriptResult").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>AI 正在生成直播话术...</span></div>';
+
+    try {
+        const script = await request(`/products/${selectedProductId}/live-scripts`, { method: "POST" });
+        statusEl.textContent = script.status === "fallback" ? "已返回本地兜底" : "生成完成";
+        _renderLiveScript(script);
+        await loadProductLiveScripts(selectedProductId);
+    } catch (e) {
+        statusEl.textContent = "生成失败";
+        document.getElementById("liveScriptResult").innerHTML = '<div class="result-empty">生成失败，请稍后重试。</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function loadProductLiveScripts(productId) {
+    const id = productId || selectedProductId;
+    if (!id) return;
+
+    try {
+        const records = await request(`/products/${id}/live-scripts`);
+        _renderLiveScriptHistory(records);
+    } catch (e) {
+        document.getElementById("liveScriptHistory").innerHTML = '<div class="result-empty">历史话术加载失败。</div>';
+    }
+}
+
+async function viewLiveScript(scriptId) {
+    try {
+        const script = await request(`/live-scripts/${scriptId}`);
+        document.getElementById("liveScriptStatus").textContent = "已加载历史话术";
+        _renderLiveScript(script);
+    } catch (e) {
+        // request() 已展示错误
+    }
 }
 
 function clearSelectedProduct() {
@@ -3183,6 +3298,9 @@ function clearSelectedProduct() {
     _updateProductHighlight();
     document.getElementById("productDetail").innerHTML = '<div style="text-align:center;padding:40px 0;"><div style="font-size:40px;margin-bottom:12px;">📦</div><div>请选择一个商品以查看详情</div></div>';
     document.getElementById("productDetailActions").style.display = "none";
+    document.getElementById("liveScriptPanel").style.display = "none";
+    document.getElementById("liveScriptHistory").innerHTML = "";
+    _resetLiveScriptResult();
     closeProductModal();
 }
 

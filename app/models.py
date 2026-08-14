@@ -21,6 +21,7 @@ class User(Base):
 
     customers: Mapped[List["Customer"]] = relationship(back_populates="owner")
     products: Mapped[List["Product"]] = relationship(back_populates="owner")
+    live_scripts: Mapped[List["LiveScript"]] = relationship(back_populates="owner")
     document_chunks: Mapped[List["DocumentChunk"]] = relationship(back_populates="owner")
 
 
@@ -70,6 +71,30 @@ class Product(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     owner: Mapped["User"] = relationship(back_populates="products")
+    live_scripts: Mapped[List["LiveScript"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
+
+
+class LiveScript(Base):
+    """AI 直播话术生成记录。"""
+
+    __tablename__ = "live_scripts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    provider: Mapped[str] = mapped_column(String(50), default="mock", nullable=False)
+    model: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="success", nullable=False, index=True)
+    error_message: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    owner: Mapped["User"] = relationship(back_populates="live_scripts")
+    product: Mapped["Product"] = relationship(back_populates="live_scripts")
 
 
 class FollowUp(Base):

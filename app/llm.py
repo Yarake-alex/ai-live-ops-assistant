@@ -15,6 +15,15 @@ FALLBACK_MESSAGE = (
     "AI 服务暂时不可用，请稍后重试。你仍可以先记录本次跟进内容。"
 )
 RETRYABLE_HTTP_STATUS = {429, 500, 502, 503, 504}
+LIVE_SCRIPT_SECTION_TITLES = [
+    "开场引入",
+    "商品卖点讲解",
+    "用户痛点刺激",
+    "互动提问",
+    "优惠逼单",
+    "异议回应",
+    "结尾转化",
+]
 
 
 def _estimate_tokens(text: str) -> int:
@@ -128,6 +137,76 @@ def build_customer_context(customer, followups):
 历史跟进记录：
 {records}
 """
+
+
+def _safe_product_value(value, default: str = "未填写") -> str:
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text or default
+
+
+def build_live_script_prompt(product) -> str:
+    """Build a maintainable prompt for AI live commerce script generation."""
+    sections = "\n".join(f"- {title}" for title in LIVE_SCRIPT_SECTION_TITLES)
+    return f"""
+你是一个谨慎、专业的直播电商运营助手。请基于商品资料生成一份主播可直接口播的直播带货话术。
+
+商品资料：
+- 商品名称：{_safe_product_value(product.name)}
+- 价格：{_safe_product_value(product.price)}
+- 核心卖点：{_safe_product_value(product.selling_points)}
+- 适用人群：{_safe_product_value(product.target_audience)}
+- 用户痛点：{_safe_product_value(product.pain_points)}
+- 优惠信息：{_safe_product_value(product.promotion)}
+- 库存：{_safe_product_value(product.stock)}
+- 直播状态：{_safe_product_value(product.live_status)}
+- 备注：{_safe_product_value(product.notes)}
+
+必须输出以下七个模块，每个模块都要有清晰标题：
+{sections}
+
+要求：
+1. 面向直播电商主播，语言自然，适合直接口播。
+2. 只使用商品资料中已有的信息，不要编造不存在的功效、参数或承诺。
+3. 不要涉及医疗、绝对化保证等高风险表达。
+4. 不要使用“全网最低”“百分百有效”“永久解决”等绝对化表述。
+5. 如果商品资料不足，请在对应模块提醒补充信息，并给出保守表达。
+"""
+
+
+def build_live_script_fallback(product) -> str:
+    """Local fallback script used when the LLM is unavailable."""
+    name = _safe_product_value(product.name, "这款商品")
+    price = _safe_product_value(product.price)
+    selling_points = _safe_product_value(product.selling_points, "当前卖点资料还不完整，建议补充核心优势")
+    target_audience = _safe_product_value(product.target_audience, "建议补充适用人群")
+    pain_points = _safe_product_value(product.pain_points, "建议补充用户常见痛点")
+    promotion = _safe_product_value(product.promotion, "暂无明确优惠信息")
+    stock = _safe_product_value(product.stock)
+    live_status = _safe_product_value(product.live_status)
+    notes = _safe_product_value(product.notes, "暂无备注")
+
+    return f"""开场引入
+欢迎大家来到直播间，今天给大家介绍的是{name}。这款商品当前直播状态是{live_status}，如果你正在对比同类产品，可以先听我用一分钟讲清楚它适合谁、解决什么问题。
+
+商品卖点讲解
+这款商品的核心卖点是：{selling_points}。当前价格为{price}元，库存为{stock}。建议主播围绕已填写卖点讲解，不补充未确认的功效或参数。
+
+用户痛点刺激
+如果你平时遇到的问题是：{pain_points}，可以重点关注这款商品是否匹配你的使用场景。这里不做夸大承诺，建议结合自己的实际需求判断。
+
+互动提问
+大家可以在评论区告诉我：你更看重价格、卖点、适用人群，还是优惠力度？如果你属于{target_audience}，也可以直接打在公屏上，我帮你一起看是否适合。
+
+优惠逼单
+当前优惠信息是：{promotion}。如果你已经确认需要，可以优先关注本场直播间的下单入口；如果优惠信息还不完整，建议主播先提示以页面实际活动为准。
+
+异议回应
+如果你担心不适合自己，建议先看商品资料里的适用人群：{target_audience}。如果还不确定，可以先留言说明你的使用场景，主播根据已知信息做保守建议，不做绝对保证。
+
+结尾转化
+最后再帮大家总结一下：{name} 适合关注「{selling_points}」的用户，补充备注为：{notes}。确认需要的朋友可以查看直播间商品卡，犹豫的朋友可以先收藏或留言补充问题。"""
 
 
 def call_llm(
@@ -250,6 +329,28 @@ def call_llm(
 
 
 def mock_llm_response(prompt: str) -> str:
+    if "直播带货话术" in prompt or "直播电商主播" in prompt:
+        return """开场引入
+欢迎来到直播间，今天这款商品适合正在认真对比、想快速抓住重点的朋友。先别急着划走，我会按价格、卖点、适用人群和优惠信息帮你讲清楚。
+
+商品卖点讲解
+这款商品的讲解重点建议围绕资料中已填写的核心卖点展开，用真实信息说明它为什么值得关注，不额外夸大未确认的效果。
+
+用户痛点刺激
+如果你遇到过资料中提到的使用痛点，可以重点听这一段。我们只基于当前商品信息做说明，不做绝对化承诺。
+
+互动提问
+大家可以在评论区打出你最关心的问题：价格、库存、适用人群、优惠，或者你自己的使用场景，我会按商品资料逐个回应。
+
+优惠逼单
+如果当前有优惠信息，建议主播明确说明优惠条件和下单入口；如果优惠信息不足，就提示以页面活动为准，避免制造不确定承诺。
+
+异议回应
+对是否适合自己有疑问的朋友，可以先对照适用人群和核心卖点。资料没有覆盖的情况，建议补充问题后再判断。
+
+结尾转化
+最后总结一下，这款商品适合对当前卖点有明确需求的用户。确认需要的朋友可以查看商品卡，下单前也可以继续留言确认关键信息。"""
+
     if "知识库资料" in prompt or "参考资料" in prompt:
         return """【AI模拟RAG回答】
 根据已上传资料，当前问题可以从产品应用场景、客户需求匹配和下一步沟通三个方面分析。

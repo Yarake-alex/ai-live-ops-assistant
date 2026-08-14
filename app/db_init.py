@@ -110,6 +110,12 @@ def upgrade_database() -> None:
         from app.models import AiCallLog
         AiCallLog.__table__.create(bind=engine, checkfirst=True)
 
+    # ── Phase 7: live script generation records ──
+    inspector = inspect(engine)
+    if "live_scripts" not in inspector.get_table_names():
+        from app.models import LiveScript
+        LiveScript.__table__.create(bind=engine, checkfirst=True)
+
 
 
 def create_indexes() -> None:
@@ -141,6 +147,18 @@ def create_indexes() -> None:
         )
         conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_ai_call_logs_status ON ai_call_logs (status)")
+        )
+
+    # ── Phase 7: live script indexes ──
+    with engine.begin() as conn:
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_scripts_user_id ON live_scripts (user_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_scripts_product_id ON live_scripts (product_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_scripts_status ON live_scripts (status)")
         )
 
 

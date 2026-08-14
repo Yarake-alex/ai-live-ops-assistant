@@ -17,7 +17,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.database import get_db
 from app.config import settings
-from app.models import Customer, FollowUp, Product, DocumentChunk, User
+from app.models import Customer, FollowUp, Product, LiveScript, DocumentChunk, User
 from app.auth import create_user, verify_password, hash_password, utc_timestamp
 from app.schemas import (
     CustomerCreate,
@@ -28,6 +28,7 @@ from app.schemas import (
     ProductCreate,
     ProductOut,
     ProductSearchResult,
+    LiveScriptOut,
     AIResult,
     RagAsk,
     RagAnswer,
@@ -42,7 +43,13 @@ from app.schemas import (
     UserStatusUpdate,
     ChangePasswordRequest,
 )
-from app.llm import build_customer_context, call_llm
+from app.llm import (
+    FALLBACK_MESSAGE,
+    build_customer_context,
+    build_live_script_fallback,
+    build_live_script_prompt,
+    call_llm,
+)
 from app.rag import (
     extract_text_from_upload,
     split_text,
@@ -821,6 +828,23 @@ def get_product_for_user(db: Session, product_id: int, user: User) -> Product:
     return product
 
 
+def get_live_script_for_user(db: Session, script_id: int, user: User) -> LiveScript:
+    script = (
+        db.query(LiveScript)
+        .filter(LiveScript.id == script_id, LiveScript.user_id == user.id)
+        .first()
+    )
+    if not script:
+        raise HTTPException(status_code=404, detail="直播话术不存在")
+    return script
+
+
+def _current_llm_provider_model() -> tuple[str, str]:
+    if settings.LLM_PROVIDER == "openai_compatible" and settings.OPENAI_API_KEY:
+        return "openai_compatible", settings.OPENAI_MODEL
+    return "mock", "mock"
+
+
 def _format_validation_error(exc: ValidationError) -> str:
     """把 Pydantic 校验错误格式化为可读的行级原因，例如「price: Input should be a valid decimal」。"""
     parts = []
@@ -1083,6 +1107,83 @@ def export_products_csv(
             "Content-Disposition": "attachment; filename=products_export.csv",
         },
     )
+
+
+@app.post("/products/{product_id}/live-scripts", response_model=LiveScriptOut)
+def generate_live_script(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+    prompt = build_live_script_prompt(product)
+    provider, model = _current_llm_provider_model()
+    status = "success"
+    error_message = None
+
+    try:
+        content = call_llm(
+            prompt,
+            feature="live_script_generation",
+            user_id=current_user.id,
+            db=db,
+        )
+        if not content or FALLBACK_MESSAGE in content:
+            error_message = "AI 服务暂时不可用，已返回本地兜底话术"
+            content = build_live_script_fallback(product)
+            status = "fallback"
+    except Exception:
+        # 未知异常细节只进日志，用户侧只看到通用提示
+        logger.exception(
+            "Live script generation failed (user=%s, product=%s)",
+            current_user.id,
+            product_id,
+        )
+        content = build_live_script_fallback(product)
+        status = "fallback"
+        error_message = "AI 服务暂时不可用，已返回本地兜底话术"
+
+    script = LiveScript(
+        user_id=current_user.id,
+        product_id=product.id,
+        content=content,
+        prompt=prompt,
+        provider=provider,
+        model=model,
+        status=status,
+        error_message=error_message,
+    )
+    db.add(script)
+    db.commit()
+    db.refresh(script)
+    return script
+
+
+@app.get("/products/{product_id}/live-scripts", response_model=List[LiveScriptOut])
+def list_product_live_scripts(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+    return (
+        db.query(LiveScript)
+        .filter(
+            LiveScript.product_id == product.id,
+            LiveScript.user_id == current_user.id,
+        )
+        .order_by(LiveScript.created_at.desc(), LiveScript.id.desc())
+        .all()
+    )
+
+
+@app.get("/live-scripts/{script_id}", response_model=LiveScriptOut)
+def get_live_script(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_live_script_for_user(db, script_id, current_user)
 
 
 @app.get("/products/{product_id}", response_model=ProductOut)
