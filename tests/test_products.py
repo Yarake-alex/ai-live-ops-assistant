@@ -164,6 +164,24 @@ class TestProductValidation:
         # 清理测试数据
         client.delete(f"/products/{data['id']}")
 
+    def test_create_rejects_name_over_100_chars(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": "长" * 101})
+        assert resp.status_code == 422
+
+    def test_create_rejects_live_status_over_20_chars(self, client):
+        resp = client.post(
+            "/products",
+            json={**PRODUCT_DATA, "name": "校验测试-超长状态", "live_status": "x" * 21},
+        )
+        assert resp.status_code == 422
+
+    def test_create_rejects_long_selling_points_over_2000(self, client):
+        resp = client.post(
+            "/products",
+            json={**PRODUCT_DATA, "name": "校验测试-超长卖点", "selling_points": "卖" * 2001},
+        )
+        assert resp.status_code == 422
+
 
 class TestProductEditDelete:
     @pytest.fixture(autouse=True)
@@ -447,6 +465,53 @@ class TestProductCsv:
             files={"file": ("data.txt", b"not csv", "text/plain")},
         )
         assert resp.status_code == 400
+
+    def test_import_rejects_oversized_file(self, client):
+        from app.main import MAX_PRODUCT_CSV_BYTES
+
+        content = b"name,price\nbig,1\n" + b"0" * (MAX_PRODUCT_CSV_BYTES + 10)
+        resp = client.post(
+            "/products/import",
+            files={"file": ("big.csv", content, "text/csv")},
+        )
+        assert resp.status_code == 413
+        assert "过大" in resp.json()["detail"]
+
+    def test_import_rejects_too_many_rows(self, client):
+        from app.main import MAX_PRODUCT_CSV_ROWS
+
+        lines = ["name,price"] + [f"商品{i},1" for i in range(1, MAX_PRODUCT_CSV_ROWS + 2)]
+        content = "\n".join(lines)
+        resp = client.post(
+            "/products/import",
+            files={"file": ("many.csv", content.encode("utf-8"), "text/csv")},
+        )
+        assert resp.status_code == 400
+        assert "行数" in resp.json()["detail"]
+
+    def test_import_unknown_error_returns_generic_reason(self, client, monkeypatch):
+        """未知内部异常不应把异常细节暴露给用户。"""
+        from fastapi.routing import APIRoute
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("internal-secret-detail")
+
+        # 注意：vector 测试会重载 app 模块，而 session 级 client 仍绑定最早创建的
+        # app 实例。因此从 /products/import 端点函数自身的 __globals__ 定位其真实
+        # 所在模块打补丁，避免补丁落在新的模块对象上不生效。
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/import"
+        )
+        monkeypatch.setitem(route.endpoint.__globals__, "_parse_decimal_field", boom)
+
+        resp = _csv_upload(client, "boom.csv", "name,price\n未知异常商品,9.9\n")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] == 0
+        assert len(data["errors"]) == 1
+        assert data["errors"][0]["reason"] == "该行数据格式不正确"
+        assert "internal-secret-detail" not in resp.text
 
     def test_export_contains_headers_and_rows(self, client):
         resp = client.post("/products", json={"name": "导出内容测试商品", "price": 39.9, "stock": 7})

@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CustomerCreate(BaseModel):
@@ -47,15 +47,16 @@ class FollowUpOut(FollowUpCreate):
 
 
 class ProductCreate(BaseModel):
-    name: str
+    # 字段最大长度与数据库列定义对齐（products 表）
+    name: str = Field(max_length=100)
     price: Decimal = Decimal("0")
-    selling_points: Optional[str] = None
-    target_audience: Optional[str] = None
-    pain_points: Optional[str] = None
-    promotion: Optional[str] = None
+    selling_points: Optional[str] = Field(default=None, max_length=2000)
+    target_audience: Optional[str] = Field(default=None, max_length=2000)
+    pain_points: Optional[str] = Field(default=None, max_length=2000)
+    promotion: Optional[str] = Field(default=None, max_length=2000)
     stock: int = 0
-    live_status: Optional[str] = "未上播"
-    notes: Optional[str] = None
+    live_status: Optional[str] = Field(default="未上播", max_length=20)
+    notes: Optional[str] = Field(default=None, max_length=2000)
 
     @field_validator("name")
     @classmethod

@@ -793,6 +793,10 @@ def export_followups_csv(
 
 # ─── Product routes (live ops — 商品管理) ───
 
+# 商品 CSV 导入限制
+MAX_PRODUCT_CSV_BYTES = 5 * 1024 * 1024  # 5MB
+MAX_PRODUCT_CSV_ROWS = 5000
+
 # CSV 中文表头 → 英文字段名映射。导入同时兼容中文和英文表头。
 _PRODUCT_CSV_HEADER_ALIASES = {
     "商品名称": "name",
@@ -946,9 +950,16 @@ def import_products_csv(
         raise HTTPException(status_code=400, detail="请上传 CSV 文件")
 
     try:
-        raw = file.file.read()
+        # 有界读取：最多多读 1 字节用于判定超限，避免把超大文件整体读入内存
+        raw = file.file.read(MAX_PRODUCT_CSV_BYTES + 1)
     except Exception:
         raise HTTPException(status_code=400, detail="无法读取文件内容")
+
+    if len(raw) > MAX_PRODUCT_CSV_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"CSV 文件过大，最大支持 {MAX_PRODUCT_CSV_BYTES // (1024 * 1024)}MB",
+        )
 
     # 尝试 UTF-8-SIG 和 UTF-8 解码
     content = None
@@ -964,6 +975,17 @@ def import_products_csv(
     reader = csv.DictReader(io.StringIO(content))
     if reader.fieldnames is None:
         raise HTTPException(status_code=400, detail="CSV 文件没有任何列")
+
+    # 行数上限检查：先整体计数（csv 解析器可正确处理带引号的换行），超限直接拒绝
+    row_count = sum(1 for _ in reader)
+    if row_count > MAX_PRODUCT_CSV_ROWS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV 行数过多，最多支持 {MAX_PRODUCT_CSV_ROWS} 行",
+        )
+
+    # 重新解析用于逐行处理
+    reader = csv.DictReader(io.StringIO(content))
 
     created = 0
     skipped = 0
@@ -1016,9 +1038,16 @@ def import_products_csv(
             db.add(product)
             created += 1
         except ValueError as exc:
+            # 可预期错误（价格/库存格式、负数等）——返回清晰原因
             errors.append({"row": row_num, "reason": str(exc)})
-        except Exception as exc:
-            errors.append({"row": row_num, "reason": str(exc)})
+        except Exception:
+            # 未知异常——只返回通用行级错误，内部细节记录到日志
+            logger.exception(
+                "Product CSV import row %d failed (user=%s)",
+                row_num,
+                current_user.id,
+            )
+            errors.append({"row": row_num, "reason": "该行数据格式不正确"})
 
     db.commit()
 
