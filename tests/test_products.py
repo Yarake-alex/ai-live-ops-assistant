@@ -117,6 +117,54 @@ class TestProducts:
         assert resp.json()["name"] == PRODUCT_DATA["name"]
 
 
+class TestProductValidation:
+    """服务端输入校验：绕过前端直接调接口也必须被拒绝。"""
+
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    def test_create_rejects_empty_name(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": ""})
+        assert resp.status_code == 422
+
+    def test_create_rejects_whitespace_name(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": "   "})
+        assert resp.status_code == 422
+
+    def test_create_rejects_negative_price(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": "校验测试-负价格", "price": -1})
+        assert resp.status_code == 422
+
+    def test_create_rejects_negative_stock(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": "校验测试-负库存", "stock": -1})
+        assert resp.status_code == 422
+
+    def test_create_rejects_fractional_stock(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": "校验测试-小数库存", "stock": 3.5})
+        assert resp.status_code == 422
+
+    def test_update_rejects_blank_name(self, client, product_id):
+        resp = client.put(f"/products/{product_id}", json={**PRODUCT_DATA, "name": "  "})
+        assert resp.status_code == 422
+
+    def test_update_rejects_negative_price(self, client, product_id):
+        resp = client.put(f"/products/{product_id}", json={**PRODUCT_DATA, "price": -1})
+        assert resp.status_code == 422
+
+    def test_update_rejects_negative_stock(self, client, product_id):
+        resp = client.put(f"/products/{product_id}", json={**PRODUCT_DATA, "stock": -1})
+        assert resp.status_code == 422
+
+    def test_name_is_trimmed_on_create(self, client):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": "  校验测试-前后空格  "})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "校验测试-前后空格"
+        # 清理测试数据
+        client.delete(f"/products/{data['id']}")
+
+
 class TestProductEditDelete:
     @pytest.fixture(autouse=True)
     def _auth(self, client):

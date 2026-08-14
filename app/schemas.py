@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CustomerCreate(BaseModel):
@@ -56,6 +56,28 @@ class ProductCreate(BaseModel):
     stock: int = 0
     live_status: Optional[str] = "未上播"
     notes: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("商品名称不能为空")
+        return v
+
+    @field_validator("price")
+    @classmethod
+    def price_must_not_be_negative(cls, v: Decimal) -> Decimal:
+        if v < 0:
+            raise ValueError("价格不能为负数")
+        return v
+
+    @field_validator("stock")
+    @classmethod
+    def stock_must_not_be_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("库存不能为负数")
+        return v
 
 
 class ProductOut(ProductCreate):
