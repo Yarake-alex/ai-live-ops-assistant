@@ -3843,6 +3843,8 @@ async function loadProductKnowledgeDocs() {
                     <b style="font-size:13px;">📄 ${escapeHtml(d.filename)}</b>
                     <div class="muted" style="font-size:11px;">${d.chunks} 个片段${d.preview ? " · " + escapeHtml(d.preview.slice(0, 40)) + "…" : ""}</div>
                 </div>
+                <button class="light" onclick="viewProductKnowledgeChunks('${encodeURIComponent(d.filename)}')" style="font-size:12px;padding:4px 10px;">查看片段</button>
+                <button class="light" onclick="reindexProductKnowledgeDoc('${encodeURIComponent(d.filename)}')" style="font-size:12px;padding:4px 10px;">重建该文件索引</button>
                 <button class="light" onclick="deleteProductKnowledgeDoc('${escapeHtml(d.filename)}')" style="font-size:12px;padding:4px 10px;">删除</button>
             </div>
         `).join("");
@@ -3859,6 +3861,44 @@ async function deleteProductKnowledgeDoc(filename) {
         await loadProductKnowledgeDocs();
     } catch (e) {
         // request() 已处理错误
+    }
+}
+
+async function viewProductKnowledgeChunks(encodedFilename) {
+    const box = document.getElementById("productKnowledgeAnswer");
+    box.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>加载片段...</span></div>';
+    try {
+        const data = await request(`/products/${selectedProductId}/knowledge/documents/${encodedFilename}/chunks`);
+        let html = `<h3 style="margin:0 0 8px;">📄 ${escapeHtml(data.filename)} — ${data.chunks.length} 个片段</h3>`;
+        data.chunks.forEach(c => {
+            html += `<div style="background:#f8f9fa;padding:8px;margin:6px 0;border-radius:4px;font-size:0.9em;">
+                <div class="muted" style="font-size:0.8em;margin-bottom:4px;">片段 ${c.chunk_index} · ${c.created_at.slice(0,16).replace('T',' ')}</div>
+                <div style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(c.content)}</div>
+            </div>`;
+        });
+        box.innerHTML = html;
+    } catch (e) {
+        box.innerHTML = '<div class="result-empty">加载片段失败。</div>';
+    }
+}
+
+async function reindexProductKnowledgeDoc(encodedFilename) {
+    const filename = decodeURIComponent(encodedFilename);
+    if (!confirm(`将为资料「${filename}」重建索引。确定吗？`)) return;
+    try {
+        const resp = await fetch(`/products/${selectedProductId}/knowledge/documents/${encodedFilename}/reindex`, {
+            method: "POST",
+            credentials: "include",
+        });
+        if (resp.status === 401) { showLogin("登录已失效，请重新登录"); return; }
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.detail || "重建失败");
+            return;
+        }
+        alert(data.message || "重建完成");
+    } catch (e) {
+        alert("文件索引重建请求失败");
     }
 }
 

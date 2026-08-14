@@ -1434,6 +1434,70 @@ def delete_product_knowledge_document(
     return {"message": "文档已删除"}
 
 
+@app.get("/products/{product_id}/knowledge/documents/{filename}/chunks", response_model=RagChunkList)
+def list_product_knowledge_chunks(
+    product_id: int,
+    filename: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """查看商品知识库单个文件的全部片段（对应「查看片段」按钮）。"""
+    product = get_product_for_user(db, product_id, current_user)
+    chunks = (
+        db.query(ProductKnowledgeChunk)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+            ProductKnowledgeChunk.filename == filename,
+        )
+        .order_by(ProductKnowledgeChunk.chunk_index.asc())
+        .all()
+    )
+    if not chunks:
+        raise HTTPException(status_code=404, detail="资料文件不存在")
+
+    return RagChunkList(
+        filename=filename,
+        chunks=[
+            RagChunkOut(
+                chunk_index=c.chunk_index,
+                content=c.content,
+                created_at=c.created_at.isoformat() if c.created_at else "",
+            )
+            for c in chunks
+        ],
+    )
+
+
+@app.post("/products/{product_id}/knowledge/documents/{filename}/reindex")
+def reindex_product_knowledge_file(
+    product_id: int,
+    filename: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """商品知识库使用商品维度 TF-IDF 检索，无向量索引可重建（对应「重建该文件索引」按钮）。"""
+    product = get_product_for_user(db, product_id, current_user)
+    chunks = (
+        db.query(ProductKnowledgeChunk)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+            ProductKnowledgeChunk.filename == filename,
+        )
+        .all()
+    )
+    if not chunks:
+        raise HTTPException(status_code=404, detail="资料文件不存在")
+
+    return {
+        "reindexed": False,
+        "message": "商品知识库使用本地关键词检索，无需重建索引",
+        "filename": filename,
+        "chunks": len(chunks),
+    }
+
+
 @app.post("/products/{product_id}/knowledge/ask", response_model=ProductKnowledgeAnswer)
 def ask_product_knowledge(
     product_id: int,

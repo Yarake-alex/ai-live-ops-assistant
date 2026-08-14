@@ -81,6 +81,37 @@ class TestProductKnowledge:
         assert docs[0]["chunks"] == 1
         assert "更新后" in docs[0]["preview"]
 
+    def test_view_chunks_and_reindex_document(self, client, kb_product_id):
+        """「查看片段」「重建该文件索引」按钮对应的接口行为。"""
+        resp = client.post(
+            f"/products/{kb_product_id}/knowledge/upload",
+            files={"file": ("chunk-test.txt", ("片段一内容。" + "补水" * 600).encode("utf-8"), "text/plain")},
+        )
+        assert resp.status_code == 200
+        uploaded_chunks = resp.json()["chunks"]
+        assert uploaded_chunks >= 2
+
+        chunks = client.get(f"/products/{kb_product_id}/knowledge/documents/chunk-test.txt/chunks")
+        assert chunks.status_code == 200
+        data = chunks.json()
+        assert data["filename"] == "chunk-test.txt"
+        assert len(data["chunks"]) == uploaded_chunks
+        assert data["chunks"][0]["chunk_index"] == 1
+        assert "片段一内容" in data["chunks"][0]["content"]
+
+        reindex = client.post(f"/products/{kb_product_id}/knowledge/documents/chunk-test.txt/reindex")
+        assert reindex.status_code == 200
+        assert reindex.json()["reindexed"] is False
+        assert "关键词检索" in reindex.json()["message"]
+
+        assert client.get(f"/products/{kb_product_id}/knowledge/documents/不存在.txt/chunks").status_code == 404
+        assert client.post(f"/products/{kb_product_id}/knowledge/documents/不存在.txt/reindex").status_code == 404
+
+    def test_chunks_scoped_by_user(self, client, kb_product_id):
+        other = _create_second_user(client, "kb-chunks-other")
+        assert other.get(f"/products/{kb_product_id}/knowledge/documents/manual.txt/chunks").status_code == 404
+        assert other.post(f"/products/{kb_product_id}/knowledge/documents/manual.txt/reindex").status_code == 404
+
     def test_ask_prompt_contains_product_and_chunks(self, client, kb_product_id, monkeypatch):
         """问答 prompt 必须包含商品信息与检索到的知识片段（不真实调用外部 AI）。"""
         from fastapi.routing import APIRoute
