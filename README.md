@@ -1,8 +1,17 @@
 # AI 直播运营助手 MVP
 
-AI 直播运营助手 MVP 是一个面向 ToB 销售客户管理场景的 AI 应用系统，集成客户管理、跟进记录、AI 跟进分析、RAG 知识库问答和 Agent 自动跟进方案。系统可以帮助销售人员维护客户资料、记录跟进过程、基于大模型生成客户总结与下一步建议，并结合产品资料知识库生成更有针对性的销售话术和跟进方案。
+AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示系统，当前交付重点是「商品知识库 RAG + 直播复盘 + 轻量运营看板」：运营人员可以为商品上传 PDF/TXT/MD/CSV 资料，基于资料进行 RAG 问答；基于商品信息生成直播话术、自动回复模拟观众评论、生成四模块直播复盘；并在轻量运营看板中查看商品、话术、评论回复、复盘等统计。
 
-相比 V1/V2/V3，V4 不仅保留了客户管理、RAG 和 Agent 能力，还进一步加入了安全加固、数据库工程化、索引优化、上传限制、环境变量配置、pytest 自动化测试和 Docker 部署支持，更适合作为 AI 应用工程师方向的综合展示项目。
+项目同时保留了早期版本的客户管理、RAG 知识库和 Agent 跟进能力，以及安全加固、数据库工程化、pytest 自动化测试和 Docker 部署支持，适合作为 AI 应用工程师方向的综合展示项目。
+
+## 当前 MVP 功能（直播运营）
+
+- **商品管理**：商品新增、列表、详情、修改、删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持搜索、筛选、分页与 CSV 导入导出。
+- **商品知识库（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持文档列表、查看片段、重建该文件索引、删除；基于商品维度 TF-IDF 检索相关片段后调用大模型回答（回答附带参考片段来源）。
+- **直播话术**：基于商品资料生成七模块主播口播话术（开场引入 → 结尾转化）；AI 不可用时自动降级为本地兜底话术并诚实标注资料缺失项。
+- **评论回复**：针对模拟观众评论，结合商品信息生成主播口吻回复；不做绝对化承诺，资料未覆盖的内容不编造。
+- **直播复盘**：基于商品资料与已记录的评论/回复生成复盘，固定四个模块：用户关注点、常见异议、高频问题、下场直播优化建议；不编造直播场次、销量、GMV 等未统计指标。
+- **轻量运营看板**：`GET /live-ops/dashboard` 返回商品数、话术数、评论回复数、复盘数、高频评论（hot_questions）与最近记录；保留旧接口 `/dashboard/stats` 兼容回退。
 
 ## 核心功能
 
@@ -113,6 +122,19 @@ API 文档地址：
 http://127.0.0.1:8000/docs
 ```
 
+### 默认演示账号
+
+| 账号 | 密码 |
+|---|---|
+| admin | 123456 |
+
+- 使用 `.env.example` 默认配置时（`APP_ACCESS_PASSWORD=123456`），首次启动会自动创建该管理员账号，登录页输入 `admin / 123456` 即可。
+- 若 `APP_ACCESS_PASSWORD` 留空（本地开发免登录模式），登录页输入任意密码即可进入，系统使用内置 admin 用户。
+
+### 演示操作步骤
+
+非技术演示人员的点击式操作步骤见 [docs/demo-guide.md](docs/demo-guide.md)；当前 MVP 的实现范围、刻意未实现项与后续建议见 [docs/mvp-scope.md](docs/mvp-scope.md)。
+
 ## 环境变量
 
 | 变量 | 说明 | 默认值 |
@@ -147,14 +169,16 @@ DATABASE_URL=sqlite:///./customer_assistant.db
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:8000
 ```
 
-使用 DeepSeek 示例：
+使用 DeepSeek 示例（与 `.env.example` 演示默认值一致）：
 
 ```env
 LLM_PROVIDER=openai_compatible
-OPENAI_API_KEY=your-api-key
+OPENAI_API_KEY=your_deepseek_api_key_here
 OPENAI_BASE_URL=https://api.deepseek.com
 OPENAI_MODEL=deepseek-chat
 ```
+
+未配置真实 API Key 或网络不可用时，可临时设置 `LLM_PROVIDER=mock`：各 AI 功能返回本地 mock / 兜底内容，演示流程不会中断，但问答不会体现资料内容。
 
 生产环境建议设置：
 
@@ -298,7 +322,11 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ### 本地测试命令
 
 ```bash
-python -m pytest tests/ -v
+# 全量测试
+python -m pytest -q
+
+# 直播运营核心模块测试（商品知识库 / 直播复盘 / 评论回复 / 直播话术）
+python -m pytest tests/test_product_knowledge.py tests/test_live_reviews.py tests/test_comment_replies.py tests/test_live_scripts.py -q
 ```
 
 测试使用临时 SQLite 数据库，不污染正式数据。LLM 使用 mock 模式，避免调用外部 API。
