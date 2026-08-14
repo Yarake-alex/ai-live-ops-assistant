@@ -1209,6 +1209,14 @@
                 <span>商品管理</span>
             </button>
 
+            <button id="tabCommentReply" class="sidebar-nav-item" onclick="showPage('commentreply')">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M8 9h8"/><path d="M8 13h5"/>
+                </svg>
+                <span>评论回复</span>
+            </button>
+
             <button id="tabAI" class="sidebar-nav-item" onclick="showPage('ai')">
                 <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
@@ -1598,6 +1606,55 @@
             </div>
 
             <!-- ════════════════════════════════════
+                 评论回复 Page（直播评论自动回复模拟器）
+                 ════════════════════════════════════ -->
+            <div id="pageCommentReply" class="page-section">
+                <div class="page-intro">
+                    <span class="intro-dot"></span>
+                    选择商品并输入一条模拟观众评论，AI 会以主播口吻生成直播间回复（仅演示，不接入真实平台）。
+                </div>
+
+                <div class="ai-grid">
+                    <!-- Left: Comment input -->
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>模拟评论</h2>
+                            </div>
+                            <select id="commentReplyProductSelect" onchange="loadCommentReplyHistory()">
+                                <option value="">请选择商品…</option>
+                            </select>
+                            <textarea id="commentReplyInput" placeholder="输入观众评论，例如：多少钱？" style="min-height:100px;"></textarea>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                                <button class="light" onclick="fillCommentExample('多少钱？')" style="font-size:12px;padding:4px 10px;">多少钱？</button>
+                                <button class="light" onclick="fillCommentExample('适合学生吗？')" style="font-size:12px;padding:4px 10px;">适合学生吗？</button>
+                                <button class="light" onclick="fillCommentExample('有没有优惠？')" style="font-size:12px;padding:4px 10px;">有没有优惠？</button>
+                                <button class="light" onclick="fillCommentExample('质量怎么样？')" style="font-size:12px;padding:4px 10px;">质量怎么样？</button>
+                                <button class="light" onclick="fillCommentExample('敏感肌能用吗？')" style="font-size:12px;padding:4px 10px;">敏感肌能用吗？</button>
+                            </div>
+                            <button id="commentReplyGenerateBtn" onclick="generateCommentReply()">🎤 生成回复</button>
+                            <div id="commentReplyResult" class="result" style="min-height:120px;margin-top:12px;">
+                                <div class="result-empty">生成的直播间回复会显示在这里。</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: History -->
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h2>历史评论与回复</h2>
+                                <button class="light" onclick="loadCommentReplyHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                            </div>
+                            <div id="commentReplyHistory" style="max-height:56vh;overflow-y:auto;">
+                                <div class="empty-state"><p>选择商品后显示该商品的历史评论回复。</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════
                  AI 跟进分析 Page
                  ════════════════════════════════════ -->
             <div id="pageAI" class="page-section">
@@ -1953,6 +2010,7 @@ function showPage(name) {
         dashboard: "pageDashboard",
         customer: "pageCustomer",
         product: "pageProduct",
+        commentreply: "pageCommentReply",
         ai: "pageAI",
         rag: "pageRAG",
         agent: "pageAgent",
@@ -1963,6 +2021,7 @@ function showPage(name) {
         dashboard: "tabDashboard",
         customer: "tabCustomer",
         product: "tabProduct",
+        commentreply: "tabCommentReply",
         ai: "tabAI",
         rag: "tabRAG",
         agent: "tabAgent",
@@ -1973,6 +2032,7 @@ function showPage(name) {
         dashboard: "数据概览",
         customer: "客户管理",
         product: "商品管理",
+        commentreply: "评论回复",
         ai: "AI 跟进分析",
         rag: "RAG 知识库",
         agent: "Agent 跟进助手",
@@ -2003,6 +2063,10 @@ function showPage(name) {
     // Auto-load user list when navigating to admin page
     if (name === 'admin') {
         loadUserList();
+    }
+    // Auto-load product options when navigating to comment reply page
+    if (name === 'commentreply') {
+        loadCommentReplyProducts();
     }
 
     // Close mobile sidebar after navigation
@@ -3403,6 +3467,126 @@ async function exportProducts() {
         window.URL.revokeObjectURL(url);
     } catch (err) {
         alert("网络错误，导出失败");
+    }
+}
+
+// ─── Live Comment Reply Simulator ───
+
+async function loadCommentReplyProducts() {
+    const select = document.getElementById("commentReplyProductSelect");
+    try {
+        const products = await request("/products");
+        const prev = select.value;
+        select.innerHTML = '<option value="">请选择商品…</option>' + products.map(p =>
+            `<option value="${p.id}">${escapeHtml(p.name)}</option>`
+        ).join("");
+        if (prev && products.some(p => String(p.id) === prev)) {
+            select.value = prev;
+        } else {
+            document.getElementById("commentReplyHistory").innerHTML = '<div class="empty-state"><p>选择商品后显示该商品的历史评论回复。</p></div>';
+            document.getElementById("commentReplyResult").innerHTML = '<div class="result-empty">生成的直播间回复会显示在这里。</div>';
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+    }
+}
+
+function fillCommentExample(text) {
+    document.getElementById("commentReplyInput").value = text;
+}
+
+function _commentReplyStatusText(status) {
+    if (status === "fallback") return "本地兜底";
+    if (status === "failed") return "生成失败";
+    return "生成成功";
+}
+
+function _renderCommentReplyRecord(record) {
+    const statusText = _commentReplyStatusText(record.status);
+    const warning = record.status !== "success" && record.error_message
+        ? `<div class="muted" style="margin-bottom:8px;">${escapeHtml(record.error_message)}</div>`
+        : "";
+    document.getElementById("commentReplyResult").innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <b>${escapeHtml(statusText)}</b>
+        </div>
+        <div class="muted" style="font-size:13px;margin-bottom:8px;">💬 观众评论：${escapeHtml(record.comment)}</div>
+        ${warning}
+        <div style="line-height:1.8;">${renderAIText(record.reply)}</div>
+    `;
+}
+
+async function generateCommentReply() {
+    const productId = document.getElementById("commentReplyProductSelect").value;
+    const comment = document.getElementById("commentReplyInput").value.trim();
+    if (!productId) {
+        alert("请先选择商品");
+        return;
+    }
+    if (!comment) {
+        alert("请输入评论内容");
+        return;
+    }
+
+    const btn = document.getElementById("commentReplyGenerateBtn");
+    const resultEl = document.getElementById("commentReplyResult");
+    btn.disabled = true;
+    resultEl.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>AI 正在生成回复...</span></div>';
+
+    try {
+        const record = await request(`/products/${productId}/comment-replies`, {
+            method: "POST",
+            body: JSON.stringify({ comment }),
+        });
+        _renderCommentReplyRecord(record);
+        await loadCommentReplyHistory();
+    } catch (e) {
+        resultEl.innerHTML = '<div class="result-empty">生成失败，请稍后重试。</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function loadCommentReplyHistory() {
+    const productId = document.getElementById("commentReplyProductSelect").value;
+    const box = document.getElementById("commentReplyHistory");
+    if (!productId) {
+        box.innerHTML = '<div class="empty-state"><p>选择商品后显示该商品的历史评论回复。</p></div>';
+        return;
+    }
+    try {
+        const records = await request(`/products/${productId}/comment-replies`);
+        if (!records.length) {
+            box.innerHTML = '<div class="empty-state"><p>暂无历史评论回复。</p></div>';
+            return;
+        }
+        box.innerHTML = records.map(item => {
+            const created = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+            return `
+                <div class="customer-item">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                        <b style="font-size:13px;">💬 ${escapeHtml((item.comment || "").slice(0, 40))}</b>
+                        <span class="status-tag">${escapeHtml(_commentReplyStatusText(item.status))}</span>
+                    </div>
+                    <div class="muted" style="font-size:12px;margin-top:4px;">${escapeHtml((item.reply || "（无回复内容）").slice(0, 60))}</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+                        <span class="muted" style="font-size:11px;">${escapeHtml(created)}</span>
+                        <button class="light" onclick="viewCommentReplyDetail(${item.id})" style="font-size:12px;padding:4px 10px;">查看</button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    } catch (e) {
+        box.innerHTML = '<div class="result-empty">历史记录加载失败。</div>';
+    }
+}
+
+async function viewCommentReplyDetail(replyId) {
+    try {
+        const record = await request(`/comment-replies/${replyId}`);
+        _renderCommentReplyRecord(record);
+    } catch (e) {
+        // request() 已展示错误
     }
 }
 

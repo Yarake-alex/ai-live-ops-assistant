@@ -209,6 +209,53 @@ def build_live_script_fallback(product) -> str:
 最后再帮大家总结一下：{name} 适合关注「{selling_points}」的用户，补充备注为：{notes}。确认需要的朋友可以查看直播间商品卡，犹豫的朋友可以先收藏或留言补充问题。"""
 
 
+def build_live_comment_reply_prompt(product, comment: str) -> str:
+    """Build a maintainable prompt for AI live comment reply generation."""
+    return f"""
+你是一个谨慎、专业的直播电商主播助理。请针对直播间观众的一条评论，生成主播可以直接发出的简短回复。
+
+商品资料：
+- 商品名称：{_safe_product_value(product.name)}
+- 价格：{_safe_product_value(product.price)}
+- 核心卖点：{_safe_product_value(product.selling_points)}
+- 适用人群：{_safe_product_value(product.target_audience)}
+- 用户痛点：{_safe_product_value(product.pain_points)}
+- 优惠信息：{_safe_product_value(product.promotion)}
+- 库存：{_safe_product_value(product.stock)}
+- 直播状态：{_safe_product_value(product.live_status)}
+- 备注：{_safe_product_value(product.notes)}
+
+观众评论：
+{comment.strip()}
+
+回复要求：
+1. 简短自然，像主播直播时的口播语气，可直接念出。
+2. 有转化意识：引导观众关注商品优势、优惠或下单入口。
+3. 只使用商品资料中已有的信息，不编造功效、参数或承诺。
+4. 不使用“全网最低”“百分百有效”“永久解决”等绝对化表述。
+5. 如果评论问到商品资料中未包含的信息，坦诚说明暂未确认，不要编造。
+6. 只输出回复内容本身，不要加“主播回复：”等前缀。
+"""
+
+
+def build_live_comment_reply_fallback(product, comment: str) -> str:
+    """Local fallback reply used when the LLM is unavailable."""
+    name = _safe_product_value(product.name, "这款商品")
+    price = _safe_product_value(product.price)
+    promotion = _safe_product_value(product.promotion, "当前场次的优惠以页面实际活动为准")
+    target_audience = _safe_product_value(product.target_audience, "建议在商品详情确认适用人群")
+    selling_points = _safe_product_value(product.selling_points, "商品卖点资料还不完整")
+
+    comment_lower = comment.strip()
+    if "优惠" in comment_lower or "便宜" in comment_lower or "价" in comment_lower:
+        return f"亲，{name} 当前价格 {price} 元，优惠信息是：{promotion}。有活动我们会在直播间及时说，可以先看看商品卡～"
+    if "适合" in comment_lower or "能用" in comment_lower or "可以" in comment_lower:
+        return f"亲，{name} 的适用人群是：{target_audience}，可以对照自己的情况看看是否合适，拿不准也可以再问我～"
+    if "质量" in comment_lower or "怎么样" in comment_lower:
+        return f"亲，{name} 的核心卖点是：{selling_points}。我们只介绍资料里确认过的信息，建议结合自己的需求判断～"
+    return f"亲，感谢关注！{name} 价格 {price} 元，优惠方面是：{promotion}。想看更多细节可以戳商品卡，也可以在评论区继续问我～"
+
+
 def resolve_llm_provider_model() -> tuple[str, str]:
     """返回 call_llm 实际会使用的 (provider, model) 组合。
 
@@ -360,6 +407,9 @@ def mock_llm_response(prompt: str, feature: str = "unknown") -> str:
 
 结尾转化
 最后总结一下，这款商品适合对当前卖点有明确需求的用户。确认需要的朋友可以查看商品卡，下单前也可以继续留言确认关键信息。"""
+
+    if feature == "live_comment_reply":
+        return """亲，感谢你的提问～这款商品的具体信息我按商品资料再跟你确认一下：价格、优惠和适用人群都可以在商品卡里看到，也可以告诉我你的使用场景，我帮你一起看看合不合适。"""
 
     if "知识库资料" in prompt or "参考资料" in prompt:
         return """【AI模拟RAG回答】

@@ -112,6 +112,33 @@ class LiveScriptOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CommentReplyCreate(BaseModel):
+    comment: str = Field(max_length=500)
+
+    @field_validator("comment")
+    @classmethod
+    def comment_must_not_be_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("评论内容不能为空")
+        return v
+
+
+class LiveCommentReplyOut(BaseModel):
+    id: int
+    product_id: int
+    comment: str
+    reply: str
+    prompt: str
+    provider: str
+    model: str
+    status: str
+    error_message: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AIResult(BaseModel):
     result: str
 

@@ -17,7 +17,15 @@ from pydantic import BaseModel, ValidationError
 
 from app.database import get_db
 from app.config import settings
-from app.models import Customer, FollowUp, Product, LiveScript, DocumentChunk, User
+from app.models import (
+    Customer,
+    FollowUp,
+    Product,
+    LiveScript,
+    LiveCommentReply,
+    DocumentChunk,
+    User,
+)
 from app.auth import create_user, verify_password, hash_password, utc_timestamp
 from app.schemas import (
     CustomerCreate,
@@ -29,6 +37,8 @@ from app.schemas import (
     ProductOut,
     ProductSearchResult,
     LiveScriptOut,
+    CommentReplyCreate,
+    LiveCommentReplyOut,
     AIResult,
     RagAsk,
     RagAnswer,
@@ -46,6 +56,8 @@ from app.schemas import (
 from app.llm import (
     FALLBACK_MESSAGE,
     build_customer_context,
+    build_live_comment_reply_fallback,
+    build_live_comment_reply_prompt,
     build_live_script_fallback,
     build_live_script_prompt,
     call_llm,
@@ -840,6 +852,17 @@ def get_live_script_for_user(db: Session, script_id: int, user: User) -> LiveScr
     return script
 
 
+def get_comment_reply_for_user(db: Session, reply_id: int, user: User) -> LiveCommentReply:
+    reply = (
+        db.query(LiveCommentReply)
+        .filter(LiveCommentReply.id == reply_id, LiveCommentReply.user_id == user.id)
+        .first()
+    )
+    if not reply:
+        raise HTTPException(status_code=404, detail="评论回复记录不存在")
+    return reply
+
+
 def _format_validation_error(exc: ValidationError) -> str:
     """把 Pydantic 校验错误格式化为可读的行级原因，例如「price: Input should be a valid decimal」。"""
     parts = []
@@ -1193,6 +1216,104 @@ def get_live_script(
     current_user: User = Depends(get_current_user),
 ):
     return get_live_script_for_user(db, script_id, current_user)
+
+
+# ─── Live comment reply routes (直播评论自动回复模拟) ───
+
+
+@app.post("/products/{product_id}/comment-replies", response_model=LiveCommentReplyOut)
+def generate_comment_reply(
+    product_id: int,
+    data: CommentReplyCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """基于商品资料为一条模拟评论生成主播口吻回复。"""
+    product = get_product_for_user(db, product_id, current_user)
+    comment = data.comment
+    prompt = build_live_comment_reply_prompt(product, comment)
+    provider, model = resolve_llm_provider_model()
+    status = "success"
+    error_message = None
+    reply = ""
+
+    try:
+        reply = call_llm(
+            prompt,
+            feature="live_comment_reply",
+            user_id=current_user.id,
+            db=db,
+        )
+    except Exception:
+        # call_llm 内部已兜底，正常情况下不会抛异常；保险起见统一走兜底路径
+        logger.exception(
+            "Comment reply AI call raised unexpectedly (user=%s, product=%s)",
+            current_user.id,
+            product_id,
+        )
+        reply = ""
+
+    if reply and FALLBACK_MESSAGE not in reply:
+        status = "success"
+    else:
+        # AI 不可用 → 尝试本地兜底回复
+        try:
+            reply = build_live_comment_reply_fallback(product, comment)
+            status = "fallback"
+            error_message = "AI 服务暂时不可用，已返回本地兜底回复"
+        except Exception:
+            # 兜底也失败 → 记录 failed 状态（可追踪），细节只进日志
+            logger.exception(
+                "Comment reply fallback generation failed (user=%s, product=%s)",
+                current_user.id,
+                product_id,
+            )
+            reply = ""
+            status = "failed"
+            error_message = "AI 服务暂时不可用，且本地兜底回复生成失败，请稍后重试"
+
+    record = LiveCommentReply(
+        user_id=current_user.id,
+        product_id=product.id,
+        comment=comment,
+        reply=reply,
+        prompt=prompt,
+        provider=provider,
+        model=model,
+        status=status,
+        error_message=error_message,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.get("/products/{product_id}/comment-replies", response_model=List[LiveCommentReplyOut])
+def list_product_comment_replies(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+    return (
+        db.query(LiveCommentReply)
+        .filter(
+            LiveCommentReply.product_id == product.id,
+            LiveCommentReply.user_id == current_user.id,
+        )
+        .order_by(LiveCommentReply.created_at.desc(), LiveCommentReply.id.desc())
+        .all()
+    )
+
+
+@app.get("/comment-replies/{reply_id}", response_model=LiveCommentReplyOut)
+def get_comment_reply(
+    reply_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_comment_reply_for_user(db, reply_id, current_user)
 
 
 @app.get("/products/{product_id}", response_model=ProductOut)

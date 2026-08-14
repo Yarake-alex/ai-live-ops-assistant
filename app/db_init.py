@@ -116,6 +116,12 @@ def upgrade_database() -> None:
         from app.models import LiveScript
         LiveScript.__table__.create(bind=engine, checkfirst=True)
 
+    # ── Phase 8: live comment reply records ──
+    inspector = inspect(engine)
+    if "live_comment_replies" not in inspector.get_table_names():
+        from app.models import LiveCommentReply
+        LiveCommentReply.__table__.create(bind=engine, checkfirst=True)
+
 
 
 def create_indexes() -> None:
@@ -159,6 +165,18 @@ def create_indexes() -> None:
         )
         conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_live_scripts_status ON live_scripts (status)")
+        )
+
+    # ── Phase 8: live comment reply indexes ──
+    with engine.begin() as conn:
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_comment_replies_user_id ON live_comment_replies (user_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_comment_replies_product_id ON live_comment_replies (product_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_live_comment_replies_status ON live_comment_replies (status)")
         )
 
 
