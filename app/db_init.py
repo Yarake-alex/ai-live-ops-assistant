@@ -119,6 +119,9 @@ def create_indexes() -> None:
             text("CREATE INDEX IF NOT EXISTS ix_customers_user_id ON customers (user_id)")
         )
         conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_products_user_id ON products (user_id)")
+        )
+        conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_followups_customer_id ON followups (customer_id)")
         )
         conn.execute(

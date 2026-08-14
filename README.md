@@ -6,6 +6,7 @@ AI 直播运营助手 MVP 是一个面向 ToB 销售客户管理场景的 AI 应
 
 ## 核心功能
 
+- **商品管理**：支持商品新增、列表查看、详情查看、修改和删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持关键词搜索、直播状态筛选、分页和 CSV 导入导出。
 - **客户管理**：支持客户新增、列表查看、详情查看、修改和删除。
 - **跟进记录**：支持为客户维护历史跟进记录和下一步动作。
 - **AI 跟进分析**：基于客户资料和跟进记录生成客户总结与下一步销售建议。
@@ -395,6 +396,11 @@ docker compose down
 | `/customers/{id}/followups` | GET | 跟进记录列表 | 是 |
 | `/customers/{id}/ai/summary` | POST | AI 跟进总结 | 是 |
 | `/customers/{id}/ai/suggestion` | POST | AI 下一步建议 | 是 |
+| `/products` | GET / POST | 商品列表 / 新增商品 | 是 |
+| `/products/search` | GET | 商品搜索、筛选、分页 | 是 |
+| `/products/import` | POST | 商品 CSV 导入（支持中英文表头） | 是 |
+| `/products/export` | GET | 商品 CSV 导出（仅当前用户） | 是 |
+| `/products/{id}` | GET / PUT / DELETE | 商品详情 / 修改 / 删除 | 是 |
 | `/rag/upload` | POST | 上传知识库文档 | 是 |
 | `/rag/documents` | GET | 知识库文档列表 | 是 |
 | `/rag/documents/{filename}` | DELETE | 删除指定文档 | 是 |
@@ -403,6 +409,24 @@ docker compose down
 | `/agent/analyze` | POST | Agent 自动跟进分析 | 是 |
 
 登录方式：打开页面后输入访问密码，登录成功后通过 HttpOnly Cookie 自动携带登录态。
+
+## 商品 CSV 导入导出格式
+
+导入（`POST /products/import`）支持两种表头：
+
+| 英文表头 | 中文表头 | 说明 |
+|---|---|---|
+| `name` | 商品名称 | 必填；同一用户名下重复会跳过 |
+| `price` | 价格 | 数字，可为小数；空值按 0 处理 |
+| `selling_points` | 核心卖点 | 可选 |
+| `target_audience` | 适用人群 | 可选 |
+| `pain_points` | 用户痛点 | 可选 |
+| `promotion` | 优惠信息 | 可选 |
+| `stock` | 库存 | 非负整数；空值按 0 处理 |
+| `live_status` | 直播状态 | 可选，空值默认「未上播」 |
+| `notes` | 备注 | 可选 |
+
+导出（`GET /products/export`）使用英文表头（含 `created_at`），文件为 UTF-8-SIG 编码（带 BOM，Excel 可直接打开）。导入导出均只作用于当前登录用户的数据。
 
 ## 安全加固
 

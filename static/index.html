@@ -1200,6 +1200,15 @@
                 <span>客户管理</span>
             </button>
 
+            <button id="tabProduct" class="sidebar-nav-item" onclick="showPage('product')">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/>
+                    <path d="M3 8l9 5 9-5"/>
+                    <path d="M12 13v8"/>
+                </svg>
+                <span>商品管理</span>
+            </button>
+
             <button id="tabAI" class="sidebar-nav-item" onclick="showPage('ai')">
                 <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
@@ -1484,6 +1493,96 @@
             </div>
 
             <!-- ════════════════════════════════════
+                 商品管理 Page
+                 ════════════════════════════════════ -->
+            <div id="pageProduct" class="page-section">
+                <!-- ── Top Action Bar ── -->
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+                    <h2 style="margin:0;font-size:18px;">商品管理</h2>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button onclick="openProductModal()">＋ 新增商品</button>
+                        <button class="light" onclick="importProductCsvDialog()">📥 导入 CSV</button>
+                        <button class="light" onclick="exportProducts()">📤 导出 CSV</button>
+                    </div>
+                </div>
+                <input id="importProductCsvFile" type="file" accept=".csv" style="display:none;" onchange="handleImportProductCsv(event)">
+                <div class="muted" style="font-size:12px;margin-bottom:12px;">
+                    CSV 表头支持英文（name, price, selling_points, target_audience, pain_points, promotion, stock, live_status, notes）或中文（商品名称、价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态、备注），仅「商品名称」为必填。
+                </div>
+
+                <!-- ── Two-Column Layout ── -->
+                <div class="crm-grid">
+                    <!-- Left: Product List -->
+                    <div>
+                        <div class="card" style="padding:16px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                                <span style="font-weight:700;font-size:15px;">商品列表</span>
+                                <span class="badge" id="productCountBadge">0</span>
+                            </div>
+                            <input id="productSearchQ" placeholder="搜索商品名称、卖点、人群、痛点、备注…" oninput="searchProducts()">
+                            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                                <select id="filterLiveStatus" onchange="searchProducts()" style="flex:1;font-size:11px;padding:6px 4px;margin:2px 0;">
+                                    <option value="">直播状态（全部）</option>
+                                    <option value="未上播">未上播</option>
+                                    <option value="待上播">待上播</option>
+                                    <option value="直播中">直播中</option>
+                                    <option value="已下播">已下播</option>
+                                </select>
+                                <button class="light" onclick="resetProductSearch()" style="font-size:11px;padding:4px 8px;">重置</button>
+                            </div>
+                            <div id="productList" style="max-height:52vh;overflow-y:auto;"></div>
+                            <div id="productPagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Product Detail -->
+                    <div>
+                        <div class="card" style="padding:20px;">
+                            <div id="productDetail" class="muted" style="text-align:center;padding:40px 0;">
+                                <div style="font-size:40px;margin-bottom:12px;">📦</div>
+                                <div>请选择一个商品以查看详情</div>
+                            </div>
+                            <div id="productDetailActions" class="detail-actions" style="display:none;">
+                                <button onclick="openProductModal(true)">✏️ 编辑商品</button>
+                                <button class="danger" onclick="deleteSelectedProduct()">🗑 删除商品</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Product Modal (add/edit) ── -->
+                <div id="productModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeProductModal()">
+                    <div class="modal-box" style="max-width:600px;max-height:85vh;overflow-y:auto;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                            <h3 id="productModalTitle" style="margin:0;">新增商品</h3>
+                            <button class="light" onclick="closeProductModal()" style="padding:4px 10px;">✕</button>
+                        </div>
+                        <input id="productName" placeholder="商品名称 *">
+                        <div style="display:flex;gap:8px;">
+                            <input id="productPrice" type="number" step="0.01" min="0" placeholder="价格（元）" style="flex:1;">
+                            <input id="productStock" type="number" step="1" min="0" placeholder="库存" style="flex:1;">
+                        </div>
+                        <textarea id="productSellingPoints" placeholder="核心卖点，例如：深层补水、长效保湿" style="min-height:60px;"></textarea>
+                        <input id="productTargetAudience" placeholder="适用人群，例如：干性皮肤人群">
+                        <textarea id="productPainPoints" placeholder="用户痛点，例如：皮肤干燥起皮" style="min-height:60px;"></textarea>
+                        <input id="productPromotion" placeholder="优惠信息，例如：买二送一">
+                        <select id="productLiveStatus">
+                            <option value="未上播">未上播</option>
+                            <option value="待上播">待上播</option>
+                            <option value="直播中">直播中</option>
+                            <option value="已下播">已下播</option>
+                        </select>
+                        <textarea id="productNotes" placeholder="备注" style="min-height:60px;"></textarea>
+                        <input type="hidden" id="editProductId" value="">
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button onclick="saveProductFromModal()" style="flex:1;">保存</button>
+                            <button class="light" onclick="closeProductModal()" style="flex:1;">取消</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════════════════════════════════
                  AI 跟进分析 Page
                  ════════════════════════════════════ -->
             <div id="pageAI" class="page-section">
@@ -1718,6 +1817,12 @@
 let selectedCustomerId = null;
 let selectedCustomerData = null;
 
+// ─── Product state ───
+let selectedProductId = null;
+let selectedProductData = null;
+let _productSearchPage = 1;
+let _productSearchTimer = null;
+
 // ─── Cache for dashboard stats ───
 let _allCustomers = [];
 let _cachedDocs = [];
@@ -1776,6 +1881,7 @@ async function showApp() {
     }
 
     loadCustomers();
+    loadProducts();
     loadRagDocuments();
     updateCurrentCustomerBox();
     showPage('dashboard');
@@ -1831,6 +1937,7 @@ function showPage(name) {
     const pages = {
         dashboard: "pageDashboard",
         customer: "pageCustomer",
+        product: "pageProduct",
         ai: "pageAI",
         rag: "pageRAG",
         agent: "pageAgent",
@@ -1840,6 +1947,7 @@ function showPage(name) {
     const tabs = {
         dashboard: "tabDashboard",
         customer: "tabCustomer",
+        product: "tabProduct",
         ai: "tabAI",
         rag: "tabRAG",
         agent: "tabAgent",
@@ -1849,6 +1957,7 @@ function showPage(name) {
     const pageTitles = {
         dashboard: "数据概览",
         customer: "客户管理",
+        product: "商品管理",
         ai: "AI 跟进分析",
         rag: "RAG 知识库",
         agent: "Agent 跟进助手",
@@ -2856,6 +2965,320 @@ async function exportFollowups() {
         const a = document.createElement("a");
         a.href = url;
         a.download = "followups_export.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        alert("网络错误，导出失败");
+    }
+}
+
+// ─── Product Management (live ops) ───
+
+function _clearProductModalFields() {
+    document.getElementById("productName").value = "";
+    document.getElementById("productPrice").value = "";
+    document.getElementById("productStock").value = "";
+    document.getElementById("productSellingPoints").value = "";
+    document.getElementById("productTargetAudience").value = "";
+    document.getElementById("productPainPoints").value = "";
+    document.getElementById("productPromotion").value = "";
+    document.getElementById("productLiveStatus").value = "未上播";
+    document.getElementById("productNotes").value = "";
+    document.getElementById("editProductId").value = "";
+}
+
+function _fillProductModalFromData(p) {
+    document.getElementById("productName").value = p.name || "";
+    document.getElementById("productPrice").value = p.price ?? "";
+    document.getElementById("productStock").value = p.stock ?? "";
+    document.getElementById("productSellingPoints").value = p.selling_points || "";
+    document.getElementById("productTargetAudience").value = p.target_audience || "";
+    document.getElementById("productPainPoints").value = p.pain_points || "";
+    document.getElementById("productPromotion").value = p.promotion || "";
+    document.getElementById("productLiveStatus").value = p.live_status || "未上播";
+    document.getElementById("productNotes").value = p.notes || "";
+}
+
+function openProductModal(isEdit) {
+    _clearProductModalFields();
+    document.getElementById("editProductId").value = "";
+    if (isEdit && selectedProductData) {
+        document.getElementById("productModalTitle").textContent = "编辑商品";
+        _fillProductModalFromData(selectedProductData);
+        document.getElementById("editProductId").value = selectedProductData.id;
+    } else {
+        document.getElementById("productModalTitle").textContent = "新增商品";
+    }
+    document.getElementById("productModal").style.display = "flex";
+}
+
+function closeProductModal() {
+    document.getElementById("productModal").style.display = "none";
+    _clearProductModalFields();
+}
+
+async function saveProductFromModal() {
+    const id = document.getElementById("editProductId").value;
+    const priceVal = document.getElementById("productPrice").value;
+    const stockVal = document.getElementById("productStock").value;
+    const data = {
+        name: document.getElementById("productName").value.trim(),
+        price: priceVal === "" ? 0 : Number(priceVal),
+        stock: stockVal === "" ? 0 : Number(stockVal),
+        selling_points: document.getElementById("productSellingPoints").value.trim(),
+        target_audience: document.getElementById("productTargetAudience").value.trim(),
+        pain_points: document.getElementById("productPainPoints").value.trim(),
+        promotion: document.getElementById("productPromotion").value.trim(),
+        live_status: document.getElementById("productLiveStatus").value || "未上播",
+        notes: document.getElementById("productNotes").value.trim()
+    };
+
+    if (!data.name) {
+        alert("商品名称必填");
+        return;
+    }
+    if (Number.isNaN(data.price) || data.price < 0) {
+        alert("价格不能为负数");
+        return;
+    }
+    if (Number.isNaN(data.stock) || data.stock < 0 || !Number.isInteger(data.stock)) {
+        alert("库存必须是非负整数");
+        return;
+    }
+
+    if (id) {
+        await request(`/products/${id}`, { method: "PUT", body: JSON.stringify(data) });
+    } else {
+        await request("/products", { method: "POST", body: JSON.stringify(data) });
+    }
+
+    closeProductModal();
+    await _doProductSearch();
+    if (id && selectedProductId === Number(id)) {
+        await selectProduct(Number(id));
+    }
+}
+
+function _buildProductSearchParams() {
+    const params = new URLSearchParams();
+    const q = document.getElementById("productSearchQ").value.trim();
+    if (q) params.set("q", q);
+    const ls = document.getElementById("filterLiveStatus").value;
+    if (ls) params.set("live_status", ls);
+    params.set("page", String(_productSearchPage));
+    params.set("page_size", "10");
+    return params;
+}
+
+async function searchProducts() {
+    // Debounce
+    if (_productSearchTimer) clearTimeout(_productSearchTimer);
+    _productSearchTimer = setTimeout(async () => {
+        _productSearchPage = 1;
+        await _doProductSearch();
+    }, 200);
+}
+
+async function _doProductSearch() {
+    const params = _buildProductSearchParams();
+    try {
+        const data = await request("/products/search?" + params.toString());
+        _renderProductList(data.items);
+        _renderProductPagination(data);
+        document.getElementById("productCountBadge").textContent = data.total;
+    } catch (e) {
+        // Error already handled by request()
+    }
+}
+
+function _renderProductList(products) {
+    const box = document.getElementById("productList");
+    if (products.length === 0) {
+        box.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><p>暂无商品，请先新增或导入商品。</p></div>';
+        return;
+    }
+    box.innerHTML = products.map(p => {
+        const points = (p.selling_points || "").slice(0, 40);
+        return `
+        <div class="customer-item" data-product-id="${p.id}" onclick="selectProduct(${p.id})">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <b>${escapeHtml(p.name)}</b>
+                <span class="status-tag">${escapeHtml(p.live_status || "未上播")}</span>
+            </div>
+            <div class="muted" style="font-size:12px;">💰 ¥${escapeHtml(String(p.price))} · 库存 ${p.stock}</div>
+            <div class="muted" style="font-size:11px;">${escapeHtml(points)}${points ? "…" : ""}</div>
+        </div>
+    `}).join("");
+    _updateProductHighlight();
+}
+
+function _updateProductHighlight() {
+    document.querySelectorAll("#productList .customer-item").forEach(item => {
+        const id = Number(item.dataset.productId);
+        item.classList.toggle("selected", id === selectedProductId);
+    });
+}
+
+function _renderProductPagination(data) {
+    const box = document.getElementById("productPagination");
+    if (data.total === 0) {
+        box.innerHTML = "";
+        return;
+    }
+    box.innerHTML = `
+        <button class="light" onclick="goToProductPage(${data.page - 1})" ${data.page <= 1 ? "disabled" : ""} style="font-size:12px;padding:4px 10px;">上一页</button>
+        <span>第 ${data.page} / ${data.pages} 页（共 ${data.total} 条）</span>
+        <button class="light" onclick="goToProductPage(${data.page + 1})" ${data.page >= data.pages ? "disabled" : ""} style="font-size:12px;padding:4px 10px;">下一页</button>
+    `;
+}
+
+function goToProductPage(p) {
+    if (p < 1) return;
+    _productSearchPage = p;
+    _doProductSearch();
+}
+
+function resetProductSearch() {
+    document.getElementById("productSearchQ").value = "";
+    document.getElementById("filterLiveStatus").value = "";
+    _productSearchPage = 1;
+    _doProductSearch();
+}
+
+// loadProducts() refreshes the product search view
+async function loadProducts() {
+    await _doProductSearch();
+}
+
+async function selectProduct(id) {
+    selectedProductId = id;
+    _updateProductHighlight();
+    const p = await request(`/products/${id}`);
+    selectedProductData = p;
+
+    document.getElementById("productDetail").innerHTML = `
+        <div style="font-size:20px;font-weight:700;margin-bottom:4px;">${escapeHtml(p.name)}</div>
+        <div style="color:var(--text-secondary);margin-bottom:12px;">💰 ¥${escapeHtml(String(p.price))} · 库存 ${p.stock}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+            <span class="status-tag">${escapeHtml(p.live_status || "未上播")}</span>
+            ${p.promotion ? `<span class="tag">🎁 ${escapeHtml(p.promotion)}</span>` : ""}
+        </div>
+        <div style="line-height:2;font-size:14px;color:var(--text-secondary);">
+            <div>✨ 核心卖点：${escapeHtml(p.selling_points || "未填写")}</div>
+            <div>👥 适用人群：${escapeHtml(p.target_audience || "未填写")}</div>
+            <div>⚠️ 用户痛点：${escapeHtml(p.pain_points || "未填写")}</div>
+            <div style="margin-top:8px;padding:8px;background:#f8fafc;border-radius:6px;">📝 ${escapeHtml(p.notes || "无备注")}</div>
+        </div>
+    `;
+
+    document.getElementById("productDetailActions").style.display = "flex";
+    closeProductModal();
+}
+
+function clearSelectedProduct() {
+    selectedProductId = null;
+    selectedProductData = null;
+    _updateProductHighlight();
+    document.getElementById("productDetail").innerHTML = '<div style="text-align:center;padding:40px 0;"><div style="font-size:40px;margin-bottom:12px;">📦</div><div>请选择一个商品以查看详情</div></div>';
+    document.getElementById("productDetailActions").style.display = "none";
+    closeProductModal();
+}
+
+async function deleteSelectedProduct() {
+    if (!selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+
+    const ok = confirm("确定要删除这个商品吗？");
+    if (!ok) {
+        return;
+    }
+
+    await request(`/products/${selectedProductId}`, {
+        method: "DELETE"
+    });
+
+    clearSelectedProduct();
+    await _doProductSearch();
+    alert("商品已删除");
+}
+
+// ─── Product CSV Import / Export ───
+
+function importProductCsvDialog() {
+    document.getElementById("importProductCsvFile").click();
+}
+
+async function handleImportProductCsv(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const res = await fetch("/products/import", {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+        });
+
+        if (res.status === 401) {
+            showLogin("登录已失效，请重新登录");
+            return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.detail || "导入失败");
+            return;
+        }
+
+        let msg = `导入完成！\n创建：${data.created} 条\n跳过（重复）：${data.skipped} 条`;
+        if (data.errors && data.errors.length) {
+            msg += `\n错误：${data.errors.length} 条`;
+            const errDetails = data.errors.slice(0, 5).map(e => `  第${e.row}行：${e.reason}`).join("\n");
+            msg += `\n\n错误详情（最多显示5条）：\n${errDetails}`;
+            if (data.errors.length > 5) {
+                msg += `\n  ...还有 ${data.errors.length - 5} 条错误`;
+            }
+        }
+
+        alert(msg);
+        await loadProducts();
+    } catch (err) {
+        alert("网络错误，导入失败");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+async function exportProducts() {
+    try {
+        const res = await fetch("/products/export", {
+            credentials: "include",
+        });
+
+        if (res.status === 401) {
+            showLogin("登录已失效，请重新登录");
+            return;
+        }
+
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.detail || "导出失败");
+            return;
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "products_export.csv";
         document.body.appendChild(a);
         a.click();
         a.remove();

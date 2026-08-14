@@ -5,6 +5,7 @@ import json
 import base64
 import logging
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
@@ -17,7 +18,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.config import settings
-from app.models import Customer, FollowUp, DocumentChunk, User
+from app.models import Customer, FollowUp, Product, DocumentChunk, User
 from app.auth import create_user, verify_password, hash_password, utc_timestamp
 from app.schemas import (
     CustomerCreate,
@@ -25,6 +26,9 @@ from app.schemas import (
     CustomerSearchResult,
     FollowUpCreate,
     FollowUpOut,
+    ProductCreate,
+    ProductOut,
+    ProductSearchResult,
     AIResult,
     RagAsk,
     RagAnswer,
@@ -785,6 +789,334 @@ def export_followups_csv(
             "Content-Disposition": "attachment; filename=followups_export.csv",
         },
     )
+
+
+# ─── Product routes (live ops — 商品管理) ───
+
+# CSV 中文表头 → 英文字段名映射。导入同时兼容中文和英文表头。
+_PRODUCT_CSV_HEADER_ALIASES = {
+    "商品名称": "name",
+    "价格": "price",
+    "核心卖点": "selling_points",
+    "适用人群": "target_audience",
+    "用户痛点": "pain_points",
+    "优惠信息": "promotion",
+    "库存": "stock",
+    "直播状态": "live_status",
+    "备注": "notes",
+}
+
+
+def get_product_for_user(db: Session, product_id: int, user: User) -> Product:
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.user_id == user.id)
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=404, detail="商品不存在")
+    return product
+
+
+def _parse_decimal_field(value: str, field_label: str) -> Decimal:
+    """解析 CSV 价格列：空值返回 0，非法或负数报错。"""
+    value = (value or "").strip()
+    if not value:
+        return Decimal("0")
+    try:
+        parsed = Decimal(value)
+    except InvalidOperation:
+        raise ValueError(f"{field_label} 格式不正确")
+    if parsed < 0:
+        raise ValueError(f"{field_label} 不能为负数")
+    return parsed
+
+
+def _parse_int_field(value: str, field_label: str) -> int:
+    """解析 CSV 库存列：空值返回 0，非法或负数报错。"""
+    value = (value or "").strip()
+    if not value:
+        return 0
+    try:
+        parsed = int(value)
+    except ValueError:
+        raise ValueError(f"{field_label} 格式不正确")
+    if parsed < 0:
+        raise ValueError(f"{field_label} 不能为负数")
+    return parsed
+
+
+@app.post("/products", response_model=ProductOut)
+def create_product(
+    data: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product_data = data.model_dump()
+    if not product_data.get("live_status"):
+        product_data["live_status"] = "未上播"
+    product = Product(user_id=current_user.id, **product_data)
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@app.get("/products", response_model=List[ProductOut])
+def list_products(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Product)
+        .filter(Product.user_id == current_user.id)
+        .order_by(Product.id.desc())
+        .all()
+    )
+
+
+@app.get("/products/search", response_model=ProductSearchResult)
+def search_products(
+    q: Optional[str] = None,
+    live_status: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """搜索/筛选/分页 查询当前用户商品。"""
+    query = db.query(Product).filter(Product.user_id == current_user.id)
+
+    # 关键词搜索：名称、核心卖点、适用人群、用户痛点、优惠信息、备注
+    if q:
+        q_like = f"%{q}%"
+        query = query.filter(or_(
+            Product.name.ilike(q_like),
+            Product.selling_points.ilike(q_like),
+            Product.target_audience.ilike(q_like),
+            Product.pain_points.ilike(q_like),
+            Product.promotion.ilike(q_like),
+            Product.notes.ilike(q_like),
+        ))
+
+    # 精确筛选
+    if live_status:
+        query = query.filter(Product.live_status == live_status)
+
+    # 总数
+    total = query.count()
+
+    # 分页参数修正
+    page = max(page, 1)
+    page_size = max(min(page_size, 100), 1)
+
+    # 排序
+    query = query.order_by(Product.id.desc())
+
+    # 总页数
+    pages = max(1, (total + page_size - 1) // page_size) if total > 0 else 0
+    if page > pages and total > 0:
+        page = pages
+
+    offset = (page - 1) * page_size
+    items = query.offset(offset).limit(page_size).all()
+
+    return ProductSearchResult(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )
+
+
+@app.post("/products/import")
+def import_products_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """导入商品 CSV 文件，只导入到当前用户。
+
+    表头支持英文（name/price/selling_points/target_audience/pain_points/
+    promotion/stock/live_status/notes）或中文（商品名称/价格/核心卖点/
+    适用人群/用户痛点/优惠信息/库存/直播状态/备注）。
+    """
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="请上传 CSV 文件")
+
+    try:
+        raw = file.file.read()
+    except Exception:
+        raise HTTPException(status_code=400, detail="无法读取文件内容")
+
+    # 尝试 UTF-8-SIG 和 UTF-8 解码
+    content = None
+    for encoding in ("utf-8-sig", "utf-8"):
+        try:
+            content = raw.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    if content is None:
+        raise HTTPException(status_code=400, detail="文件编码不支持，请使用 UTF-8 编码的 CSV 文件")
+
+    reader = csv.DictReader(io.StringIO(content))
+    if reader.fieldnames is None:
+        raise HTTPException(status_code=400, detail="CSV 文件没有任何列")
+
+    created = 0
+    skipped = 0
+    errors: list[dict] = []
+
+    # 批量内去重追踪（导入过程中尚未提交到数据库的记录），按商品名称去重
+    batch_seen: set[str] = set()
+
+    for row_num, row in enumerate(reader, start=2):
+        # 中文表头 → 英文字段名
+        row = {_PRODUCT_CSV_HEADER_ALIASES.get(k, k): v for k, v in row.items()}
+        try:
+            name = (row.get("name") or "").strip()
+
+            if not name:
+                errors.append({"row": row_num, "reason": "name（商品名称）为必填项"})
+                continue
+
+            # 重复检测：当前用户名下同名字段视为重复
+            existing_in_db = (
+                db.query(Product)
+                .filter(
+                    Product.user_id == current_user.id,
+                    Product.name == name,
+                )
+                .first()
+            )
+            if existing_in_db or name in batch_seen:
+                skipped += 1
+                continue
+
+            price = _parse_decimal_field(row.get("price") or "", "price（价格）")
+            stock = _parse_int_field(row.get("stock") or "", "stock（库存）")
+
+            # 只有通过所有校验、确定要创建的行才加入去重集合
+            batch_seen.add(name)
+
+            product = Product(
+                user_id=current_user.id,
+                name=name,
+                price=price,
+                selling_points=(row.get("selling_points") or "").strip() or None,
+                target_audience=(row.get("target_audience") or "").strip() or None,
+                pain_points=(row.get("pain_points") or "").strip() or None,
+                promotion=(row.get("promotion") or "").strip() or None,
+                stock=stock,
+                live_status=(row.get("live_status") or "").strip() or "未上播",
+                notes=(row.get("notes") or "").strip() or None,
+            )
+            db.add(product)
+            created += 1
+        except ValueError as exc:
+            errors.append({"row": row_num, "reason": str(exc)})
+        except Exception as exc:
+            errors.append({"row": row_num, "reason": str(exc)})
+
+    db.commit()
+
+    return {
+        "created": created,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
+@app.get("/products/export")
+def export_products_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """导出当前用户商品为 CSV 文件（UTF-8-SIG，英文表头）。"""
+    products = (
+        db.query(Product)
+        .filter(Product.user_id == current_user.id)
+        .order_by(Product.id.asc())
+        .all()
+    )
+
+    output = io.StringIO()
+    output.write("﻿")  # UTF-8 BOM
+
+    fieldnames = [
+        "name", "price", "selling_points", "target_audience", "pain_points",
+        "promotion", "stock", "live_status", "notes", "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+
+    for p in products:
+        writer.writerow({
+            "name": p.name,
+            "price": str(p.price),
+            "selling_points": p.selling_points or "",
+            "target_audience": p.target_audience or "",
+            "pain_points": p.pain_points or "",
+            "promotion": p.promotion or "",
+            "stock": p.stock,
+            "live_status": p.live_status or "",
+            "notes": p.notes or "",
+            "created_at": p.created_at.isoformat() if p.created_at else "",
+        })
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={
+            "Content-Disposition": "attachment; filename=products_export.csv",
+        },
+    )
+
+
+@app.get("/products/{product_id}", response_model=ProductOut)
+def get_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_product_for_user(db, product_id, current_user)
+
+
+@app.put("/products/{product_id}", response_model=ProductOut)
+def update_product(
+    product_id: int,
+    data: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+
+    product_data = data.model_dump()
+    if not product_data.get("live_status"):
+        product_data["live_status"] = "未上播"
+
+    for key, value in product_data.items():
+        setattr(product, key, value)
+
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@app.delete("/products/{product_id}")
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = get_product_for_user(db, product_id, current_user)
+
+    db.delete(product)
+    db.commit()
+    return {"message": "商品已删除"}
 
 
 @app.post("/customers/{customer_id}/ai/summary", response_model=AIResult)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, List
 
 from pydantic import BaseModel, ConfigDict
@@ -40,6 +41,38 @@ class FollowUpOut(FollowUpCreate):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ─── Product schemas ───
+
+
+class ProductCreate(BaseModel):
+    name: str
+    price: Decimal = Decimal("0")
+    selling_points: Optional[str] = None
+    target_audience: Optional[str] = None
+    pain_points: Optional[str] = None
+    promotion: Optional[str] = None
+    stock: int = 0
+    live_status: Optional[str] = "未上播"
+    notes: Optional[str] = None
+
+
+class ProductOut(ProductCreate):
+    id: int
+    # price 对外以数值输出（FastAPI 不会自动把 Decimal 转成 JSON 数字）
+    price: float
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductSearchResult(BaseModel):
+    items: List[ProductOut]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class AIResult(BaseModel):

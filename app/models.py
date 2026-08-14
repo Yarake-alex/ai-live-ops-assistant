@@ -1,7 +1,8 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, List
 
-from sqlalchemy import String, Integer, DateTime, Text, ForeignKey, Boolean
+from sqlalchemy import String, Integer, DateTime, Text, ForeignKey, Boolean, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -19,6 +20,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     customers: Mapped[List["Customer"]] = relationship(back_populates="owner")
+    products: Mapped[List["Product"]] = relationship(back_populates="owner")
     document_chunks: Mapped[List["DocumentChunk"]] = relationship(back_populates="owner")
 
 
@@ -47,6 +49,27 @@ class Customer(Base):
         cascade="all, delete-orphan"
     )
     owner: Mapped["User"] = relationship(back_populates="customers")
+
+
+class Product(Base):
+    """直播带货商品 — 直播运营核心业务主体。"""
+
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0"))
+    selling_points: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    target_audience: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pain_points: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    promotion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    live_status: Mapped[str] = mapped_column(String(20), nullable=False, default="未上播")
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    owner: Mapped["User"] = relationship(back_populates="products")
 
 
 class FollowUp(Base):
