@@ -779,24 +779,6 @@
             font-size: 15px;
         }
 
-        /* ─── Customer Detail ─── */
-        #customerDetail p {
-            margin: 6px 0;
-            padding: 6px 0;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        #customerDetail b { font-size: 17px; }
-
-        .current-customer {
-            padding: 16px;
-            border-radius: var(--radius);
-            background: #eff6ff;
-            border: 1.5px solid #bfdbfe;
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
 
         .detail-actions {
             margin-top: 16px;
@@ -1149,7 +1131,7 @@
     <div class="login-card">
         <div class="login-brand">MVP</div>
         <h1>AI 直播运营助手 <span class="title-highlight">MVP</span></h1>
-        <p class="login-sub">MVP · RAG 知识库 · Agent 跟进分析<br>请输入账号和密码以进入系统</p>
+        <p class="login-sub">商品知识库 RAG · 直播复盘 · 轻量运营看板<br>请输入账号和密码以进入系统</p>
         <input id="loginUsername" type="text" placeholder="用户名" autocomplete="username">
         <input id="loginPassword" type="password" placeholder="访问密码" autocomplete="off">
         <div id="loginError" class="login-error"></div>
@@ -1190,16 +1172,6 @@
                 <span>数据概览</span>
             </button>
 
-            <button id="tabCustomer" class="sidebar-nav-item" onclick="showPage('customer')">
-                <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <span>客户管理</span>
-            </button>
-
             <button id="tabProduct" class="sidebar-nav-item" onclick="showPage('product')">
                 <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/>
@@ -1217,15 +1189,6 @@
                 <span>评论回复</span>
             </button>
 
-            <button id="tabAI" class="sidebar-nav-item" onclick="showPage('ai')">
-                <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
-                    <path d="M18 16l-1 2.5-2.5 1 2.5 1 1 2.5 1-2.5 2.5-1-2.5-1-1-2.5z"/>
-                    <path d="M6 13l-1 2-2 1 2 1 1 2 1-2 2-1-2-1-1-2z"/>
-                </svg>
-                <span>AI 跟进分析</span>
-            </button>
-
             <button id="tabRAG" class="sidebar-nav-item" onclick="showPage('rag')">
                 <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -1234,23 +1197,6 @@
                     <line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
                 <span>RAG 知识库</span>
-            </button>
-
-            <button id="tabDue" class="sidebar-nav-item" onclick="showPage('due')">
-                <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span>待跟进客户</span>
-            </button>
-
-            <button id="tabAgent" class="sidebar-nav-item" onclick="showPage('agent')">
-                <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="10" rx="2"/>
-                    <circle cx="12" cy="16" r="2"/>
-                    <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-                </svg>
-                <span>Agent 助手</span>
             </button>
 
             <button id="tabAdmin" class="sidebar-nav-item" onclick="showPage('admin')" style="display:none;">
@@ -1305,38 +1251,7 @@
 
                 <div class="welcome-card">
                     <h2>欢迎使用 AI 直播运营助手 MVP</h2>
-                    <p>企业级 ToB 销售管理平台 · 集成客户管理、AI 分析、RAG 知识库与 Agent 智能跟进</p>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                        </div>
-                        <div class="stat-label">客户总数</div>
-                        <div class="stat-value" id="statTotalCustomers">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </div>
-                        <div class="stat-label">已合作客户</div>
-                        <div class="stat-value" id="statCooperating">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        </div>
-                        <div class="stat-label">跟进中客户</div>
-                        <div class="stat-value" id="statFollowing">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <div class="stat-label">知识库文档</div>
-                        <div class="stat-value" id="statDocuments">0</div>
-                    </div>
+                    <p>商品知识库 RAG · 直播话术 · 评论回复 · 直播复盘 · 轻量运营看板</p>
                 </div>
 
                 <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">运营概览</h3>
@@ -1387,19 +1302,12 @@
 
                 <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">快速入口</h3>
                 <div class="quick-grid">
-                    <div class="quick-card" onclick="showPage('customer')">
+                    <div class="quick-card" onclick="showPage('product')">
                         <div class="qc-icon blue">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
                         </div>
-                        <div class="qc-title">客户管理</div>
-                        <div class="qc-desc">维护客户资料与跟进记录</div>
-                    </div>
-                    <div class="quick-card" onclick="showPage('ai')">
-                        <div class="qc-icon purple">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-                        </div>
-                        <div class="qc-title">AI 跟进分析</div>
-                        <div class="qc-desc">生成客户总结与销售建议</div>
+                        <div class="qc-title">商品管理</div>
+                        <div class="qc-desc">商品资料、知识库与直播话术</div>
                     </div>
                     <div class="quick-card" onclick="showPage('rag')">
                         <div class="qc-icon green">
@@ -1408,143 +1316,9 @@
                         <div class="qc-title">RAG 知识库</div>
                         <div class="qc-desc">上传资料并基于资料问答</div>
                     </div>
-                    <div class="quick-card" onclick="showPage('agent')">
-                        <div class="qc-icon amber">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="16" r="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                        </div>
-                        <div class="qc-title">Agent 助手</div>
-                        <div class="qc-desc">自动生成客户跟进方案</div>
-                    </div>
                 </div>
             </div>
 
-            <!-- ════════════════════════════════════
-                 Customer Management Page
-                 ════════════════════════════════════ -->
-            <div id="pageCustomer" class="page-section">
-                <!-- ── Top Action Bar ── -->
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-                    <h2 style="margin:0;font-size:18px;">客户管理</h2>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <button onclick="openCustomerModal()">＋ 新增客户</button>
-                        <button class="light" onclick="importCsvDialog()">📥 导入 CSV</button>
-                        <button class="light" onclick="exportCustomers()">📤 导出客户</button>
-                        <button class="light" onclick="exportFollowups()">📤 导出跟进</button>
-                    </div>
-                </div>
-                <input id="importCsvFile" type="file" accept=".csv" style="display:none;" onchange="handleImportCsv(event)">
-
-                <!-- ── Three-Column Layout ── -->
-                <div class="crm-grid">
-                    <!-- Left: Customer List 320px -->
-                    <div>
-                        <div class="card" style="padding:16px;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                                <span style="font-weight:700;font-size:15px;">客户列表</span>
-                                <span class="badge" id="customerCountBadge">0</span>
-                            </div>
-                            <input id="searchQ" placeholder="搜索姓名、公司、电话、邮箱…" oninput="searchCustomers()">
-                            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
-                                <select id="filterLevel" onchange="searchCustomers()" style="flex:1;min-width:70px;font-size:11px;padding:6px 4px;margin:2px 0;">
-                                    <option value="">等级</option>
-                                    <option value="A">A</option><option value="B">B</option><option value="C">C</option>
-                                </select>
-                                <select id="filterIntention" onchange="searchCustomers()" style="flex:1;min-width:70px;font-size:11px;padding:6px 4px;margin:2px 0;">
-                                    <option value="">意向</option>
-                                    <option value="高">高</option><option value="中">中</option><option value="低">低</option>
-                                </select>
-                                <select id="filterCooperationStatus" onchange="searchCustomers()" style="flex:1;min-width:80px;font-size:11px;padding:6px 4px;margin:2px 0;">
-                                    <option value="">合作</option>
-                                    <option value="已合作">已合作</option><option value="跟进洽谈">洽谈</option><option value="暂未合作">未合作</option>
-                                </select>
-                                <select id="filterFollowupStatus" onchange="searchCustomers()" style="flex:1;min-width:70px;font-size:11px;padding:6px 4px;margin:2px 0;">
-                                    <option value="">跟进</option>
-                                    <option value="待跟进">待跟进</option><option value="已跟进">已跟进</option><option value="逾期">逾期</option>
-                                    <option value="暂停">暂停</option><option value="成交">成交</option><option value="流失">流失</option>
-                                </select>
-                                <input id="filterSource" placeholder="来源" oninput="searchCustomers()" style="flex:1;min-width:60px;font-size:11px;padding:6px 4px;margin:2px 0;">
-                            </div>
-                            <div style="display:flex;gap:6px;margin-bottom:8px;">
-                                <button class="light" onclick="resetSearch()" style="font-size:11px;padding:4px 8px;">重置</button>
-                                <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;">
-                                    <input type="checkbox" id="filterDueOnly" onchange="searchCustomers()" style="width:auto;margin:0;">待跟进
-                                </label>
-                            </div>
-                            <div id="customerList" style="max-height:52vh;overflow-y:auto;"></div>
-                            <div id="customerPagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>
-                        </div>
-                    </div>
-
-                    <!-- Center: Customer Detail 1fr -->
-                    <div>
-                        <div class="card" style="padding:20px;">
-                            <div id="customerDetail" class="muted" style="text-align:center;padding:40px 0;">
-                                <div style="font-size:40px;margin-bottom:12px;">👤</div>
-                                <div>请选择一个客户以查看详情</div>
-                            </div>
-                            <div id="detailActions" class="detail-actions" style="display:none;">
-                                <button onclick="openCustomerModal(true)">✏️ 编辑客户</button>
-                                <button class="danger" onclick="deleteSelectedCustomer()">🗑 删除客户</button>
-                                <button class="secondary" onclick="aiSummary()" style="flex:1 0 45%;">🤖 AI 总结</button>
-                                <button class="secondary" onclick="aiSuggestion()" style="flex:1 0 45%;">💡 AI 建议</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: Follow-up Panel 360px -->
-                    <div>
-                        <div class="card" style="padding:16px;">
-                            <div style="font-weight:700;font-size:15px;margin-bottom:10px;">新增跟进记录</div>
-                            <div id="followupPanelHint" class="muted" style="text-align:center;padding:24px 0;font-size:13px;">选择客户后可记录跟进</div>
-                            <div id="followupPanelForm" style="display:none;">
-                                <textarea id="followupContent" placeholder="跟进内容…"></textarea>
-                                <textarea id="nextAction" placeholder="下一步动作…"></textarea>
-                                <input id="followupNextFollowupAt" type="datetime-local" placeholder="下次跟进时间（可选）">
-                                <select id="followupFollowupStatus">
-                                    <option value="">不修改跟进状态</option>
-                                    <option value="待跟进">待跟进</option><option value="已跟进">已跟进</option>
-                                    <option value="逾期">逾期</option><option value="暂停">暂停</option>
-                                    <option value="成交">成交</option><option value="流失">流失</option>
-                                </select>
-                                <button onclick="createFollowup()" style="width:100%;">保存跟进</button>
-                            </div>
-                        </div>
-                        <div class="card" style="padding:16px;margin-top:12px;">
-                            <div style="font-weight:700;font-size:15px;margin-bottom:10px;">历史跟进记录</div>
-                            <div id="followupList" class="muted" style="text-align:center;padding:12px 0;font-size:13px;">暂无记录</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── Customer Modal (add/edit) ── -->
-                <div id="customerModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeCustomerModal()">
-                    <div class="modal-box" style="max-width:600px;max-height:85vh;overflow-y:auto;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                            <h3 id="customerModalTitle" style="margin:0;">新增客户</h3>
-                            <button class="light" onclick="closeCustomerModal()" style="padding:4px 10px;">✕</button>
-                        </div>
-                        <input id="name" placeholder="客户姓名 *">
-                        <input id="company" placeholder="公司名称 *">
-                        <input id="phone" placeholder="电话">
-                        <input id="email" placeholder="邮箱">
-                        <input id="industry" placeholder="行业，例如：汽车电子">
-                        <div style="display:flex;gap:8px;">
-                            <select id="level" style="flex:1;"><option value="">客户等级</option><option value="A">A 重点</option><option value="B">B 普通</option><option value="C">C 潜在</option></select>
-                            <select id="intention" style="flex:1;"><option value="">意向程度</option><option value="高">高</option><option value="中">中</option><option value="低">低</option></select>
-                        </div>
-                        <select id="cooperationStatus"><option value="">合作状态</option><option value="已合作">已合作</option><option value="跟进洽谈">跟进洽谈</option><option value="暂未合作">暂未合作</option></select>
-                        <input id="source" placeholder="客户来源，例如：展会 / 转介绍">
-                        <textarea id="remark" placeholder="销售备注" style="min-height:60px;"></textarea>
-                        <input id="nextFollowupAt" type="datetime-local" placeholder="下次跟进时间">
-                        <select id="followupStatus"><option value="">跟进状态</option><option value="待跟进">待跟进</option><option value="已跟进">已跟进</option><option value="逾期">逾期</option><option value="暂停">暂停</option><option value="成交">成交</option><option value="流失">流失</option></select>
-                        <input type="hidden" id="editCustomerId" value="">
-                        <div style="display:flex;gap:8px;margin-top:8px;">
-                            <button onclick="saveCustomerFromModal()" style="flex:1;">保存</button>
-                            <button class="light" onclick="closeCustomerModal()" style="flex:1;">取消</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- ════════════════════════════════════
                  商品管理 Page
@@ -1555,8 +1329,8 @@
                     <h2 style="margin:0;font-size:18px;">商品管理</h2>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         <button onclick="openProductModal()">＋ 新增商品</button>
-                        <button class="light" onclick="importProductCsvDialog()">📥 导入 CSV</button>
-                        <button class="light" onclick="exportProducts()">📤 导出 CSV</button>
+                        <button class="light" onclick="importProductCsvDialog()">📥 导入商品 CSV</button>
+                        <button class="light" onclick="exportProducts()">📤 导出商品 CSV</button>
                     </div>
                 </div>
                 <input id="importProductCsvFile" type="file" accept=".csv" style="display:none;" onchange="handleImportProductCsv(event)">
@@ -1737,56 +1511,6 @@
                 </div>
             </div>
 
-            <!-- ════════════════════════════════════
-                 AI 跟进分析 Page
-                 ════════════════════════════════════ -->
-            <div id="pageAI" class="page-section">
-                <div class="page-intro">
-                    <span class="intro-dot"></span>
-                    基于当前选中的客户资料和历史跟进记录，调用大模型生成客户总结和下一步销售建议。
-                </div>
-
-                <div class="ai-grid">
-                    <div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>选择分析客户</h2>
-                            </div>
-                            <div id="currentCustomerBox" class="current-customer muted" style="margin-bottom:14px;">暂未选择客户。可以在下方直接选择一个客户。</div>
-                            <select id="aiCustomerSelect">
-                                <option value="" disabled selected>请选择要分析的客户</option>
-                            </select>
-                            <div class="btn-group" style="margin-top:10px;">
-                                <button onclick="switchCustomerFromAI()" class="outline">设为当前客户</button>
-                            </div>
-                            <div class="muted" style="margin-top:12px;">
-                                选择客户后，AI 会基于该客户的基础资料和历史跟进记录生成分析结果。
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>AI 分析操作</h2>
-                            </div>
-                            <div class="btn-group">
-                                <button onclick="aiSummary()">AI 总结跟进记录</button>
-                                <button class="secondary" onclick="aiSuggestion()">AI 生成下一步建议</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>分析结果</h2>
-                            </div>
-                            <div id="aiResult" class="result">
-                                <div class="result-empty">选择客户后可生成 AI 分析结果</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- ════════════════════════════════════
                  RAG 知识库 Page
@@ -1839,75 +1563,7 @@
                 </div>
             </div>
 
-            <!-- ════════════════════════════════════
-                 Agent 跟进助手 Page
-                 ════════════════════════════════════ -->
-            <div id="pageAgent" class="page-section">
-                <div class="page-intro">
-                    <span class="intro-dot"></span>
-                    V4 Agent 会自动查询客户信息、历史跟进记录和知识库资料，并调用大模型生成完整客户跟进方案。
-                </div>
 
-                <div class="ai-grid">
-                    <div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>Agent 任务设置</h2>
-                            </div>
-                            <select id="agentCustomerSelect">
-                                <option value="" disabled selected>请选择要分析的客户</option>
-                            </select>
-                            <textarea id="agentTask" placeholder="例如：帮我分析这个客户下一步怎么跟进，并结合产品资料给出销售话术。">帮我分析这个客户下一步怎么跟进，并结合知识库资料给出销售话术。</textarea>
-                            <button onclick="runAgentAnalyze()" style="width:100%;">启动 Agent 分析</button>
-                            <div class="muted" style="margin-top:10px;">
-                                Agent 会自动调用：客户查询工具、跟进记录查询工具、知识库检索工具和大模型生成工具。
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>Agent 执行步骤</h2>
-                            </div>
-                            <div id="agentSteps" class="result">
-                                <div class="result-empty">等待启动 Agent。</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h2>Agent 分析结果</h2>
-                            </div>
-                            <div id="agentResult" class="result">
-                                <div class="result-empty">Agent 生成的完整跟进方案会显示在这里。</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ════════════════════════════════════
-                 Due Follow-ups Page
-                 ════════════════════════════════════ -->
-            <div id="pageDue" class="page-section">
-                <div class="page-intro">
-                    <span class="intro-dot"></span>
-                    以下客户已到或超过计划跟进时间，且状态非终态，需尽快跟进。
-                </div>
-
-                <div class="btn-group" style="margin-bottom:16px;">
-                    <button onclick="loadDueCustomers()">刷新列表</button>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2>待跟进客户</h2>
-                        <span class="badge" id="dueCountBadge">0</span>
-                    </div>
-                    <div id="dueCustomerList"></div>
-                </div>
-            </div>
 
             <!-- ════════════════════════════════════
                  User Admin Page
@@ -1969,8 +1625,6 @@
 </div>
 
 <script>
-let selectedCustomerId = null;
-let selectedCustomerData = null;
 
 // ─── Product state ───
 let selectedProductId = null;
@@ -1979,13 +1633,8 @@ let _productSearchPage = 1;
 let _productSearchTimer = null;
 
 // ─── Cache for dashboard stats ───
-let _allCustomers = [];
 let _cachedDocs = [];
 
-// ─── Search / Filter / Pagination state ───
-let _searchPage = 1;
-let _searchTimer = null;
-let _searchTotal = 0;
 
 // ─── Sidebar toggle (mobile) ───
 function toggleSidebar() {
@@ -2035,10 +1684,8 @@ async function showApp() {
         // ignore — admin tab stays hidden
     }
 
-    loadCustomers();
     loadProducts();
     loadRagDocuments();
-    updateCurrentCustomerBox();
     showPage('dashboard');
 }
 
@@ -2091,35 +1738,23 @@ async function handleLogout() {
 function showPage(name) {
     const pages = {
         dashboard: "pageDashboard",
-        customer: "pageCustomer",
         product: "pageProduct",
         commentreply: "pageCommentReply",
-        ai: "pageAI",
         rag: "pageRAG",
-        agent: "pageAgent",
-        due: "pageDue",
         admin: "pageAdmin"
     };
     const tabs = {
         dashboard: "tabDashboard",
-        customer: "tabCustomer",
         product: "tabProduct",
         commentreply: "tabCommentReply",
-        ai: "tabAI",
         rag: "tabRAG",
-        agent: "tabAgent",
-        due: "tabDue",
         admin: "tabAdmin"
     };
     const pageTitles = {
         dashboard: "数据概览",
-        customer: "客户管理",
         product: "商品管理",
         commentreply: "评论回复",
-        ai: "AI 跟进分析",
         rag: "RAG 知识库",
-        agent: "Agent 跟进助手",
-        due: "待跟进客户",
         admin: "用户管理"
     };
 
@@ -2139,10 +1774,6 @@ function showPage(name) {
         titleEl.textContent = pageTitles[name];
     }
 
-    // Auto-load due customers when navigating to due page
-    if (name === 'due') {
-        loadDueCustomers();
-    }
     // Auto-load user list when navigating to admin page
     if (name === 'admin') {
         loadUserList();
@@ -2225,18 +1856,6 @@ function renderAIText(text) {
 // ─── Dashboard Stats ───
 
 function updateDashboardStats() {
-    const total = document.getElementById('statTotalCustomers');
-    const cooperating = document.getElementById('statCooperating');
-    const following = document.getElementById('statFollowing');
-    const docs = document.getElementById('statDocuments');
-    const badge = document.getElementById('customerCountBadge');
-
-    if (total) total.textContent = _allCustomers.length;
-    if (cooperating) cooperating.textContent = _allCustomers.filter(c => c.cooperation_status === '已合作').length;
-    if (following) following.textContent = _allCustomers.filter(c => c.cooperation_status === '跟进洽谈').length;
-    if (docs) docs.textContent = _cachedDocs.length;
-    if (badge) badge.textContent = _searchTotal;
-
     loadOpsStats();
 }
 
@@ -2291,437 +1910,6 @@ async function request(url, options = {}) {
     return res.json();
 }
 
-// ─── Modal helpers ───
-function _clearModalFields() {
-    document.getElementById("name").value = "";
-    document.getElementById("company").value = "";
-    document.getElementById("phone").value = "";
-    document.getElementById("email").value = "";
-    document.getElementById("industry").value = "";
-    document.getElementById("level").value = "";
-    document.getElementById("intention").value = "";
-    document.getElementById("cooperationStatus").value = "";
-    document.getElementById("source").value = "";
-    document.getElementById("remark").value = "";
-    document.getElementById("nextFollowupAt").value = "";
-    document.getElementById("followupStatus").value = "";
-    document.getElementById("editCustomerId").value = "";
-}
-
-function _fillModalFromData(c) {
-    document.getElementById("name").value = c.name || "";
-    document.getElementById("company").value = c.company || "";
-    document.getElementById("phone").value = c.phone || "";
-    document.getElementById("email").value = c.email || "";
-    document.getElementById("industry").value = c.industry || "";
-    document.getElementById("level").value = c.level || "";
-    document.getElementById("intention").value = c.intention || "";
-    document.getElementById("cooperationStatus").value = c.cooperation_status || "";
-    document.getElementById("source").value = c.source || "";
-    document.getElementById("remark").value = c.remark || "";
-    if (c.next_followup_at) {
-        document.getElementById("nextFollowupAt").value = new Date(c.next_followup_at).toISOString().slice(0, 16);
-    } else {
-        document.getElementById("nextFollowupAt").value = "";
-    }
-    document.getElementById("followupStatus").value = c.followup_status || "";
-}
-
-function openCustomerModal(isEdit) {
-    _clearModalFields();
-    document.getElementById("editCustomerId").value = "";
-    if (isEdit && selectedCustomerData) {
-        document.getElementById("customerModalTitle").textContent = "编辑客户";
-        _fillModalFromData(selectedCustomerData);
-        document.getElementById("editCustomerId").value = selectedCustomerData.id;
-    } else {
-        document.getElementById("customerModalTitle").textContent = "新增客户";
-    }
-    document.getElementById("customerModal").style.display = "flex";
-}
-
-function closeCustomerModal() {
-    document.getElementById("customerModal").style.display = "none";
-    _clearModalFields();
-}
-
-async function saveCustomerFromModal() {
-    const id = document.getElementById("editCustomerId").value;
-    const followupVal = document.getElementById("nextFollowupAt").value;
-    const data = {
-        name: document.getElementById("name").value,
-        company: document.getElementById("company").value,
-        phone: document.getElementById("phone").value,
-        email: document.getElementById("email").value,
-        industry: document.getElementById("industry").value,
-        level: document.getElementById("level").value,
-        intention: document.getElementById("intention").value,
-        cooperation_status: document.getElementById("cooperationStatus").value,
-        source: document.getElementById("source").value,
-        remark: document.getElementById("remark").value,
-        next_followup_at: followupVal ? new Date(followupVal).toISOString() : null,
-        followup_status: document.getElementById("followupStatus").value || "待跟进"
-    };
-
-    if (!data.name || !data.company) {
-        alert("客户姓名和公司名称必填");
-        return;
-    }
-
-    if (id) {
-        await request(`/customers/${id}`, { method: "PUT", body: JSON.stringify(data) });
-    } else {
-        await request("/customers", { method: "POST", body: JSON.stringify(data) });
-    }
-
-    closeCustomerModal();
-    await loadCustomers();
-    if (id && selectedCustomerId === Number(id)) {
-        await selectCustomer(Number(id));
-    }
-}
-
-// Keep backward compat shim
-function createCustomer() { openCustomerModal(false); }
-
-function _buildSearchParams() {
-    const params = new URLSearchParams();
-    const q = document.getElementById("searchQ").value.trim();
-    if (q) params.set("q", q);
-    const level = document.getElementById("filterLevel").value;
-    if (level) params.set("level", level);
-    const intention = document.getElementById("filterIntention").value;
-    if (intention) params.set("intention", intention);
-    const cs = document.getElementById("filterCooperationStatus").value;
-    if (cs) params.set("cooperation_status", cs);
-    const fs = document.getElementById("filterFollowupStatus").value;
-    if (fs) params.set("followup_status", fs);
-    const src = document.getElementById("filterSource").value.trim();
-    if (src) params.set("source", src);
-    if (document.getElementById("filterDueOnly").checked) params.set("due_only", "true");
-    params.set("page", String(_searchPage));
-    params.set("page_size", "10");
-    return params;
-}
-
-async function searchCustomers() {
-    // Debounce
-    if (_searchTimer) clearTimeout(_searchTimer);
-    _searchTimer = setTimeout(async () => {
-        _searchPage = 1;
-        await _doSearch();
-    }, 200);
-}
-
-async function _doSearch() {
-    const params = _buildSearchParams();
-    try {
-        const data = await request("/customers/search?" + params.toString());
-        _renderCustomerList(data.items);
-        _renderPagination(data);
-        _searchTotal = data.total;
-        document.getElementById("customerCountBadge").textContent = data.total;
-    } catch (e) {
-        // Error already handled by request()
-    }
-}
-
-function _renderCustomerList(customers) {
-    const box = document.getElementById("customerList");
-    if (customers.length === 0) {
-        box.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>暂无客户，请先新增一个客户。</p></div>';
-        return;
-    }
-    box.innerHTML = customers.map(c => {
-        const nextDate = c.next_followup_at ? new Date(c.next_followup_at).toLocaleDateString() : "";
-        const dueText = nextDate ? `下次：${nextDate}` : "";
-        return `
-        <div class="customer-item" data-customer-id="${c.id}" onclick="selectCustomer(${c.id})">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <b>${escapeHtml(c.name)}</b>
-                <span class="status-tag">${escapeHtml(c.followup_status || "待跟进")}</span>
-            </div>
-            <div class="muted" style="font-size:12px;">${escapeHtml(c.company)} · ${escapeHtml(c.level || "未分级")} · ${escapeHtml(c.intention || "未设置")}</div>
-            <div class="muted" style="font-size:11px;">${dueText}${c.source ? ' · ' + escapeHtml(c.source) : ''}</div>
-        </div>
-    `}).join("");
-    updateSelectedCustomerHighlight();
-}
-
-function updateSelectedCustomerHighlight() {
-    document.querySelectorAll("#customerList .customer-item").forEach(item => {
-        const id = Number(item.dataset.customerId);
-        item.classList.toggle("selected", id === selectedCustomerId);
-    });
-}
-
-function _renderPagination(data) {
-    const box = document.getElementById("customerPagination");
-    if (data.total === 0) {
-        box.innerHTML = "";
-        return;
-    }
-    box.innerHTML = `
-        <button class="light" onclick="goToPage(${data.page - 1})" ${data.page <= 1 ? "disabled" : ""} style="font-size:12px;padding:4px 10px;">上一页</button>
-        <span>第 ${data.page} / ${data.pages} 页（共 ${data.total} 条）</span>
-        <button class="light" onclick="goToPage(${data.page + 1})" ${data.page >= data.pages ? "disabled" : ""} style="font-size:12px;padding:4px 10px;">下一页</button>
-    `;
-}
-
-function _updateAiAgentSelects() {
-    const aiSelect = document.getElementById("aiCustomerSelect");
-    const agentSelect = document.getElementById("agentCustomerSelect");
-    const customers = _allCustomers;
-    const options = customers.map(c => `
-        <option value="${c.id}">${escapeHtml(c.name)}｜${escapeHtml(c.company)}｜${escapeHtml(c.intention || "未设置意向")}</option>
-    `).join("");
-    if (aiSelect) {
-        aiSelect.innerHTML = '<option value="" disabled selected>请选择要分析的客户</option>' + (options || '<option value="" disabled>暂无客户</option>');
-        if (selectedCustomerId) aiSelect.value = String(selectedCustomerId);
-    }
-    if (agentSelect) {
-        agentSelect.innerHTML = '<option value="" disabled selected>请选择要分析的客户</option>' + (options || '<option value="" disabled>暂无客户</option>');
-        if (selectedCustomerId) agentSelect.value = String(selectedCustomerId);
-    }
-}
-
-function goToPage(p) {
-    if (p < 1) return;
-    _searchPage = p;
-    _doSearch();
-}
-
-function resetSearch() {
-    document.getElementById("searchQ").value = "";
-    document.getElementById("filterLevel").value = "";
-    document.getElementById("filterIntention").value = "";
-    document.getElementById("filterCooperationStatus").value = "";
-    document.getElementById("filterFollowupStatus").value = "";
-    document.getElementById("filterSource").value = "";
-    document.getElementById("filterDueOnly").checked = false;
-    _searchPage = 1;
-    _doSearch();
-}
-
-// loadCustomerReferenceData() loads the FULL customer list for AI/Agent selects and dashboard stats
-async function loadCustomerReferenceData() {
-    try {
-        _allCustomers = await request("/customers");
-        _updateAiAgentSelects();
-        updateDashboardStats();
-    } catch (e) {
-        // Error already handled by request()
-    }
-}
-
-// loadCustomers() refreshes both reference data and search view
-async function loadCustomers() {
-    await loadCustomerReferenceData();
-    await _doSearch();
-}
-
-async function selectCustomer(id) {
-    selectedCustomerId = id;
-    updateSelectedCustomerHighlight();
-    const c = await request(`/customers/${id}`);
-    selectedCustomerData = c;
-
-    const nextDate = c.next_followup_at ? new Date(c.next_followup_at).toLocaleString() : "未设置";
-    const lastDate = c.last_followup_at ? new Date(c.last_followup_at).toLocaleString() : "暂无";
-    document.getElementById("customerDetail").innerHTML = `
-        <div style="font-size:20px;font-weight:700;margin-bottom:4px;">${escapeHtml(c.name)}</div>
-        <div style="color:var(--text-secondary);margin-bottom:12px;">${escapeHtml(c.company)}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-            <span class="tag">${escapeHtml(c.level || "未分级")}</span>
-            <span class="status-tag">${escapeHtml(c.followup_status || "待跟进")}</span>
-            <span class="tag">${escapeHtml(c.intention || "未设置意向")}</span>
-        </div>
-        <div style="line-height:2;font-size:14px;color:var(--text-secondary);">
-            <div>📞 ${escapeHtml(c.phone || "未填写")}  ✉️ ${escapeHtml(c.email || "未填写")}</div>
-            <div>🏭 ${escapeHtml(c.industry || "未知行业")}  📊 ${escapeHtml(c.cooperation_status || "未设置")}</div>
-            <div>📍 来源：${escapeHtml(c.source || "未填写")}</div>
-            <div>📅 最近跟进：${lastDate}  ·  下次：${nextDate}</div>
-            <div style="margin-top:8px;padding:8px;background:#f8fafc;border-radius:6px;">📝 ${escapeHtml(c.remark || "无备注")}</div>
-        </div>
-    `;
-
-    document.getElementById("detailActions").style.display = "flex";
-    closeCustomerModal();
-
-    // Show follow-up panel form
-    document.getElementById("followupPanelHint").style.display = "none";
-    document.getElementById("followupPanelForm").style.display = "block";
-
-    document.getElementById("aiResult").innerHTML = '<div class="result-empty">选择客户后可生成 AI 分析结果</div>';
-    updateCurrentCustomerBox();
-
-    const aiSelect = document.getElementById("aiCustomerSelect");
-    if (aiSelect) {
-        aiSelect.value = String(id);
-    }
-
-    const agentSelect = document.getElementById("agentCustomerSelect");
-    if (agentSelect) {
-        agentSelect.value = String(id);
-    }
-
-    loadFollowups();
-}
-
-function updateCurrentCustomerBox() {
-    const box = document.getElementById("currentCustomerBox");
-    if (!selectedCustomerData) {
-        box.innerHTML = "暂未选择客户。可以在下方直接选择一个客户。";
-        return;
-    }
-
-    box.innerHTML = `
-        <b>${escapeHtml(selectedCustomerData.name)}</b>
-        <span class="tag">${escapeHtml(selectedCustomerData.intention || "未设置意向")}</span>
-        <span class="status-tag">${escapeHtml(selectedCustomerData.cooperation_status || "未设置状态")}</span>
-        <div class="muted" style="margin-top:6px;">
-            ${escapeHtml(selectedCustomerData.company)} · ${escapeHtml(selectedCustomerData.industry || "未知行业")}
-        </div>
-    `;
-}
-
-async function switchCustomerFromAI() {
-    const select = document.getElementById("aiCustomerSelect");
-    const id = select.value;
-
-    if (!id) {
-        alert("请先选择一个客户");
-        return;
-    }
-
-    await selectCustomer(Number(id));
-    document.getElementById("aiResult").innerHTML = '<div class="result-empty">已切换客户，可以点击上方按钮生成 AI 分析。</div>';
-}
-
-function clearSelectedCustomer() {
-    selectedCustomerId = null;
-    selectedCustomerData = null;
-    updateSelectedCustomerHighlight();
-    document.getElementById("customerDetail").innerHTML = '<div style="text-align:center;padding:40px 0;"><div style="font-size:40px;margin-bottom:12px;">👤</div><div>请选择一个客户以查看详情</div></div>';
-    document.getElementById("detailActions").style.display = "none";
-    // Hide follow-up panel form
-    document.getElementById("followupPanelHint").style.display = "block";
-    document.getElementById("followupPanelForm").style.display = "none";
-    hideEditCustomerForm();
-    document.getElementById("followupList").innerHTML = '<div class="muted" style="text-align:center;padding:12px 0;">暂无记录</div>';
-    document.getElementById("aiResult").innerHTML = '<div class="result-empty">选择客户后可生成 AI 分析结果</div>';
-
-    const aiSelect = document.getElementById("aiCustomerSelect");
-    if (aiSelect) {
-        aiSelect.value = "";
-    }
-
-    const agentSelect = document.getElementById("agentCustomerSelect");
-    if (agentSelect) {
-        agentSelect.value = "";
-    }
-
-    updateCurrentCustomerBox();
-}
-
-async function deleteSelectedCustomer() {
-    if (!selectedCustomerId) {
-        alert("请先选择客户");
-        return;
-    }
-
-    const ok = confirm("确定要删除这个客户吗？删除后，该客户的历史跟进记录也会一起删除。");
-    if (!ok) {
-        return;
-    }
-
-    await request(`/customers/${selectedCustomerId}`, {
-        method: "DELETE"
-    });
-
-    clearSelectedCustomer();
-    await loadCustomers();
-    alert("客户已删除");
-}
-
-// Backward compat — now use the modal
-function showEditCustomerForm() { openCustomerModal(true); }
-function hideEditCustomerForm() { closeCustomerModal(); }
-async function updateCustomer() { await saveCustomerFromModal(); }
-
-async function createFollowup() {
-    if (!selectedCustomerId) {
-        alert("请先选择客户");
-        return;
-    }
-
-    const nextFollowupVal = document.getElementById("followupNextFollowupAt").value;
-    const data = {
-        content: document.getElementById("followupContent").value,
-        next_action: document.getElementById("nextAction").value,
-        next_followup_at: nextFollowupVal ? new Date(nextFollowupVal).toISOString() : null,
-        followup_status: document.getElementById("followupFollowupStatus").value || null
-    };
-
-    if (!data.content) {
-        alert("跟进内容不能为空");
-        return;
-    }
-
-    await request(`/customers/${selectedCustomerId}/followups`, {
-        method: "POST",
-        body: JSON.stringify(data)
-    });
-
-    document.getElementById("followupContent").value = "";
-    document.getElementById("nextAction").value = "";
-    document.getElementById("followupNextFollowupAt").value = "";
-    document.getElementById("followupFollowupStatus").value = "";
-    loadFollowups();
-    // Refresh customer detail to show updated followup status
-    if (selectedCustomerId) {
-        selectCustomer(selectedCustomerId);
-    }
-}
-
-async function loadFollowups() {
-    if (!selectedCustomerId) return;
-    const list = await request(`/customers/${selectedCustomerId}/followups`);
-    const box = document.getElementById("followupList");
-
-    if (list.length === 0) {
-        box.innerHTML = '<div class="empty-state"><p>暂无跟进记录。</p></div>';
-        return;
-    }
-
-    box.innerHTML = list.map(f => `
-        <div class="customer-item">
-            <div>${escapeHtml(f.content)}</div>
-            <div class="muted">下一步：${escapeHtml(f.next_action || "暂无")}</div>
-            <div class="muted">时间：${new Date(f.created_at).toLocaleString()}</div>
-        </div>
-    `).join("");
-}
-
-async function aiSummary() {
-    if (!selectedCustomerId) {
-        alert("请先到客户管理中选择客户");
-        return;
-    }
-    document.getElementById("aiResult").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>AI 正在分析中...</span></div>';
-    const data = await request(`/customers/${selectedCustomerId}/ai/summary`, {method: "POST"});
-    document.getElementById("aiResult").innerHTML = renderAIText(data.result);
-}
-
-async function aiSuggestion() {
-    if (!selectedCustomerId) {
-        alert("请先到客户管理中选择客户");
-        return;
-    }
-    document.getElementById("aiResult").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>AI 正在生成建议...</span></div>';
-    const data = await request(`/customers/${selectedCustomerId}/ai/suggestion`, {method: "POST"});
-    document.getElementById("aiResult").innerHTML = renderAIText(data.result);
-}
 
 async function uploadRagFile() {
     const fileInput = document.getElementById("ragFile");
@@ -3001,196 +2189,6 @@ async function askRag() {
     document.getElementById("ragResult").innerHTML = html;
 }
 
-
-async function runAgentAnalyze() {
-    const customerSelect = document.getElementById("agentCustomerSelect");
-    const customerId = customerSelect.value;
-    const task = document.getElementById("agentTask").value.trim();
-
-    if (!customerId) {
-        alert("请先选择要分析的客户");
-        return;
-    }
-
-    document.getElementById("agentSteps").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>Agent 正在执行工具调用...</span></div>';
-    document.getElementById("agentResult").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>Agent 正在生成完整跟进方案...</span></div>';
-
-    const data = await request("/agent/analyze", {
-        method: "POST",
-        body: JSON.stringify({
-            customer_id: Number(customerId),
-            task: task || "帮我分析这个客户下一步怎么跟进"
-        })
-    });
-
-    let stepHtml = "";
-    if (data.steps && data.steps.length) {
-        stepHtml = data.steps.map((step, index) => `
-            <div class="ai-line"><strong>步骤 ${index + 1}：</strong>${escapeHtml(step)}</div>
-        `).join("");
-    } else {
-        stepHtml = "暂无执行步骤";
-    }
-
-    document.getElementById("agentSteps").innerHTML = stepHtml;
-
-    let resultHtml = renderAIText(data.result);
-
-    if (data.sources && data.sources.length) {
-        resultHtml += '<div class="source-box"><b>Agent 参考资料片段：</b>';
-        data.sources.forEach((s, index) => {
-            resultHtml += `
-                <div style="margin-top:8px;">
-                    <b>资料 ${index + 1}：</b>${escapeHtml(s.filename)}，片段 ${s.chunk_index}<br>
-                    <span class="muted">${escapeHtml(s.content)}...</span>
-                </div>
-            `;
-        });
-        resultHtml += '</div>';
-    }
-
-    document.getElementById("agentResult").innerHTML = resultHtml;
-}
-
-// ─── CSV Import / Export ───
-
-function importCsvDialog() {
-    document.getElementById("importCsvFile").click();
-}
-
-async function handleImportCsv(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-        const res = await fetch("/customers/import", {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-        });
-
-        if (res.status === 401) {
-            showLogin("登录已失效，请重新登录");
-            return;
-        }
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            alert(data.detail || "导入失败");
-            return;
-        }
-
-        let msg = `导入完成！\n创建：${data.created} 条\n跳过（重复）：${data.skipped} 条`;
-        if (data.errors && data.errors.length) {
-            msg += `\n错误：${data.errors.length} 条`;
-            const errDetails = data.errors.slice(0, 5).map(e => `  第${e.row}行：${e.reason}`).join("\n");
-            msg += `\n\n错误详情（最多显示5条）：\n${errDetails}`;
-            if (data.errors.length > 5) {
-                msg += `\n  ...还有 ${data.errors.length - 5} 条错误`;
-            }
-        }
-
-        alert(msg);
-        await loadCustomers();
-    } catch (err) {
-        alert("网络错误，导入失败");
-    } finally {
-        event.target.value = "";
-    }
-}
-
-async function exportCustomers() {
-    try {
-        const res = await fetch("/customers/export", {
-            credentials: "include",
-        });
-
-        if (res.status === 401) {
-            showLogin("登录已失效，请重新登录");
-            return;
-        }
-
-        if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "导出失败");
-            return;
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "customers_export.csv";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (err) {
-        alert("网络错误，导出失败");
-    }
-}
-
-async function exportFollowups() {
-    try {
-        const res = await fetch("/followups/export", {
-            credentials: "include",
-        });
-
-        if (res.status === 401) {
-            showLogin("登录已失效，请重新登录");
-            return;
-        }
-
-        if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "导出失败");
-            return;
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "followups_export.csv";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (err) {
-        alert("网络错误，导出失败");
-    }
-}
-
-// ─── Product Management (live ops) ───
-
-function _clearProductModalFields() {
-    document.getElementById("productName").value = "";
-    document.getElementById("productPrice").value = "";
-    document.getElementById("productStock").value = "";
-    document.getElementById("productSellingPoints").value = "";
-    document.getElementById("productTargetAudience").value = "";
-    document.getElementById("productPainPoints").value = "";
-    document.getElementById("productPromotion").value = "";
-    document.getElementById("productLiveStatus").value = "未上播";
-    document.getElementById("productNotes").value = "";
-    document.getElementById("editProductId").value = "";
-}
-
-function _fillProductModalFromData(p) {
-    document.getElementById("productName").value = p.name || "";
-    document.getElementById("productPrice").value = p.price ?? "";
-    document.getElementById("productStock").value = p.stock ?? "";
-    document.getElementById("productSellingPoints").value = p.selling_points || "";
-    document.getElementById("productTargetAudience").value = p.target_audience || "";
-    document.getElementById("productPainPoints").value = p.pain_points || "";
-    document.getElementById("productPromotion").value = p.promotion || "";
-    document.getElementById("productLiveStatus").value = p.live_status || "未上播";
-    document.getElementById("productNotes").value = p.notes || "";
-}
 
 function openProductModal(isEdit) {
     _clearProductModalFields();
@@ -3930,53 +2928,6 @@ async function askProductKnowledge() {
         box.innerHTML = '<div class="result-empty">提问失败，请稍后重试。</div>';
     }
 }
-
-async function loadDueCustomers() {
-    try {
-        const res = await fetch("/customers/due", {
-            credentials: "include",
-        });
-
-        if (res.status === 401) {
-            showLogin("登录已失效，请重新登录");
-            return;
-        }
-
-        if (!res.ok) {
-            alert("加载待跟进客户失败");
-            return;
-        }
-
-        const customers = await res.json();
-        const box = document.getElementById("dueCustomerList");
-        const badge = document.getElementById("dueCountBadge");
-        if (badge) badge.textContent = customers.length;
-
-        if (customers.length === 0) {
-            box.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>暂无需要跟进的客户。</p></div>';
-            return;
-        }
-
-        box.innerHTML = customers.map(c => {
-            const nextDate = c.next_followup_at ? new Date(c.next_followup_at).toLocaleString() : "未设置";
-            return `
-            <div class="customer-item" onclick="selectCustomer(${c.id}); showPage('customer');">
-                <div>
-                    <b>${escapeHtml(c.name)}</b>
-                    <span class="status-tag">${escapeHtml(c.followup_status || "待跟进")}</span>
-                    <span class="tag">${escapeHtml(c.level || "未分级")}</span>
-                </div>
-                <div class="muted">${escapeHtml(c.company)} · ${escapeHtml(c.industry || "未知行业")}</div>
-                <div class="muted">计划跟进：${nextDate}</div>
-                <div class="muted">${escapeHtml((c.remark || "").substring(0, 80))}</div>
-            </div>
-        `}).join("");
-    } catch (err) {
-        alert("网络错误");
-    }
-}
-
-// ─── User Management ───
 
 async function loadUserList() {
     try {
