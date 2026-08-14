@@ -24,6 +24,18 @@ LIVE_SCRIPT_SECTION_TITLES = [
     "异议回应",
     "结尾转化",
 ]
+LIVE_COMMENT_REPLY_FIELD_LABELS = {
+    "name": "商品名称",
+    "price": "价格",
+    "selling_points": "核心卖点",
+    "target_audience": "适用人群",
+    "pain_points": "用户痛点",
+    "promotion": "优惠信息",
+    "stock": "库存",
+    "live_status": "直播状态",
+    "notes": "备注",
+}
+LIVE_COMMENT_REPLY_COMMENT_LABEL = "观众评论"
 
 
 def _estimate_tokens(text: str) -> int:
@@ -215,17 +227,17 @@ def build_live_comment_reply_prompt(product, comment: str) -> str:
 你是一个谨慎、专业的直播电商主播助理。请针对直播间观众的一条评论，生成主播可以直接发出的简短回复。
 
 商品资料：
-- 商品名称：{_safe_product_value(product.name)}
-- 价格：{_safe_product_value(product.price)}
-- 核心卖点：{_safe_product_value(product.selling_points)}
-- 适用人群：{_safe_product_value(product.target_audience)}
-- 用户痛点：{_safe_product_value(product.pain_points)}
-- 优惠信息：{_safe_product_value(product.promotion)}
-- 库存：{_safe_product_value(product.stock)}
-- 直播状态：{_safe_product_value(product.live_status)}
-- 备注：{_safe_product_value(product.notes)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["name"]}：{_safe_product_value(product.name)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["price"]}：{_safe_product_value(product.price)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["selling_points"]}：{_safe_product_value(product.selling_points)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["target_audience"]}：{_safe_product_value(product.target_audience)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["pain_points"]}：{_safe_product_value(product.pain_points)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["promotion"]}：{_safe_product_value(product.promotion)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["stock"]}：{_safe_product_value(product.stock)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["live_status"]}：{_safe_product_value(product.live_status)}
+- {LIVE_COMMENT_REPLY_FIELD_LABELS["notes"]}：{_safe_product_value(product.notes)}
 
-观众评论：
+{LIVE_COMMENT_REPLY_COMMENT_LABEL}：
 {comment.strip()}
 
 回复要求：
@@ -390,18 +402,8 @@ def _extract_live_comment_reply_fields(prompt: str) -> dict[str, str]:
     简单按行匹配「字段名：值」格式（兼容「- 字段名：值」），不做复杂解析；
     未找到的字段返回空字符串。观众评论的正文在标题行的下一行。
     """
-    labels = {
-        "商品名称": "name",
-        "价格": "price",
-        "核心卖点": "selling_points",
-        "适用人群": "target_audience",
-        "用户痛点": "pain_points",
-        "优惠信息": "promotion",
-        "库存": "stock",
-        "直播状态": "live_status",
-        "备注": "notes",
-        "观众评论": "comment",
-    }
+    labels = {label: key for key, label in LIVE_COMMENT_REPLY_FIELD_LABELS.items()}
+    labels[LIVE_COMMENT_REPLY_COMMENT_LABEL] = "comment"
     fields: dict[str, str] = {}
     lines = prompt.splitlines()
     for i, raw in enumerate(lines):
