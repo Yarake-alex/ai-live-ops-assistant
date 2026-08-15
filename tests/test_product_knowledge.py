@@ -36,9 +36,10 @@ class TestProductKnowledge:
         assert docs[0]["preview"]
 
     def test_ask_returns_answer_with_sources(self, client, kb_product_id):
+        # 用非本地快答类问题（本地快答见 test_question_insights）验证资料检索链路
         resp = client.post(
             f"/products/{kb_product_id}/knowledge/ask",
-            json={"question": "这款商品适合什么人群？"},
+            json={"question": "这款商品适合什么肤质？"},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -131,13 +132,13 @@ class TestProductKnowledge:
 
         resp = client.post(
             f"/products/{kb_product_id}/knowledge/ask",
-            json={"question": "什么人群？"},
+            json={"question": "补水效果怎么样？"},
         )
         assert resp.status_code == 200
         prompt = captured["prompt"]
         assert "知识库测试商品" in prompt          # 商品名称
         assert "补水保湿" in prompt                  # 知识片段内容
-        assert "什么人群？" in prompt                # 用户问题
+        assert "补水效果怎么样？" in prompt          # 用户问题
 
     def test_other_user_cannot_access(self, client, kb_product_id):
         other = _create_second_user(client, "kb-other-user")

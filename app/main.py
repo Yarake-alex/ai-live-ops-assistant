@@ -79,6 +79,8 @@ from app.rag import (
 from app.db_init import init_database
 from app.question_insights import (
     record_product_question,
+    classify_question,
+    build_local_product_answer,
     SOURCE_PRODUCT_ASK,
     SOURCE_COMMENT_REPLY,
 )
@@ -1193,8 +1195,24 @@ def ask_product_knowledge(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """基于商品资料文档回答问题（优先商品资料向量检索，自动降级 TF-IDF）。"""
+    """基于商品资料文档回答问题（低风险本地快答 → 商品资料向量检索 → 自动降级 TF-IDF）。"""
     product = get_product_for_user(db, product_id, current_user)
+
+    # ── V3 本地快答：低风险确定性字段直接回答，不调 LLM、不走向量 ──
+    question_category = classify_question(data.question)
+    local_answer = build_local_product_answer(product, question_category)
+    if local_answer:
+        record_product_question(
+            db,
+            user_id=current_user.id,
+            product_id=product.id,
+            source=SOURCE_PRODUCT_ASK,
+            question=data.question,
+            category=local_answer["category"],
+            answer_mode="local_rule",
+            was_answered=True,
+        )
+        return ProductKnowledgeAnswer(answer=local_answer["answer"], sources=[])
 
     chunks = (
         db.query(ProductKnowledgeChunk)

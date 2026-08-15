@@ -130,8 +130,9 @@ class TestQuestionLogRecording:
 
     def test_ask_without_docs_records_no_match(self, client):
         pid = self._create_product(client)
+        # 用非本地快答类问题（usage）验证无资料 → no_match
         resp = client.post(
-            f"/products/{pid}/knowledge/ask", json={"question": "多少钱？"}
+            f"/products/{pid}/knowledge/ask", json={"question": "怎么用？"}
         )
         assert resp.status_code == 200
 
@@ -139,7 +140,7 @@ class TestQuestionLogRecording:
         assert len(logs) == 1
         assert logs[0].answer_mode == "no_match"
         assert logs[0].was_answered is False
-        assert logs[0].category == "price"
+        assert logs[0].category == "usage"
 
     def test_ask_without_retrieval_records_no_match(self, client):
         pid = self._create_product(client)
@@ -259,3 +260,149 @@ class TestQuestionLogRecording:
         )
         assert resp.status_code == 200
         return client
+
+
+# ─── 本地快答（V3 阶段 B） ───
+
+
+FULL_PRODUCT = {
+    "name": "快答商品",
+    "price": 129,
+    "stock": 50,
+    "selling_points": "舒缓泛红、修护屏障",
+    "target_audience": "熬夜肌、换季敏感人群",
+    "promotion": "直播间拍一发二",
+    "live_status": "直播中",
+}
+
+
+class TestLocalProductAnswer:
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    @staticmethod
+    def _create_product(client, data=None):
+        resp = client.post("/products", json=data if data is not None else FULL_PRODUCT)
+        assert resp.status_code == 200
+        return resp.json()["id"]
+
+    @staticmethod
+    def _ask(client, pid, question):
+        return client.post(f"/products/{pid}/knowledge/ask", json={"question": question})
+
+    @staticmethod
+    def _logs_for_product(client, pid):
+        session_local, model, _ = TestQuestionLogRecording._app_objects(client)
+        with session_local() as db:
+            return (
+                db.query(model)
+                .filter(model.product_id == pid)
+                .order_by(model.id.asc())
+                .all()
+            )
+
+    @staticmethod
+    def _patch_llm_raise(monkeypatch, client):
+        from fastapi.routing import APIRoute
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/knowledge/ask"
+        )
+
+        def _raise(*a, **k):
+            raise RuntimeError("LLM must not be called for local rule")
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", _raise)
+
+    def test_price_local_answer(self, client, monkeypatch):
+        pid = self._create_product(client)
+        self._patch_llm_raise(monkeypatch, client)
+        resp = self._ask(client, pid, "多少钱")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "129" in data["answer"]
+        assert data["sources"] == []
+
+        logs = self._logs_for_product(client, pid)
+        assert len(logs) == 1
+        assert logs[0].answer_mode == "local_rule"
+        assert logs[0].category == "price"
+        assert logs[0].was_answered is True
+
+    def test_stock_local_answer(self, client):
+        pid = self._create_product(client)
+        data = self._ask(client, pid, "还有库存吗").json()
+        assert "50" in data["answer"] and "库存" in data["answer"]
+        assert data["sources"] == []
+        assert self._logs_for_product(client, pid)[0].answer_mode == "local_rule"
+
+    def test_promotion_local_answer(self, client):
+        pid = self._create_product(client)
+        data = self._ask(client, pid, "有什么优惠").json()
+        assert "直播间拍一发二" in data["answer"]
+        assert data["sources"] == []
+        assert self._logs_for_product(client, pid)[0].answer_mode == "local_rule"
+
+    def test_audience_local_answer(self, client):
+        pid = self._create_product(client)
+        data = self._ask(client, pid, "适合什么人").json()
+        assert "熬夜肌、换季敏感人群" in data["answer"]
+        assert data["sources"] == []
+        assert self._logs_for_product(client, pid)[0].answer_mode == "local_rule"
+
+    def test_selling_points_local_answer(self, client):
+        pid = self._create_product(client)
+        data = self._ask(client, pid, "有什么卖点").json()
+        assert "舒缓泛红、修护屏障" in data["answer"]
+        assert data["sources"] == []
+        assert self._logs_for_product(client, pid)[0].answer_mode == "local_rule"
+
+    def test_empty_field_does_not_force_local_answer(self, client):
+        # promotion 为空：快答不命中 → 继续走资料检索 → 无资料 → no_match
+        pid = self._create_product(client, {**FULL_PRODUCT, "promotion": ""})
+        resp = self._ask(client, pid, "有什么优惠")
+        assert resp.status_code == 200
+        log = self._logs_for_product(client, pid)[0]
+        assert log.answer_mode != "local_rule"
+        assert log.answer_mode == "no_match"
+        assert log.was_answered is False
+
+    def test_high_risk_question_not_local_answered(self, client):
+        # 商品有 audience 字段，但 risk 优先级最高，不得被 audience 快答
+        pid = self._create_product(client)
+        resp = self._ask(client, pid, "孕妇敏感肌能不能用")
+        assert resp.status_code == 200
+        log = self._logs_for_product(client, pid)[0]
+        assert log.category == "risk"
+        assert log.answer_mode != "local_rule"
+        assert log.answer_mode == "no_match"
+
+    def test_local_answer_does_not_use_vector_retrieval(self, client, monkeypatch):
+        from fastapi.routing import APIRoute
+
+        pid = self._create_product(client)
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/knowledge/ask"
+        )
+
+        def _raise(*a, **k):
+            raise RuntimeError("vector retrieval must not be called for local rule")
+
+        monkeypatch.setitem(
+            route.endpoint.__globals__, "retrieve_product_chunks_vector", _raise
+        )
+        resp = self._ask(client, pid, "多少钱")
+        assert resp.status_code == 200
+        assert "129" in resp.json()["answer"]
+
+    def test_local_answer_scoped_by_user(self, client):
+        pid = self._create_product(client)
+        other = TestQuestionLogRecording._create_second_user(client, "local-other")
+        # 他人访问该商品问答 → 404，不产生本地快答与日志
+        assert other.post(
+            f"/products/{pid}/knowledge/ask", json={"question": "多少钱"}
+        ).status_code == 404
+        assert self._logs_for_product(client, pid) == []

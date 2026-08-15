@@ -50,6 +50,68 @@ def classify_question(text: str) -> str:
     return "other"
 
 
+# 本地快答仅支持低风险、确定性字段（V3 阶段 B）。
+# risk / after_sales / usage / other 一律不快答，继续走商品资料检索。
+LOCAL_ANSWER_CATEGORIES = ("price", "stock", "promotion", "audience", "selling_points")
+
+
+def _format_price(price) -> str:
+    """把 Decimal 价格转成简洁字符串（129.00 → 129，129.50 → 129.5）。"""
+    return str(float(price)).rstrip("0").rstrip(".")
+
+
+def build_local_product_answer(product, category: str):
+    """按商品字段构建本地快答；字段为空/不支持时返回 None。
+
+    返回 {"answer": str, "category": str} 或 None。
+    不调用 LLM、不走向量、不编造：答案只由商品字段模板生成。
+    """
+    if category not in LOCAL_ANSWER_CATEGORIES:
+        return None
+
+    if category == "price":
+        if not product.price or product.price <= 0:
+            return None
+        return {
+            "answer": f"这款商品当前价格是 ¥{_format_price(product.price)}，具体以直播间实际展示为准。",
+            "category": "price",
+        }
+
+    if category == "stock":
+        if not product.stock or product.stock <= 0:
+            return None
+        return {
+            "answer": f"这款商品当前库存为 {product.stock} 件，库存会随下单变化，建议以实际下单页面为准。",
+            "category": "stock",
+        }
+
+    if category == "promotion":
+        if not (product.promotion or "").strip():
+            return None
+        return {
+            "answer": f"当前优惠信息：{product.promotion}。具体活动规则以直播间说明为准。",
+            "category": "promotion",
+        }
+
+    if category == "audience":
+        if not (product.target_audience or "").strip():
+            return None
+        return {
+            "answer": f"这款商品适合的人群：{product.target_audience}。如果有特殊情况，建议结合商品资料或咨询客服确认。",
+            "category": "audience",
+        }
+
+    if category == "selling_points":
+        if not (product.selling_points or "").strip():
+            return None
+        return {
+            "answer": f"这款商品的核心卖点是：{product.selling_points}。",
+            "category": "selling_points",
+        }
+
+    return None
+
+
 def record_product_question(
     db: Session,
     *,
