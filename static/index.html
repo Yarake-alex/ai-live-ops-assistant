@@ -536,13 +536,21 @@
             color: var(--text-muted);
             margin-top: 4px;
         }
+        .quick-card .qc-action {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--primary);
+            cursor: pointer;
+        }
+        .quick-card .qc-action:hover { text-decoration: underline; }
 
         /* ═══════════════════════════════════════════
-           Product Page 3-Column Layout
+           Product Page 2-Column Layout（左侧商品列表 320px，右侧详情自适应）
            ═══════════════════════════════════════════ */
         .product-grid {
             display: grid;
-            grid-template-columns: 320px 1fr 360px;
+            grid-template-columns: 320px 1fr;
             gap: 16px;
             align-items: start;
         }
@@ -1131,7 +1139,7 @@
     <div class="login-card">
         <div class="login-brand">MVP</div>
         <h1>AI 直播运营助手 <span class="title-highlight">MVP</span></h1>
-        <p class="login-sub">商品知识库 RAG · 直播复盘 · 轻量运营看板<br>请输入账号和密码以进入系统</p>
+        <p class="login-sub">商品资料 · 直播话术 · 评论助手 · 直播复盘<br>请输入账号和密码以进入系统</p>
         <input id="loginUsername" type="text" placeholder="用户名" autocomplete="username">
         <input id="loginPassword" type="password" placeholder="访问密码" autocomplete="off">
         <div id="loginError" class="login-error"></div>
@@ -1169,7 +1177,7 @@
                     <rect x="3" y="14" width="7" height="7" rx="1"/>
                     <rect x="14" y="14" width="7" height="7" rx="1"/>
                 </svg>
-                <span>数据概览</span>
+                <span>运营工作台</span>
             </button>
 
             <button id="tabProduct" class="sidebar-nav-item" onclick="showPage('product')">
@@ -1178,7 +1186,7 @@
                     <path d="M3 8l9 5 9-5"/>
                     <path d="M12 13v8"/>
                 </svg>
-                <span>商品管理</span>
+                <span>商品资料</span>
             </button>
 
             <button id="tabCommentReply" class="sidebar-nav-item" onclick="showPage('commentreply')">
@@ -1186,7 +1194,7 @@
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     <path d="M8 9h8"/><path d="M8 13h5"/>
                 </svg>
-                <span>评论回复</span>
+                <span>评论助手</span>
             </button>
 
             <button id="tabRAG" class="sidebar-nav-item" onclick="showPage('rag')">
@@ -1196,10 +1204,14 @@
                     <line x1="16" y1="13" x2="8" y2="13"/>
                     <line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
-                <span>RAG 知识库</span>
+                <span>直播素材库</span>
             </button>
+        </nav>
 
-            <button id="tabAdmin" class="sidebar-nav-item" onclick="showPage('admin')" style="display:none;">
+        <!-- ─── System management（仅管理员可见，弱化分组置于底部） ─── -->
+        <nav class="sidebar-nav" id="adminNav" style="display:none;flex:0 0 auto;border-top:1px solid rgba(255,255,255,0.08);">
+            <div class="sidebar-nav-label" style="margin-top:10px;">系统管理</div>
+            <button id="tabAdmin" class="sidebar-nav-item" onclick="showPage('admin')">
                 <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -1237,7 +1249,7 @@
                     <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
                 </svg>
             </button>
-            <h2 class="page-title" id="pageTitle">数据概览</h2>
+            <h2 class="page-title" id="pageTitle">运营工作台</h2>
             <div class="header-actions"></div>
         </header>
 
@@ -1250,8 +1262,8 @@
             <div id="pageDashboard" class="page-section active">
 
                 <div class="welcome-card">
-                    <h2>欢迎使用 AI 直播运营助手 MVP</h2>
-                    <p>商品知识库 RAG · 直播话术 · 评论回复 · 直播复盘 · 轻量运营看板</p>
+                    <h2>直播运营工作台</h2>
+                    <p>围绕商品资料完成开播准备、实时评论回复和下播复盘</p>
                 </div>
 
                 <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">运营概览</h3>
@@ -1260,7 +1272,7 @@
                         <div class="stat-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
                         </div>
-                        <div class="stat-label">商品总数</div>
+                        <div class="stat-label">商品资料</div>
                         <div class="stat-value" id="statOpsProducts">0</div>
                     </div>
                     <div class="stat-card">
@@ -1274,7 +1286,7 @@
                         <div class="stat-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
                         </div>
-                        <div class="stat-label">直播话术</div>
+                        <div class="stat-label">已生成话术</div>
                         <div class="stat-value" id="statOpsScripts">0</div>
                     </div>
                     <div class="stat-card">
@@ -1295,38 +1307,59 @@
                         <div class="stat-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         </div>
-                        <div class="stat-label">商品知识库文档</div>
+                        <div class="stat-label">商品资料文档</div>
                         <div class="stat-value" id="statOpsDocs">0</div>
                     </div>
                 </div>
 
-                <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">快速入口</h3>
+                <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">直播流程</h3>
                 <div class="quick-grid">
-                    <div class="quick-card" onclick="showPage('product')">
+                    <div class="quick-card" style="cursor:default;">
                         <div class="qc-icon blue">
                             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
                         </div>
-                        <div class="qc-title">商品管理</div>
-                        <div class="qc-desc">商品资料、知识库与直播话术</div>
-                    </div>
-                    <div class="quick-card" onclick="showPage('rag')">
-                        <div class="qc-icon green">
-                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <div class="qc-title">开播前</div>
+                        <div class="qc-desc">
+                            <span class="qc-action" onclick="showPage('product')">完善商品资料 ›</span>
+                            <span class="qc-action" onclick="showPage('rag')">上传素材资料 ›</span>
+                            <span class="qc-action" onclick="showPage('product')">生成直播话术 ›</span>
                         </div>
-                        <div class="qc-title">RAG 知识库</div>
-                        <div class="qc-desc">上传资料并基于资料问答</div>
+                    </div>
+                    <div class="quick-card" style="cursor:default;">
+                        <div class="qc-icon green">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>
+                        </div>
+                        <div class="qc-title">直播中</div>
+                        <div class="qc-desc">
+                            <span class="qc-action" onclick="showPage('commentreply')">输入观众评论 ›</span>
+                            <span class="qc-action" onclick="showPage('commentreply')">生成主播口吻回复 ›</span>
+                        </div>
+                    </div>
+                    <div class="quick-card" style="cursor:default;">
+                        <div class="qc-icon amber">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        </div>
+                        <div class="qc-title">下播后</div>
+                        <div class="qc-desc">
+                            <span class="qc-action" onclick="showPage('product')">生成直播复盘 ›</span>
+                            <span class="qc-action" onclick="showPage('product')">查看优化建议 ›</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
 
             <!-- ════════════════════════════════════
-                 商品管理 Page
+                 商品资料 Page
                  ════════════════════════════════════ -->
             <div id="pageProduct" class="page-section">
+                <div class="page-intro">
+                    <span class="intro-dot"></span>
+                    维护直播商品的卖点、人群、痛点、优惠和资料文档，作为话术、评论回复和复盘的依据。
+                </div>
                 <!-- ── Top Action Bar ── -->
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-                    <h2 style="margin:0;font-size:18px;">商品管理</h2>
+                    <h2 style="margin:0;font-size:18px;">商品资料</h2>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         <button onclick="openProductModal()">＋ 新增商品</button>
                         <button class="light" onclick="importProductCsvDialog()">📥 导入商品 CSV</button>
@@ -1335,7 +1368,11 @@
                 </div>
                 <input id="importProductCsvFile" type="file" accept=".csv" style="display:none;" onchange="handleImportProductCsv(event)">
                 <div class="muted" style="font-size:12px;margin-bottom:12px;">
-                    CSV 表头支持英文（name, price, selling_points, target_audience, pain_points, promotion, stock, live_status, notes）或中文（商品名称、价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态、备注），仅「商品名称」为必填。
+                    支持 CSV 批量导入导出，仅「商品名称」为必填。
+                    <details style="display:inline;margin-left:6px;">
+                        <summary style="cursor:pointer;color:var(--primary);display:inline;">查看表头说明</summary>
+                        <div style="margin-top:6px;">表头支持英文（name, price, selling_points, target_audience, pain_points, promotion, stock, live_status, notes）或中文（商品名称、价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态、备注）。</div>
+                    </details>
                 </div>
 
                 <!-- ── Two-Column Layout ── -->
@@ -1375,9 +1412,35 @@
                                 <button class="secondary" id="generateLiveScriptBtn" onclick="generateLiveScript()">🎙 生成直播话术</button>
                                 <button class="danger" onclick="deleteSelectedProduct()">🗑 删除商品</button>
                             </div>
-                            <div id="liveScriptPanel" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                        </div>
+
+                        <!-- 选中商品后展示：商品资料文档 → 开播话术 → 直播复盘 -->
+                        <div id="productDetailModules" style="display:none;">
+                            <!-- ── Product Knowledge Card ── -->
+                            <div class="card" style="padding:16px;margin-top:12px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                    <h3 style="margin:0;font-size:15px;">📚 商品资料文档</h3>
+                                    <div style="display:flex;gap:6px;">
+                                        <button class="light" onclick="triggerProductKnowledgeUpload()" style="font-size:12px;padding:4px 10px;">上传资料</button>
+                                        <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                    </div>
+                                </div>
+                                <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" style="display:none;" onchange="handleProductKnowledgeUpload(event)">
+                                <div class="muted" style="font-size:12px;margin-bottom:8px;">支持 PDF / TXT / MD / CSV；基于商品资料检索，无需额外配置。</div>
+                                <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
+                                <div style="display:flex;gap:6px;margin-bottom:10px;">
+                                    <input id="productKnowledgeQuestion" placeholder="向商品资料提问，例如：这款商品怎么介绍卖点？" style="flex:1;font-size:13px;">
+                                    <button onclick="askProductKnowledge()">提问</button>
+                                </div>
+                                <div id="productKnowledgeAnswer" class="result" style="min-height:60px;">
+                                    <div class="result-empty">基于商品资料的回答会显示在这里。</div>
+                                </div>
+                            </div>
+
+                            <!-- ── Live Script Card ── -->
+                            <div class="card" id="liveScriptCard" style="display:none;padding:16px;margin-top:12px;">
                                 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                                    <h3 style="margin:0;font-size:15px;">AI 直播话术</h3>
+                                    <h3 style="margin:0;font-size:15px;">开播话术</h3>
                                     <span id="liveScriptStatus" class="muted" style="font-size:12px;"></span>
                                 </div>
                                 <div id="liveScriptResult" class="result" style="min-height:120px;margin-bottom:12px;">
@@ -1389,42 +1452,21 @@
                                 </div>
                                 <div id="liveScriptHistory" style="max-height:220px;overflow-y:auto;"></div>
                             </div>
-                        </div>
 
-                        <!-- ── Live Review Card ── -->
-                        <div class="card" style="padding:16px;margin-top:12px;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                                <h3 style="margin:0;font-size:15px;">📋 直播复盘</h3>
-                                <div style="display:flex;gap:6px;">
-                                    <button id="generateReviewBtn" onclick="generateLiveReview()">生成复盘</button>
-                                    <button class="light" onclick="loadLiveReviewHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                            <!-- ── Live Review Card ── -->
+                            <div class="card" style="padding:16px;margin-top:12px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                    <h3 style="margin:0;font-size:15px;">📋 直播复盘</h3>
+                                    <div style="display:flex;gap:6px;">
+                                        <button id="generateReviewBtn" onclick="generateLiveReview()">生成复盘</button>
+                                        <button class="light" onclick="loadLiveReviewHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div id="liveReviewResult" class="result" style="min-height:100px;margin-bottom:10px;">
-                                <div class="result-empty">选择商品后可生成直播复盘。</div>
-                            </div>
-                            <div style="font-weight:700;font-size:13px;margin-bottom:6px;">历史复盘</div>
-                            <div id="liveReviewHistory" style="max-height:180px;overflow-y:auto;"></div>
-                        </div>
-
-                        <!-- ── Product Knowledge Card ── -->
-                        <div class="card" style="padding:16px;margin-top:12px;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                                <h3 style="margin:0;font-size:15px;">📚 商品知识库</h3>
-                                <div style="display:flex;gap:6px;">
-                                    <button class="light" onclick="triggerProductKnowledgeUpload()" style="font-size:12px;padding:4px 10px;">上传资料</button>
-                                    <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                <div id="liveReviewResult" class="result" style="min-height:100px;margin-bottom:10px;">
+                                    <div class="result-empty">选择商品后可生成直播复盘。</div>
                                 </div>
-                            </div>
-                            <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" style="display:none;" onchange="handleProductKnowledgeUpload(event)">
-                            <div class="muted" style="font-size:12px;margin-bottom:8px;">支持 PDF / TXT / MD / CSV；检索基于商品维度 TF-IDF，不接向量索引。</div>
-                            <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
-                            <div style="display:flex;gap:6px;margin-bottom:10px;">
-                                <input id="productKnowledgeQuestion" placeholder="向商品资料提问，例如：这款商品怎么介绍卖点？" style="flex:1;font-size:13px;">
-                                <button onclick="askProductKnowledge()">提问</button>
-                            </div>
-                            <div id="productKnowledgeAnswer" class="result" style="min-height:60px;">
-                                <div class="result-empty">基于商品资料的回答会显示在这里。</div>
+                                <div style="font-weight:700;font-size:13px;margin-bottom:6px;">历史复盘</div>
+                                <div id="liveReviewHistory" style="max-height:180px;overflow-y:auto;"></div>
                             </div>
                         </div>
                     </div>
@@ -1463,12 +1505,12 @@
             </div>
 
             <!-- ════════════════════════════════════
-                 评论回复 Page（直播评论自动回复模拟器）
+                 评论助手 Page（直播评论自动回复模拟器）
                  ════════════════════════════════════ -->
             <div id="pageCommentReply" class="page-section">
                 <div class="page-intro">
                     <span class="intro-dot"></span>
-                    选择商品并输入一条模拟观众评论，AI 会以主播口吻生成直播间回复（仅演示，不接入真实平台）。
+                    输入观众评论，系统会结合商品资料生成主播可直接参考的回复（仅演示，不接入真实平台）。
                 </div>
 
                 <div class="ai-grid">
@@ -1513,19 +1555,19 @@
 
 
             <!-- ════════════════════════════════════
-                 RAG 知识库 Page
+                 直播素材库 Page
                  ════════════════════════════════════ -->
             <div id="pageRAG" class="page-section">
                 <div class="page-intro">
                     <span class="intro-dot"></span>
-                    上传产品资料或行业资料后，系统会先检索相关资料片段，再调用大模型生成回答，并展示参考资料来源。
+                    上传品牌资料、活动规则、售后政策等通用素材，用于资料问答和运营辅助。
                 </div>
 
                 <div class="ai-grid">
                     <div>
                         <div class="card">
                             <div class="card-header">
-                                <h2>知识库资料</h2>
+                                <h2>已上传素材</h2>
                                 <div style="margin-top:6px;display:flex;gap:6px;">
                                     <input id="ragSearch" type="text" placeholder="按文件名搜索..." style="flex:1;"
                                            onkeydown="if(event.key==='Enter')searchRagDocuments()">
@@ -1540,7 +1582,7 @@
                                 <button class="danger" onclick="clearRagDocuments()">清空全部</button>
                             </div>
                             <div class="btn-group" style="margin-top:6px;">
-                                <button class="outline" onclick="reindexRag()" title="重新计算所有资料片段的向量嵌入，一般在向量检索异常时使用">🔄 重建向量索引</button>
+                                <button class="outline" onclick="reindexRag()" title="重新整理资料检索索引，一般在资料检索异常时使用">🔄 重建资料索引</button>
                             </div>
                             <div class="muted" style="margin-bottom:8px;">支持 PDF、TXT、MD、CSV，可一次选择多个文件。</div>
                             <div id="ragVectorStatus" class="muted" style="margin-bottom:8px;"></div>
@@ -1551,7 +1593,7 @@
                     <div>
                         <div class="card">
                             <div class="card-header">
-                                <h2>产品资料问答</h2>
+                                <h2>资料问答</h2>
                             </div>
                             <textarea id="ragQuestion" placeholder="例如：这款商品适合什么人群？敏感肌能不能用？售后规则是什么？"></textarea>
                             <button class="success" onclick="askRag()">基于资料回答</button>
@@ -1666,22 +1708,22 @@ function showLogin(msg) {
     document.getElementById("loginError").textContent = msg || "";
     document.getElementById("loginPassword").value = "";
     document.getElementById("loginUsername").focus();
-    document.getElementById("tabAdmin").style.display = "none";
+    document.getElementById("adminNav").style.display = "none";
 }
 
 async function showApp() {
     document.getElementById("loginPage").classList.add("hidden");
     document.getElementById("mainApp").classList.remove("hidden");
 
-    // Always hide admin tab first, then show only if current user is admin
-    document.getElementById("tabAdmin").style.display = "none";
+    // 始终先隐藏「系统管理」分组，仅当前用户为 admin 时显示
+    document.getElementById("adminNav").style.display = "none";
     try {
         const me = await request("/auth/me");
         if (me.role === "admin") {
-            document.getElementById("tabAdmin").style.display = "flex";
+            document.getElementById("adminNav").style.display = "block";
         }
     } catch (e) {
-        // ignore — admin tab stays hidden
+        // ignore — admin entry stays hidden
     }
 
     loadProducts();
@@ -1751,10 +1793,10 @@ function showPage(name) {
         admin: "tabAdmin"
     };
     const pageTitles = {
-        dashboard: "数据概览",
-        product: "商品管理",
-        commentreply: "评论回复",
-        rag: "RAG 知识库",
+        dashboard: "运营工作台",
+        product: "商品资料",
+        commentreply: "评论助手",
+        rag: "直播素材库",
         admin: "用户管理"
     };
 
@@ -1993,8 +2035,8 @@ async function loadRagDocuments() {
             totalIndexed += d.vector_indexed;
         }
         const vecInfo = d.vector_indexed != null
-            ? `向量索引: ${d.vector_indexed}/${d.chunks}`
-            : "向量搜索未启用";
+            ? `资料索引: ${d.vector_indexed}/${d.chunks}`
+            : "资料索引功能未启用";
         const updatedInfo = d.updated_at
             ? ` · 更新于 ${d.updated_at.slice(0, 16).replace('T',' ')}`
             : "";
@@ -2019,13 +2061,13 @@ async function loadRagDocuments() {
     const statusEl = document.getElementById("ragVectorStatus");
     if (hasVectorInfo) {
         if (totalIndexed === 0) {
-            statusEl.innerHTML = '⚠️ 向量索引为空，请点击「🔄 重建向量索引」以启用语义检索。当前使用 TF-IDF 检索。';
+            statusEl.innerHTML = '⚠️ 资料索引未完成，请点击「🔄 重建资料索引」重新整理资料。当前仍可使用基础资料检索。';
             statusEl.style.color = '#e67e22';
         } else if (totalIndexed < totalChunks) {
-            statusEl.innerHTML = `⚠️ 向量索引不完整（${totalIndexed}/${totalChunks}），部分资料使用 TF-IDF 检索。建议重建索引。`;
+            statusEl.innerHTML = `⚠️ 资料索引不完整（${totalIndexed}/${totalChunks}），部分资料可能只支持基础检索。建议重建资料索引。`;
             statusEl.style.color = '#e67e22';
         } else {
-            statusEl.innerHTML = `✅ 向量索引完整（${totalIndexed} 个片段），使用语义向量检索。`;
+            statusEl.innerHTML = `✅ 资料索引完整（${totalIndexed} 个片段），可用于资料问答。`;
             statusEl.style.color = '#27ae60';
         }
     } else {
@@ -2061,7 +2103,7 @@ async function viewFileChunks(encodedFilename) {
 
 async function reindexFile(encodedFilename) {
     const filename = decodeURIComponent(encodedFilename);
-    const ok = confirm(`将为文件「${filename}」重新计算向量索引。确定吗？`);
+    const ok = confirm(`将为文件「${filename}」重新整理资料索引。确定吗？`);
     if (!ok) return;
     try {
         const resp = await fetch(`/rag/documents/${encodedFilename}/reindex`, {
@@ -2077,7 +2119,7 @@ async function reindexFile(encodedFilename) {
         if (data.reindexed) {
             alert(data.message || "文件索引重建完成");
         } else {
-            alert(data.message || "向量搜索未启用");
+            alert(data.message || "资料索引功能未启用");
         }
         await loadRagDocuments();
     } catch (e) {
@@ -2087,7 +2129,7 @@ async function reindexFile(encodedFilename) {
 
 async function deleteRagDocument(encodedFilename) {
     const filename = decodeURIComponent(encodedFilename);
-    const ok = confirm(`确定要删除资料“${filename}”吗？删除后，该资料不会再参与 RAG 检索。`);
+    const ok = confirm(`确定要删除资料“${filename}”吗？删除后，该资料不会再参与资料检索。`);
 
     if (!ok) {
         return;
@@ -2103,7 +2145,7 @@ async function deleteRagDocument(encodedFilename) {
 }
 
 async function clearRagDocuments() {
-    const ok = confirm("确定要清空全部知识库资料吗？清空后，所有已上传资料都不会再参与 RAG 检索。");
+    const ok = confirm("确定要清空全部素材库资料吗？清空后，所有已上传资料都不会再参与资料检索。");
 
     if (!ok) {
         return;
@@ -2113,17 +2155,17 @@ async function clearRagDocuments() {
         method: "DELETE"
     });
 
-    document.getElementById("ragResult").innerHTML = '<div class="result-empty">知识库已清空，请重新上传资料后再提问。</div>';
+    document.getElementById("ragResult").innerHTML = '<div class="result-empty">素材库已清空，请重新上传资料后再提问。</div>';
     await loadRagDocuments();
-    alert("知识库已清空");
+    alert("素材库已清空");
 }
 
 async function reindexRag() {
-    const ok = confirm("将重新计算所有资料片段的向量嵌入并重建索引。\n\n此操作可能需要一些时间，期间向量检索暂时不可用（会自动降级到 TF-IDF）。\n\n确定要重建吗？");
+    const ok = confirm("将重新整理所有资料的检索索引。\n\n此操作可能需要一些时间，期间资料问答仍可使用基础检索。\n\n确定要重建吗？");
     if (!ok) return;
 
     const statusEl = document.getElementById("ragVectorStatus");
-    statusEl.innerHTML = '🔄 正在重建向量索引...';
+    statusEl.innerHTML = '🔄 正在重建资料索引...';
     statusEl.style.color = '#3498db';
 
     try {
@@ -2142,18 +2184,18 @@ async function reindexRag() {
         if (!resp.ok) {
             statusEl.innerHTML = `❌ 重建失败：${data.detail || "未知错误"}`;
             statusEl.style.color = '#e74c3c';
-            alert(`重建向量索引失败：${data.detail || "未知错误"}`);
+            alert(`重建资料索引失败：${data.detail || "未知错误"}`);
             return;
         }
 
-        statusEl.innerHTML = `✅ 向量索引重建完成，共 ${data.chunks || 0} 个片段`;
+        statusEl.innerHTML = `✅ 资料索引重建完成，共 ${data.chunks || 0} 个片段`;
         statusEl.style.color = '#27ae60';
-        alert(data.message || "向量索引重建完成");
+        alert(data.message || "资料索引重建完成");
         await loadRagDocuments();
     } catch (error) {
         statusEl.innerHTML = '❌ 重建失败：网络或服务异常';
         statusEl.style.color = '#e74c3c';
-        alert("重建向量索引失败：网络或服务异常");
+        alert("重建资料索引失败：网络或服务异常");
     }
 }
 
@@ -2164,7 +2206,7 @@ async function askRag() {
         return;
     }
 
-    document.getElementById("ragResult").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>正在检索知识库并生成回答...</span></div>';
+    document.getElementById("ragResult").innerHTML = '<div class="result-loading"><div class="spinner"></div><span>正在检索资料并生成回答...</span></div>';
 
     const data = await request("/rag/ask", {
         method: "POST",
@@ -2363,7 +2405,8 @@ async function selectProduct(id) {
     `;
 
     document.getElementById("productDetailActions").style.display = "flex";
-    document.getElementById("liveScriptPanel").style.display = "block";
+    document.getElementById("productDetailModules").style.display = "block";
+    document.getElementById("liveScriptCard").style.display = "block";
     _resetLiveScriptResult();
     await loadProductLiveScripts(id);
     document.getElementById("liveReviewResult").innerHTML = '<div class="result-empty">选择商品后可生成直播复盘。</div>';
@@ -2478,7 +2521,8 @@ function clearSelectedProduct() {
     _updateProductHighlight();
     document.getElementById("productDetail").innerHTML = '<div style="text-align:center;padding:40px 0;"><div style="font-size:40px;margin-bottom:12px;">📦</div><div>请选择一个商品以查看详情</div></div>';
     document.getElementById("productDetailActions").style.display = "none";
-    document.getElementById("liveScriptPanel").style.display = "none";
+    document.getElementById("productDetailModules").style.display = "none";
+    document.getElementById("liveScriptCard").style.display = "none";
     document.getElementById("liveScriptHistory").innerHTML = "";
     _resetLiveScriptResult();
     document.getElementById("liveReviewResult").innerHTML = '<div class="result-empty">选择商品后可生成直播复盘。</div>';
@@ -2787,7 +2831,7 @@ async function viewLiveReviewDetail(reviewId) {
     }
 }
 
-// ─── Product Knowledge Base (商品知识库) ───
+// ─── Product Knowledge Base (商品资料文档) ───
 
 function triggerProductKnowledgeUpload() {
     if (!selectedProductId) {
