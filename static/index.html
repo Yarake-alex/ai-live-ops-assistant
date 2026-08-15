@@ -1539,12 +1539,24 @@
                                 </div>
                             </div>
 
-                            <!-- ── Tab: 问题洞察 ── -->
+                            <!-- ── Tab: 问题洞察（顶部为运营建议，下方为洞察明细） ── -->
                             <div class="prod-tab-panel" id="prodTabPanel-insights" style="display:none;">
+                                <!-- Ops Suggestions Card（运营建议） -->
+                                <div class="card" style="padding:16px;margin-top:12px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                        <h3 style="margin:0;font-size:15px;">💡 运营建议</h3>
+                                        <button class="light" onclick="refreshInsightsTab()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                    </div>
+                                    <div id="productOpsSuggestionsBox">
+                                        <div class="result-empty">暂无运营建议。积累更多商品问题后，这里会提示该补充哪些资料和话术。</div>
+                                    </div>
+                                </div>
+
+                                <!-- 问题洞察明细 Card -->
                                 <div class="card" style="padding:16px;margin-top:12px;">
                                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
                                         <h3 style="margin:0;font-size:15px;">❓ 问题洞察</h3>
-                                        <button class="light" onclick="loadProductQuestionInsights()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                        <button class="light" onclick="refreshInsightsTab()" style="font-size:12px;padding:4px 10px;">刷新</button>
                                     </div>
                                     <div id="productQuestionInsightsBox">
                                         <div class="result-empty">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>
@@ -2568,6 +2580,7 @@ async function selectProduct(id) {
     await loadProductKnowledgeDocs();
     await loadProductReadiness();
     await loadProductQuestionInsights();
+    await loadOpsSuggestions();
     closeProductModal();
 }
 
@@ -2684,6 +2697,7 @@ function clearSelectedProduct() {
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
     document.getElementById("productReadinessBox").innerHTML = '<div class="result-empty">选择商品后可查看资料完整度。</div>';
     resetProductQuestionInsights();
+    resetOpsSuggestions();
     closeProductModal();
 }
 
@@ -2859,9 +2873,10 @@ async function generateCommentReply() {
         });
         _renderCommentReplyRecord(record);
         await loadCommentReplyHistory();
-        // 若商品资料页当前选中的就是该商品，同步刷新问题洞察
+        // 若商品资料页当前选中的就是该商品，同步刷新问题洞察与运营建议
         if (selectedProductId && selectedProductId === Number(productId)) {
             loadProductQuestionInsights();
+            loadOpsSuggestions();
         }
     } catch (e) {
         resultEl.innerHTML = '<div class="result-empty">生成失败，请稍后重试。</div>';
@@ -3216,6 +3231,98 @@ function renderProductQuestionInsights(data) {
     box.innerHTML = html;
 }
 
+// ─── 运营建议（V4） ───
+
+const OPS_SUGGESTION_TYPE_LABELS = {
+    material_gap: "资料补齐",
+    faq_candidate: "FAQ 建议",
+    script_focus: "话术强化",
+    risk_reminder: "风险提醒",
+};
+const OPS_PRIORITY_LABELS = { high: "高", medium: "中", low: "低" };
+const OPS_PRIORITY_STYLES = {
+    high: "background:#fef2f2;color:#991b1b",
+    medium: "background:#fffbeb;color:#92400e",
+    low: "background:#f0f9ff;color:#075985",
+};
+
+function refreshInsightsTab() {
+    loadProductQuestionInsights();
+    loadOpsSuggestions();
+}
+
+function resetOpsSuggestions() {
+    const box = document.getElementById("productOpsSuggestionsBox");
+    if (box) box.innerHTML = '<div class="result-empty">暂无运营建议。积累更多商品问题后，这里会提示该补充哪些资料和话术。</div>';
+}
+
+async function loadOpsSuggestions() {
+    if (!selectedProductId) return;
+    const box = document.getElementById("productOpsSuggestionsBox");
+    if (!box) return;
+    try {
+        const res = await fetch(`/products/${selectedProductId}/ops-suggestions`, { credentials: "include" });
+        if (res.status === 401) {
+            showLogin("登录已失效，请重新登录");
+            return;
+        }
+        if (!res.ok) throw new Error("ops suggestions unavailable");
+        const data = await res.json();
+        renderOpsSuggestions(data);
+    } catch (e) {
+        box.innerHTML = '<div class="muted" style="font-size:12px;">运营建议暂不可用，不影响其他功能</div>';
+    }
+}
+
+function renderOpsSuggestions(data) {
+    const box = document.getElementById("productOpsSuggestionsBox");
+    if (!box) return;
+    const summary = data.summary || {};
+    const list = data.suggestions || [];
+
+    let html = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <div class="prep-summary-item">
+                <div class="prep-summary-value" style="font-size:16px;">${summary.total ?? 0}</div>
+                <div class="prep-summary-label">建议总数</div>
+            </div>
+            <div class="prep-summary-item">
+                <div class="prep-summary-value" style="font-size:16px;color:#ef4444;">${summary.high_priority ?? 0}</div>
+                <div class="prep-summary-label">高优先级</div>
+            </div>
+            <div class="prep-summary-item">
+                <div class="prep-summary-value" style="font-size:16px;${summary.needs_material_update ? "color:#ef4444;" : "color:#10b981;"}">${summary.needs_material_update ? "建议补资料" : "暂不需要补资料"}</div>
+                <div class="prep-summary-label">资料状态</div>
+            </div>
+        </div>`;
+
+    if (!list.length) {
+        html += '<div class="result-empty">暂无运营建议。积累更多商品问题后，这里会提示该补充哪些资料和话术。</div>';
+        box.innerHTML = html;
+        return;
+    }
+
+    html += list.map(s => {
+        const typeLabel = OPS_SUGGESTION_TYPE_LABELS[s.type] || "建议";
+        const prioLabel = OPS_PRIORITY_LABELS[s.priority] || "低";
+        const prioStyle = OPS_PRIORITY_STYLES[s.priority] || OPS_PRIORITY_STYLES.low;
+        const questions = (s.source_questions || []).slice(0, 3);
+        return `
+            <div class="list-item" style="display:block;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+                    <span class="tag">${escapeHtml(typeLabel)}</span>
+                    <span class="tag" style="${prioStyle};font-weight:600;">${escapeHtml(prioLabel)}</span>
+                    <b style="font-size:13px;min-width:0;word-break:break-all;">${escapeHtml(s.title || "")}</b>
+                </div>
+                <div class="muted" style="font-size:12px;line-height:1.7;word-break:break-all;">${escapeHtml(s.detail || "")}</div>
+                ${questions.length ? `<div class="muted" style="font-size:11px;margin-top:4px;word-break:break-all;">来源问题：${questions.map(escapeHtml).join("、")}</div>` : ""}
+                <div style="margin-top:6px;"><span class="tag" style="cursor:default;">${escapeHtml(s.action_label || "")}</span></div>
+            </div>`;
+    }).join("");
+
+    box.innerHTML = html;
+}
+
 async function loadProductKnowledgeDocs() {
     if (!selectedProductId) return;
     const box = document.getElementById("productKnowledgeDocs");
@@ -3320,8 +3427,9 @@ async function askProductKnowledge() {
                 + '</div>';
         }
         box.innerHTML = html;
-        // 提问成功后刷新问题洞察
+        // 提问成功后刷新问题洞察与运营建议
         loadProductQuestionInsights();
+        loadOpsSuggestions();
     } catch (e) {
         box.innerHTML = '<div class="result-empty">提问失败，请稍后重试。</div>';
     }
