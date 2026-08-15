@@ -1,22 +1,23 @@
 # AI 直播运营助手 MVP
 
-AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示系统，当前交付重点是「商品资料文档 + 开播话术 + 评论助手 + 直播复盘 + 运营工作台」：运营人员可以为商品上传 PDF/TXT/MD/CSV 资料，基于资料进行 RAG 问答；基于商品信息生成直播话术、自动回复模拟观众评论、生成四模块直播复盘；并在运营工作台中查看商品、话术、评论回复、复盘等统计。
+AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示系统，当前交付重点是「商品资料文档 + 开播话术 + 评论助手 + 直播复盘 + 运营工作台」：运营人员可以为商品上传 PDF/TXT/MD/CSV 资料，基于资料进行 RAG 问答；基于商品信息生成直播话术、自动回复模拟观众评论、生成四模块直播复盘；并在运营工作台中查看商品、话术、评论回复、复盘等统计。V2 已完成「资料检索增强 + 开播准备工作流」：商品资料文档支持真实 Embedding + 本地 Chroma 语义检索（不可用时自动降级基础检索），并新增商品资料完整度评分与开播准备入口。
 
 项目同时保留了通用「直播素材库」（独立于商品维度的资料问答），以及安全加固、数据库工程化、pytest 自动化测试和 Docker 部署支持，适合作为 AI 应用工程师方向的综合展示项目。旧版 CRM（客户管理、跟进分析、待跟进、Agent 跟进助手）已在 `chore: remove legacy CRM features` 系列提交中下线。
 
 ## 当前 MVP 功能（直播运营）
 
 - **商品资料**：商品新增、列表、详情、修改、删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持搜索、筛选、分页与 CSV 导入导出。
-- **商品资料文档（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持文档列表、查看片段、重建该文件索引、删除；基于商品维度 TF-IDF 检索相关片段后调用大模型回答（回答附带参考片段来源）。
+- **商品资料文档（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持文档列表、查看片段、重建资料索引、删除；问答优先语义检索（真实 Embedding + 本地 Chroma，独立 collection `product_knowledge_chunks`），Embedding 或索引不可用时自动降级商品维度 TF-IDF；上传、删除、重传、重建会同步维护本地索引；回答附带参考片段来源。
+- **资料完整度评分**：`GET /products/{id}/readiness` 实时计算商品资料完整度（12 项确定性规则，不落库、不调用大模型），返回 `score`、`missing_items`、`suggestions`；商品资料页展示百分比、缺失项与下一步建议，运营工作台提供「开播准备」轻量入口。
 - **直播话术**：基于商品资料生成七模块主播口播话术（开场引入 → 结尾转化）；AI 不可用时自动降级为本地兜底话术并诚实标注资料缺失项。
 - **评论助手**：针对模拟观众评论，结合商品信息生成主播口吻回复；不做绝对化承诺，资料未覆盖的内容不编造。
 - **直播复盘**：基于商品资料与已记录的评论/回复生成复盘，固定四个模块：用户关注点、常见异议、高频问题、下场直播优化建议；不编造直播场次、销量、GMV 等未统计指标。
-- **运营工作台**：`GET /live-ops/dashboard` 返回商品数、话术数、评论回复数、复盘数、高频评论（hot_questions）与最近记录；保留旧接口 `/dashboard/stats` 兼容回退。
+- **运营工作台**：`GET /live-ops/dashboard` 返回商品数、话术数、评论回复数、复盘数、高频评论（hot_questions）与最近记录；保留旧接口 `/dashboard/stats` 兼容回退；首页提供轻量「开播准备」入口。
 
 ## 核心功能
 
 - **商品资料**：支持商品新增、列表查看、详情查看、修改和删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持关键词搜索、直播状态筛选、分页和 CSV 导入导出。
-- **直播素材库**（通用资料问答，辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，基于 TF-IDF 检索相关片段后调用大模型回答问题；商品维度的资料问答见「当前 MVP 功能（直播运营）」。
+- **直播素材库**（通用资料问答，辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，基于资料检索生成回答（独立 collection `rag_chunks`）；与商品资料文档相互独立，商品问答只检索当前商品资料，不混检、不共用资料池。
 - **安全加固**：支持 CORS 白名单、访问密码登录页 + HttpOnly Cookie 登录态、上传文件大小限制。
 - **测试体系**：使用 pytest + FastAPI TestClient 覆盖核心接口、鉴权逻辑和上传限制。
 - **Docker 部署**：支持通过 Dockerfile 和 docker-compose.yml 在云服务器上部署运行。
@@ -29,7 +30,7 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 - **配置管理**：pydantic-settings / `.env`
 - **数据校验**：Pydantic
 - **文档解析**：pypdf
-- **文本检索**：scikit-learn TF-IDF
+- **文本检索**：scikit-learn TF-IDF（基础降级）+ Embedding + 本地 ChromaDB 语义索引
 - **LLM 接口**：OpenAI-compatible API（支持 DeepSeek / 通义 / 智谱等兼容接口）
 - **前端**：HTML、CSS、JavaScript
 - **测试**：pytest、FastAPI TestClient
@@ -364,14 +365,21 @@ VECTOR_SEARCH_ENABLED=true
 EMBEDDING_PROVIDER=openai_compatible
 EMBEDDING_API_KEY=your-embedding-api-key
 EMBEDDING_BASE_URL=https://your-embedding-api-endpoint
-EMBEDDING_MODEL_NAME=text-embedding-v3
+EMBEDDING_MODEL_NAME=text-embedding-v4
 EMBEDDING_DIMENSION=0          # 0 = 自动检测模型输出维度，或根据模型填写具体值
 ```
 
 常见 Embedding API 兼容示例：
-- **阿里云百炼 (Qwen)**：`EMBEDDING_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`，`EMBEDDING_MODEL_NAME=text-embedding-v3`
+- **阿里云百炼 (Qwen)**：`EMBEDDING_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`，`EMBEDDING_MODEL_NAME=text-embedding-v4`
 - **智谱 (Zhipu)**：`EMBEDDING_BASE_URL=https://open.bigmodel.cn/api/paas/v4`，`EMBEDDING_MODEL_NAME=embedding-3`
 - **与 LLM 同源**：如果 Embedding 和 LLM 使用同一个 API 地址和 Key，可以留空 `EMBEDDING_API_KEY` 和 `EMBEDDING_BASE_URL`，系统会自动沿用 `OPENAI_API_KEY` 和 `OPENAI_BASE_URL`。
+
+向量存储说明（V2）：
+
+- 向量存储为**本地 Chroma/SQLite**，无需额外服务。
+- 直播素材库使用 collection `rag_chunks`；商品资料文档使用独立 collection `product_knowledge_chunks`——两者不混检、不共用资料池。
+- 商品资料问答按 `user_id + product_id` 隔离检索，不跨用户、不跨商品召回。
+- 自动化测试使用内置 `test` embedding provider，不依赖真实外部 API；未配置 Embedding 时各问答功能自动降级基础资料检索。
 
 Docker 部署时，向量检索同样需要在 `.env` 中配置上述变量，`docker-compose.yml` 会自动加载。
 
@@ -421,6 +429,7 @@ docker compose down
 | `/products/{id}/knowledge/documents/{filename}/reindex` | POST | 重建该文件索引 | 是 |
 | `/products/{id}/knowledge/documents/{filename}` | DELETE | 删除商品资料文档 | 是 |
 | `/products/{id}/knowledge/ask` | POST | 基于商品资料问答（RAG） | 是 |
+| `/products/{id}/readiness` | GET | 商品资料完整度与开播准备（实时计算） | 是 |
 | `/products/{id}/live-scripts` | GET / POST | 直播话术列表 / 生成直播话术 | 是 |
 | `/products/{id}/comment-replies` | GET / POST | 评论回复历史 / 生成评论回复 | 是 |
 | `/products/{id}/live-reviews` | GET / POST | 复盘历史 / 生成直播复盘 | 是 |
@@ -492,6 +501,8 @@ python -m pytest
 
 - 商品新增、列表查询、搜索、CSV 导入导出；
 - 商品资料文档上传、片段查看、重建索引、删除与 RAG 问答；
+- 商品资料向量检索、TF-IDF 降级、删除/重传索引清理、用户/商品隔离；
+- 商品资料完整度评分（12 项规则、缺失项与建议）；
 - 直播话术、评论助手、直播复盘与本地兜底；
 - 运营工作台字段、计数与用户隔离；
 - 未登录请求业务接口返回 401；
@@ -519,13 +530,14 @@ python -m pytest
 | V2 | 通用资料问答 | 增加资料上传、文本切分、资料检索和资料问答（原称 RAG 知识库问答） |
 | V3 | Agent 跟进助手 | 自动组合客户信息、跟进记录和知识库资料生成跟进方案（已下线） |
 | V4 | 企业增强版 | 增加安全加固、数据库工程化、索引优化、测试体系和 Docker 部署 |
-| V5 | 直播运营 MVP（当前） | 商品资料文档 RAG、开播话术、评论助手、直播复盘、运营工作台；旧 CRM 功能下线 |
+| V5 | 直播运营 MVP | 商品资料文档 RAG、开播话术、评论助手、直播复盘、运营工作台；旧 CRM 功能下线 |
+| V6 | 资料检索增强 + 开播准备（当前） | 商品资料文档真实 Embedding + 本地 Chroma 语义检索（自动降级基础检索）、资料完整度评分、开播准备入口 |
 
 ## 后续规划
 
 - 引入 Alembic 管理正式数据库迁移；
 - 增加 GitHub Actions 自动测试；
-- 将 TF-IDF 检索升级为 Embedding + 向量数据库（含商品资料文档真实重建索引）；
+- 商品资料文档与直播素材库的 Embedding + 本地 Chroma 语义检索已完成；生产环境可进一步将向量存储扩展到 PostgreSQL（pgvector，可选）；
 - 增加直播场次模型，按场次聚合复盘与看板数据；
 - 接入真实直播平台评论流；
 - 支持 Nginx 反向代理和域名部署。
