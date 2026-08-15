@@ -34,61 +34,61 @@ class TestValidateProductionSettings:
 
     def test_missing_access_password_raises(self, monkeypatch):
         """APP_ENV=production + APP_ACCESS_PASSWORD empty → ValueError."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", True)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", True)
 
-        from app.config import validate_production_settings
         with pytest.raises(ValueError, match="APP_ACCESS_PASSWORD"):
             validate_production_settings()
 
     def test_missing_session_secret_raises(self, monkeypatch):
         """APP_ENV=production + SESSION_SECRET empty → ValueError."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "strong-password")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", True)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "strong-password")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", True)
 
-        from app.config import validate_production_settings
         with pytest.raises(ValueError, match="SESSION_SECRET"):
             validate_production_settings()
 
     def test_short_session_secret_raises(self, monkeypatch):
         """APP_ENV=production + SESSION_SECRET < 32 chars → ValueError."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "strong-password")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "too-short")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", True)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "strong-password")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "too-short")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", True)
 
-        from app.config import validate_production_settings
         with pytest.raises(ValueError, match="SESSION_SECRET.*(?:32|characters)"):
             validate_production_settings()
 
     def test_public_registration_true_raises(self, monkeypatch):
         """APP_ENV=production + ENABLE_PUBLIC_REGISTRATION=true → ValueError."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "strong-password")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", True)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", True)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "strong-password")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", True)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", True)
 
-        from app.config import validate_production_settings
         with pytest.raises(ValueError, match="ENABLE_PUBLIC_REGISTRATION"):
             validate_production_settings()
 
     def test_cookie_secure_false_warns_but_no_error(self, monkeypatch):
         """APP_ENV=production + COOKIE_SECURE=false → warning, NOT error."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "strong-password")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", False)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "strong-password")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", False)
 
-        from app.config import validate_production_settings
         warnings = validate_production_settings()
         # Should return warnings (not raise)
         assert isinstance(warnings, list)
@@ -98,27 +98,27 @@ class TestValidateProductionSettings:
 
     def test_all_valid_passes(self, monkeypatch):
         """All prod settings valid → no error, empty warnings."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "strong-password")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", True)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "strong-password")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", True)
 
-        from app.config import validate_production_settings
         warnings = validate_production_settings()
         assert warnings == [], f"Expected no warnings, got: {warnings}"
 
     def test_development_mode_not_affected(self, monkeypatch):
         """APP_ENV=development → function is not called (guarded), but if called
         with dev-typical empty values it should still validate correctly."""
+        from app.config import settings, validate_production_settings
         # Simulate dev-like settings explicitly
-        monkeypatch.setattr("app.config.settings.APP_ENV", "development")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", False)
+        monkeypatch.setattr(settings, "APP_ENV", "development")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", False)
 
-        from app.config import validate_production_settings
         # The function doesn't check APP_ENV internally — it validates
         # whatever settings are currently active. This test verifies that
         # the function reports errors for dev-like values (no password/secret).
@@ -128,26 +128,20 @@ class TestValidateProductionSettings:
     def test_vector_search_disabled_no_embedding_required(self, monkeypatch):
         """VECTOR_SEARCH_ENABLED=false + prod → validation does NOT require
         Embedding API configuration."""
-        monkeypatch.setattr("app.config.settings.APP_ENV", "production")
-        monkeypatch.setattr("app.config.settings.APP_ACCESS_PASSWORD", "strong-password")
-        monkeypatch.setattr("app.config.settings.SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
-        monkeypatch.setattr("app.config.settings.COOKIE_SECURE", True)
-        monkeypatch.setattr("app.config.settings.VECTOR_SEARCH_ENABLED", False)
+        from app.config import settings, validate_production_settings
+        monkeypatch.setattr(settings, "APP_ENV", "production")
+        monkeypatch.setattr(settings, "APP_ACCESS_PASSWORD", "strong-password")
+        monkeypatch.setattr(settings, "SESSION_SECRET", "a-very-long-secret-key-for-production-use-123456")
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
+        monkeypatch.setattr(settings, "COOKIE_SECURE", True)
+        monkeypatch.setattr(settings, "VECTOR_SEARCH_ENABLED", False)
 
-        from app.config import validate_production_settings
         warnings = validate_production_settings()
         # No embedding-related errors or warnings
         embedding_warnings = [w for w in warnings if "EMBEDDING" in w.upper()]
         assert len(embedding_warnings) == 0, (
             f"Should not warn about Embedding when VECTOR_SEARCH_ENABLED=false, got: {warnings}"
         )
-
-
-# ═══════════════════════════════════════════════════════════════
-# Public registration default-off tests
-# ═══════════════════════════════════════════════════════════════
-
 
 class TestPublicRegistrationDefaultOff:
     """Verify ENABLE_PUBLIC_REGISTRATION defaults to False and /auth/register is blocked."""
@@ -175,7 +169,8 @@ class TestPublicRegistrationDefaultOff:
 
     def test_register_returns_403_even_when_env_set_to_false(self, client, monkeypatch):
         """Explicit ENABLE_PUBLIC_REGISTRATION=false → 403 on register."""
-        monkeypatch.setattr("app.config.settings.ENABLE_PUBLIC_REGISTRATION", False)
+        from app.config import settings
+        monkeypatch.setattr(settings, "ENABLE_PUBLIC_REGISTRATION", False)
         client.cookies.clear()
         resp = client.post(
             "/auth/register",

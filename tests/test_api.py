@@ -448,6 +448,9 @@ class TestOldDatabaseUpgrade:
         for mod in sorted(sys.modules):
             if mod.startswith("app."):
                 del sys.modules[mod]
+        # 同时移除 app 包本身，避免包上残留的旧子模块属性（如 app.config）
+        # 被 monkeypatch 通过 getattr 拿到悬空旧模块，导致后续测试 patch 失效。
+        sys.modules.pop("app", None)
 
 
 class TestAdminCreateUser:
