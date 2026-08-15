@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 class VectorStore:
     """Protocol for vector indexing and similarity search."""
 
+    # 商品资料向量索引当前只由本地 Chroma 实现支持。
+    # pgvector 等实现不支持时保持 False，调用方应跳过商品资料向量
+    # 路径并自动降级到商品维度 TF-IDF（见 app/rag.py 与 app/main.py）。
+    supports_product_knowledge: bool = False
+
     def add_chunks(
         self,
         ids: List[int],
@@ -53,6 +58,39 @@ class VectorStore:
         """Return the number of indexed vectors for a specific file."""
         raise NotImplementedError
 
+    # ── Product knowledge (商品资料文档) — isolated from generic library ──
+
+    def add_product_chunks(
+        self,
+        ids: List[int],
+        embeddings: List[List[float]],
+        metadatas: List[dict],
+    ) -> None:
+        """Index product knowledge chunks (source_type=product_knowledge)."""
+        raise NotImplementedError
+
+    def search_product_chunks(
+        self,
+        query_embedding: List[float],
+        user_id: int,
+        product_id: int,
+        top_k: int,
+    ) -> List[int]:
+        """Ranked chunk IDs scoped to a user AND product. No cross-product recall."""
+        raise NotImplementedError
+
+    def delete_product_file_chunks(self, user_id: int, product_id: int, filename: str) -> None:
+        """Remove product knowledge vectors for one file of one product."""
+        raise NotImplementedError
+
+    def count_product_chunks(self, user_id: int, product_id: int) -> int:
+        """Number of indexed product knowledge vectors for a product."""
+        raise NotImplementedError
+
+    def count_product_file_chunks(self, user_id: int, product_id: int, filename: str) -> int:
+        """Number of indexed product knowledge vectors for a single file."""
+        raise NotImplementedError
+
 
 # ── ChromaDB implementation (SQLite / development) ──
 
@@ -67,6 +105,9 @@ class ChromaVectorStore(VectorStore):
     the same file is re-uploaded.
     """
 
+    # 商品资料文档使用独立 collection，本实现完整支持
+    supports_product_knowledge = True
+
     def __init__(self, persist_dir: str) -> None:
         try:
             import chromadb
@@ -79,6 +120,11 @@ class ChromaVectorStore(VectorStore):
         self._client = chromadb.PersistentClient(path=persist_dir)
         self._collection = self._client.get_or_create_collection(
             name="rag_chunks",
+            metadata={"hnsw:space": "cosine"},
+        )
+        # 商品资料文档使用独立 collection，与通用素材库物理隔离
+        self._product_collection = self._client.get_or_create_collection(
+            name="product_knowledge_chunks",
             metadata={"hnsw:space": "cosine"},
         )
         logger.info(f"ChromaDB vector store ready: {persist_dir}")
@@ -135,6 +181,87 @@ class ChromaVectorStore(VectorStore):
     def count_file_chunks(self, user_id: int, filename: str) -> int:
         existing = self._collection.get(
             where={"$and": [{"user_id": user_id}, {"filename": filename}]},
+        )
+        return len(existing["ids"]) if (existing and existing["ids"]) else 0
+
+    # ── Product knowledge (商品资料文档) ──
+
+    def add_product_chunks(
+        self,
+        ids: List[int],
+        embeddings: List[List[float]],
+        metadatas: List[dict],
+    ) -> None:
+        if not ids:
+            return
+        # 独立 collection，id 与通用素材库不共享命名空间
+        self._product_collection.upsert(
+            ids=[str(cid) for cid in ids],
+            embeddings=embeddings,
+            metadatas=metadatas,
+        )
+
+    def search_product_chunks(
+        self,
+        query_embedding: List[float],
+        user_id: int,
+        product_id: int,
+        top_k: int,
+    ) -> List[int]:
+        # 强制过滤 user_id + product_id + source_type，禁止跨用户/跨商品/跨来源召回
+        results = self._product_collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            where={
+                "$and": [
+                    {"user_id": user_id},
+                    {"product_id": product_id},
+                    {"source_type": "product_knowledge"},
+                ]
+            },
+        )
+        if not results or not results["ids"] or not results["ids"][0]:
+            return []
+        return [int(cid) for cid in results["ids"][0]]
+
+    def delete_product_file_chunks(self, user_id: int, product_id: int, filename: str) -> None:
+        self._product_collection.delete(
+            where={
+                "$and": [
+                    {"user_id": user_id},
+                    {"product_id": product_id},
+                    {"filename": filename},
+                    {"source_type": "product_knowledge"},
+                ]
+            }
+        )
+        logger.info(
+            f"ChromaDB: deleted product chunks for user {user_id}, "
+            f"product {product_id}, file {filename}"
+        )
+
+    def count_product_chunks(self, user_id: int, product_id: int) -> int:
+        existing = self._product_collection.get(
+            where={
+                "$and": [
+                    {"user_id": user_id},
+                    {"product_id": product_id},
+                    {"source_type": "product_knowledge"},
+                ]
+            },
+        )
+        return len(existing["ids"]) if (existing and existing["ids"]) else 0
+
+    def count_product_file_chunks(self, user_id: int, product_id: int, filename: str) -> int:
+        existing = self._product_collection.get(
+            where={
+                "$and": [
+                    {"user_id": user_id},
+                    {"product_id": product_id},
+                    {"filename": filename},
+                    {"source_type": "product_knowledge"},
+                ]
+            }
         )
         return len(existing["ids"]) if (existing and existing["ids"]) else 0
 
@@ -253,6 +380,10 @@ class PgvectorStore(VectorStore):
                 {"uid": user_id, "fname": filename},
             ).scalar()
         return row or 0
+
+    # 商品资料文档向量索引不支持（supports_product_knowledge=False）：
+    # 不实现商品资料方法，也不新增任何 PostgreSQL embedding 字段。
+    # 调用方通过能力标记跳过商品资料向量路径，自动降级到商品维度 TF-IDF。
 
 
 # ── Factory ──

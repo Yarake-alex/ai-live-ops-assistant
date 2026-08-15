@@ -69,8 +69,8 @@ from app.llm import (
 from app.rag import (
     extract_text_from_upload,
     split_text,
-    retrieve_chunks,
     retrieve_chunks_vector,
+    retrieve_product_chunks_vector,
     build_rag_prompt,
 )
 from app.db_init import init_database
@@ -884,7 +884,17 @@ async def upload_product_knowledge(
         raise HTTPException(status_code=400, detail="文件内容为空，无法加入知识库")
 
     filename = file.filename or "unnamed"
-    # 同名文件重新上传时，先删除该商品下的旧片段，避免重复检索
+    # 同名文件重新上传时，先清理该商品下该文件的旧向量索引，再删除旧 SQL 片段，
+    # 避免旧索引残留（只影响当前用户、当前商品，不影响其他同名文件）
+    if settings.VECTOR_SEARCH_ENABLED:
+        try:
+            from app.vector_store import get_vector_store
+            vs = get_vector_store()
+            if vs is not None and getattr(vs, "supports_product_knowledge", False):
+                vs.delete_product_file_chunks(current_user.id, product.id, filename)
+        except Exception as exc:
+            logger.warning(f"Product vector pre-cleanup failed for '{filename}': {exc}")
+
     db.query(ProductKnowledgeChunk).filter(
         ProductKnowledgeChunk.filename == filename,
         ProductKnowledgeChunk.product_id == product.id,
@@ -901,6 +911,50 @@ async def upload_product_knowledge(
         ))
 
     db.commit()
+
+    # ── 商品资料向量索引（fire-and-forget — 失败不影响上传成功） ──
+    if settings.VECTOR_SEARCH_ENABLED:
+        try:
+            from app.embeddings import get_embedding_service
+            from app.vector_store import get_vector_store
+
+            emb_svc = get_embedding_service()
+            vs = get_vector_store()
+            if vs is not None and getattr(vs, "supports_product_knowledge", False):
+                new_chunks = (
+                    db.query(ProductKnowledgeChunk)
+                    .filter(
+                        ProductKnowledgeChunk.filename == filename,
+                        ProductKnowledgeChunk.product_id == product.id,
+                        ProductKnowledgeChunk.user_id == current_user.id,
+                    )
+                    .order_by(ProductKnowledgeChunk.id.asc())
+                    .all()
+                )
+                if new_chunks:
+                    texts = [c.content for c in new_chunks]
+                    embeddings = emb_svc.embed_documents(texts)
+                    vs.add_product_chunks(
+                        ids=[c.id for c in new_chunks],
+                        embeddings=embeddings,
+                        metadatas=[
+                            {
+                                "user_id": c.user_id,
+                                "product_id": c.product_id,
+                                "filename": c.filename,
+                                "chunk_index": c.chunk_index,
+                                "source_type": "product_knowledge",
+                            }
+                            for c in new_chunks
+                        ],
+                    )
+                    logger.info(
+                        f"Product vector indexed {len(new_chunks)} chunks "
+                        f"for file '{filename}' (product={product.id})"
+                    )
+        except Exception as exc:
+            logger.warning(f"Product vector indexing skipped (upload continues): {exc}")
+
     return {"filename": filename, "chunks": len(chunks)}
 
 
@@ -956,7 +1010,25 @@ def delete_product_knowledge_document(
     db.commit()
     if not deleted:
         raise HTTPException(status_code=404, detail="文档不存在")
-    return {"message": "文档已删除"}
+
+    # ── 同步清理该用户、该商品、该文件的商品资料向量索引（失败不阻止删除） ──
+    vector_warning: Optional[str] = None
+    if settings.VECTOR_SEARCH_ENABLED:
+        try:
+            from app.vector_store import get_vector_store
+            vs = get_vector_store()
+            if vs is not None and getattr(vs, "supports_product_knowledge", False):
+                vs.delete_product_file_chunks(current_user.id, product.id, filename)
+            elif vs is None:
+                vector_warning = "资料索引清理失败（索引服务不可用），可稍后点击「重建资料索引」"
+        except Exception as exc:
+            logger.error(f"Product vector cleanup failed for file '{filename}': {exc}")
+            vector_warning = "资料索引清理失败，可稍后点击「重建资料索引」"
+
+    resp = {"message": "文档已删除"}
+    if vector_warning:
+        resp["vector_warning"] = vector_warning
+    return resp
 
 
 @app.get("/products/{product_id}/knowledge/documents/{filename}/chunks", response_model=RagChunkList)
@@ -1001,7 +1073,7 @@ def reindex_product_knowledge_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """商品知识库使用商品维度 TF-IDF 检索，无向量索引可重建（对应「重建该文件索引」按钮）。"""
+    """重新整理该文件的资料检索索引（向量启用时真实重建；未启用时返回提示）。"""
     product = get_product_for_user(db, product_id, current_user)
     chunks = (
         db.query(ProductKnowledgeChunk)
@@ -1010,17 +1082,87 @@ def reindex_product_knowledge_file(
             ProductKnowledgeChunk.user_id == current_user.id,
             ProductKnowledgeChunk.filename == filename,
         )
+        .order_by(ProductKnowledgeChunk.id.asc())
         .all()
     )
     if not chunks:
         raise HTTPException(status_code=404, detail="资料文件不存在")
 
-    return {
-        "reindexed": False,
-        "message": "商品知识库使用本地关键词检索，无需重建索引",
-        "filename": filename,
-        "chunks": len(chunks),
-    }
+    if not settings.VECTOR_SEARCH_ENABLED:
+        return {
+            "reindexed": False,
+            "message": "资料索引功能未启用",
+            "filename": filename,
+            "chunks": len(chunks),
+        }
+
+    try:
+        from app.embeddings import get_embedding_service
+        from app.vector_store import get_vector_store
+
+        emb_svc = get_embedding_service()
+        vs = get_vector_store()
+        if vs is None:
+            raise RuntimeError("Vector store unavailable")
+        if not getattr(vs, "supports_product_knowledge", False):
+            # 向量存储存在但不支持商品资料索引（如 pgvector 场景）→ 视为未启用
+            return {
+                "reindexed": False,
+                "message": "资料索引功能未启用",
+                "filename": filename,
+                "chunks": len(chunks),
+            }
+    except Exception as exc:
+        # 索引服务暂不可用不是错误——返回未重建，前端继续使用基础资料检索
+        logger.warning("Product reindex init failed for file '%s': %s", filename, exc)
+        return {
+            "reindexed": False,
+            "message": "资料索引服务暂不可用，可继续使用基础资料检索",
+            "filename": filename,
+            "chunks": len(chunks),
+        }
+
+    try:
+        # 先清理该用户、该商品、该文件的旧索引，再重新写入
+        vs.delete_product_file_chunks(current_user.id, product.id, filename)
+
+        texts = [c.content for c in chunks]
+        embeddings = emb_svc.embed_documents(texts)
+        vs.add_product_chunks(
+            ids=[c.id for c in chunks],
+            embeddings=embeddings,
+            metadatas=[
+                {
+                    "user_id": c.user_id,
+                    "product_id": c.product_id,
+                    "filename": c.filename,
+                    "chunk_index": c.chunk_index,
+                    "source_type": "product_knowledge",
+                }
+                for c in chunks
+            ],
+        )
+
+        logger.info(
+            "Reindexed %d product chunks for file '%s', product %d, user %d",
+            len(chunks), filename, product.id, current_user.id,
+        )
+        return {
+            "message": f"文件 {filename} 重新整理完成，共处理 {len(chunks)} 个片段",
+            "chunks": len(chunks),
+            "reindexed": True,
+            "filename": filename,
+        }
+    except Exception as exc:
+        # embedding 调用失败 / 网络异常等：不向用户暴露底层异常，
+        # 返回未重建提示，问答继续走基础资料检索
+        logger.warning("Product reindex failed for file '%s': %s", filename, exc)
+        return {
+            "reindexed": False,
+            "message": "资料索引服务暂不可用，可继续使用基础资料检索",
+            "filename": filename,
+            "chunks": len(chunks),
+        }
 
 
 @app.post("/products/{product_id}/knowledge/ask", response_model=ProductKnowledgeAnswer)
@@ -1030,7 +1172,7 @@ def ask_product_knowledge(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """基于商品知识库资料回答问题（SQL 过滤 product_id 后 TF-IDF 检索）。"""
+    """基于商品资料文档回答问题（优先商品资料向量检索，自动降级 TF-IDF）。"""
     product = get_product_for_user(db, product_id, current_user)
 
     chunks = (
@@ -1048,7 +1190,14 @@ def ask_product_knowledge(
             sources=[],
         )
 
-    top = retrieve_chunks(data.question, chunks, top_k=4)
+    top = retrieve_product_chunks_vector(
+        db,
+        data.question,
+        current_user.id,
+        product.id,
+        chunks,
+        top_k=4,
+    )
     if not top:
         return ProductKnowledgeAnswer(
             answer="没有检索到与问题相关的商品资料，建议补充相关资料或换个问法。",

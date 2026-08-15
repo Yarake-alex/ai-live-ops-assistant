@@ -9,7 +9,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.embeddings import get_embedding_service
 from app.models import DocumentChunk
+from app.vector_store import get_vector_store
 
 logger = logging.getLogger(__name__)
 
@@ -107,9 +109,6 @@ def retrieve_chunks_vector(
         return retrieve_chunks(question, chunks, top_k)
 
     try:
-        from app.embeddings import get_embedding_service
-        from app.vector_store import get_vector_store
-
         emb_svc = get_embedding_service()
         vs = get_vector_store()
 
@@ -168,6 +167,93 @@ def retrieve_chunks_vector(
     except Exception as exc:
         logger.warning(f"Vector search failed, falling back to TF-IDF: {exc}")
         chunks = _load_user_chunks(db, user_id)
+        return retrieve_chunks(question, chunks, top_k)
+
+
+def retrieve_product_chunks_vector(
+    db: Session,
+    question: str,
+    user_id: int,
+    product_id: int,
+    chunks: list,
+    top_k: int = 4,
+) -> list:
+    """商品资料问答检索：优先商品资料向量检索，自动降级 TF-IDF。
+
+    ``chunks`` 为已按 user_id + product_id 过滤的 ProductKnowledgeChunk 列表，
+    向量检索也必须带同样的 user_id + product_id 过滤（不允许跨用户、跨商品召回）。
+
+    Degradation chain（与通用素材库一致）:
+      1. VECTOR_SEARCH_ENABLED=False → 立即 TF-IDF
+      2. 向量存储不可用 → TF-IDF
+      3. 向量索引不完整（SQL 片段数 > 已索引数）→ TF-IDF
+      4. embedding / 检索异常 → TF-IDF
+    """
+    # Layer 1: config switch
+    if not settings.VECTOR_SEARCH_ENABLED:
+        return retrieve_chunks(question, chunks, top_k)
+
+    try:
+        emb_svc = get_embedding_service()
+        vs = get_vector_store()
+
+        # Layer 2: vector store unavailable / unsupported (e.g. pgvector)
+        if vs is None or not getattr(vs, "supports_product_knowledge", False):
+            logger.info(
+                "Product vector store unavailable or unsupported, "
+                "falling back to TF-IDF (product knowledge)"
+            )
+            return retrieve_chunks(question, chunks, top_k)
+
+        # Layer 3: actual vector search scoped to user + product
+        query_emb = emb_svc.embed_query(question)
+        chunk_ids = vs.search_product_chunks(query_emb, user_id, product_id, top_k)
+
+        # 只保留仍存在于当前商品 SQL 片段的 id，防止向量库残留的失效 id 被用于回答
+        valid_ids = {c.id for c in chunks}
+        chunk_ids = [cid for cid in chunk_ids if cid in valid_ids]
+
+        # Layer 3a: no usable vector results → fall back to TF-IDF.
+        # 过滤后为空但商品存在 SQL 片段时，一律用商品维度 TF-IDF 兜底。
+        if not chunk_ids:
+            indexed = vs.count_product_chunks(user_id, product_id)
+            if len(chunks) > indexed:
+                logger.info(
+                    f"Product vector index incomplete ({indexed}/{len(chunks)}), "
+                    f"falling back to TF-IDF (product={product_id})"
+                )
+            else:
+                logger.info(
+                    f"Product vector search returned no usable chunks, "
+                    f"falling back to TF-IDF (product={product_id})"
+                )
+            return retrieve_chunks(question, chunks, top_k)
+
+        # Layer 3b: fewer than top_k — merge with TF-IDF for completeness (dedup by id)
+        if len(chunk_ids) < top_k:
+            logger.info(
+                f"Product vector search returned {len(chunk_ids)}/{top_k} usable results, "
+                f"merging TF-IDF (product={product_id})"
+            )
+            tfidf_chunks = retrieve_chunks(question, chunks, top_k)
+            seen = set(chunk_ids)
+            for tc in tfidf_chunks:
+                if tc.id not in seen:
+                    chunk_ids.append(tc.id)
+                    seen.add(tc.id)
+                    if len(chunk_ids) >= top_k:
+                        break
+
+        # Preserve search rank order; all ids 已经过 user+product 过滤的 chunks 校验，
+        # 不允许跨用户、跨商品召回
+        chunk_map = {c.id: c for c in chunks}
+        return [chunk_map[cid] for cid in chunk_ids if cid in chunk_map]
+
+    except Exception as exc:
+        logger.warning(
+            f"Product vector search failed, falling back to TF-IDF "
+            f"(product={product_id}): {exc}"
+        )
         return retrieve_chunks(question, chunks, top_k)
 
 
