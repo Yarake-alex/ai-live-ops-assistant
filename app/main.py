@@ -74,6 +74,7 @@ from app.llm import (
 from app.rag import (
     extract_text_from_upload,
     split_text,
+    non_empty_chunks,
     retrieve_chunks_vector,
     retrieve_product_chunks_vector,
     build_rag_prompt,
@@ -965,6 +966,8 @@ async def upload_product_knowledge(
                     .order_by(ProductKnowledgeChunk.id.asc())
                     .all()
                 )
+                # 空内容片段不进入 embedding（SQL 展示不受影响）
+                new_chunks = non_empty_chunks(new_chunks)
                 if new_chunks:
                     texts = [c.content for c in new_chunks]
                     embeddings = emb_svc.embed_documents(texts)
@@ -1122,6 +1125,16 @@ def reindex_product_knowledge_file(
     if not chunks:
         raise HTTPException(status_code=404, detail="资料文件不存在")
 
+    # 空内容片段不能进入 embedding（会导致 API 400）
+    chunks = non_empty_chunks(chunks)
+    if not chunks:
+        return {
+            "reindexed": False,
+            "message": "该资料没有可索引内容，请检查文件内容后重新上传",
+            "filename": filename,
+            "chunks": 0,
+        }
+
     if not settings.VECTOR_SEARCH_ENABLED:
         return {
             "reindexed": False,
@@ -1234,6 +1247,8 @@ def ask_product_knowledge(
         .order_by(ProductKnowledgeChunk.id.asc())
         .all()
     )
+    # 防御：空内容片段不参与检索、不进入 LLM
+    chunks = non_empty_chunks(chunks)
     if not chunks:
         record_product_question(
             db,
@@ -1965,6 +1980,16 @@ def reindex_rag_file(
     if not chunks:
         raise HTTPException(status_code=404, detail="资料文件不存在")
 
+    # 空内容片段不能进入 embedding（会导致 API 400）
+    chunks = non_empty_chunks(chunks)
+    if not chunks:
+        return {
+            "reindexed": False,
+            "message": "该资料没有可索引内容，请检查文件内容后重新上传",
+            "filename": filename,
+            "chunks": 0,
+        }
+
     if not settings.VECTOR_SEARCH_ENABLED:
         return {
             "reindexed": False,
@@ -1982,7 +2007,13 @@ def reindex_rag_file(
         if vs is None:
             raise RuntimeError("Vector store unavailable")
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"向量服务初始化失败：{exc}")
+        logger.warning("Rag file reindex init failed for '%s': %s", filename, exc)
+        return {
+            "reindexed": False,
+            "message": "资料索引服务暂不可用，可继续使用基础资料检索",
+            "filename": filename,
+            "chunks": len(chunks),
+        }
 
     try:
         # Clear only this user's file's vectors
@@ -2014,7 +2045,13 @@ def reindex_rag_file(
             "filename": filename,
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"文件重新索引失败：{exc}")
+        logger.warning("Rag file reindex failed for '%s': %s", filename, exc)
+        return {
+            "reindexed": False,
+            "message": "资料索引服务暂不可用，可继续使用基础资料检索",
+            "filename": filename,
+            "chunks": len(chunks),
+        }
 
 
 @app.delete("/rag/documents/{filename}")
@@ -2155,7 +2192,8 @@ def rag_reindex(
         if vs is None:
             raise RuntimeError("Vector store unavailable")
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"向量服务初始化失败：{exc}")
+        logger.warning("Rag reindex init failed: %s", exc)
+        return {"message": "资料索引服务暂不可用，可继续使用基础资料检索", "reindexed": False, "chunks": 0}
 
     chunks = (
         db.query(DocumentChunk)
@@ -2165,6 +2203,11 @@ def rag_reindex(
     )
     if not chunks:
         raise HTTPException(status_code=400, detail="知识库为空，无需重新索引")
+
+    # 空内容片段不能进入 embedding（会导致 API 400）
+    chunks = non_empty_chunks(chunks)
+    if not chunks:
+        return {"message": "该资料没有可索引内容，请检查文件内容后重新上传", "reindexed": False, "chunks": 0}
 
     try:
         # Clear existing vector entries for this user, then re-index
@@ -2192,7 +2235,12 @@ def rag_reindex(
             "reindexed": True,
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"重新索引失败：{exc}")
+        logger.warning(f"Rag reindex failed for user {current_user.id}: {exc}")
+        return {
+            "message": "资料索引服务暂不可用，可继续使用基础资料检索",
+            "chunks": 0,
+            "reindexed": False,
+        }
 
 
 

@@ -700,6 +700,175 @@ class TestProductKnowledgeVector:
         assert set(ids_a) <= valid_a, "跨商品召回：返回了不属于该商品的片段"
         assert not (set(ids_a) & valid_b), "跨商品召回：返回了其他商品的片段"
 
+    def test_reindex_all_empty_chunks_returns_friendly_message(self, vector_client, monkeypatch):
+        """全空片段：不调用 embedding，返回 reindexed=false 与运营语言。"""
+        from app.database import SessionLocal
+        from app.embeddings import get_embedding_service
+        from app.models import ProductKnowledgeChunk
+
+        pid = self._make_product_with_doc(
+            vector_client, "向量空片段商品", "empty.txt", "有内容的一段。"
+        )
+        with SessionLocal() as db:
+            db.query(ProductKnowledgeChunk).filter(
+                ProductKnowledgeChunk.product_id == pid
+            ).update({"content": "   "})
+            db.commit()
+
+        svc = get_embedding_service()
+        calls = []
+        orig = svc.embed_documents
+
+        def spy(texts):
+            calls.append(texts)
+            return orig(texts)
+
+        svc.embed_documents = spy
+        try:
+            resp = vector_client.post(
+                f"/products/{pid}/knowledge/documents/empty.txt/reindex"
+            )
+        finally:
+            svc.embed_documents = orig
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reindexed"] is False
+        assert "没有可索引内容" in data["message"]
+        assert calls == [], "全空片段不应调用 embedding"
+
+    def test_reindex_partial_empty_only_indexes_non_empty(self, vector_client):
+        """部分空片段：只对非空片段建索引。"""
+        from app.database import SessionLocal
+        from app.models import ProductKnowledgeChunk
+        from app.vector_store import get_vector_store
+
+        pid = self._make_product_with_doc(
+            vector_client, "向量部分空商品", "part.txt", "片段一。" + "保" * 900
+        )
+        with SessionLocal() as db:
+            db.query(ProductKnowledgeChunk).filter(
+                ProductKnowledgeChunk.product_id == pid,
+                ProductKnowledgeChunk.chunk_index == 2,
+            ).update({"content": ""})
+            db.commit()
+
+        resp = vector_client.post(
+            f"/products/{pid}/knowledge/documents/part.txt/reindex"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reindexed"] is True
+        assert data["chunks"] == 1  # 只统计非空片段
+
+        vs = get_vector_store()
+        assert vs.count_product_file_chunks(self._admin_user_id(), pid, "part.txt") == 1
+
+    def test_upload_skips_empty_chunks_when_indexing(self, vector_client, monkeypatch):
+        """上传建索引时过滤空片段：SQL 保留原逻辑，向量只索引非空。"""
+        from fastapi.routing import APIRoute
+
+        from app.database import SessionLocal
+        from app.models import ProductKnowledgeChunk
+        from app.vector_store import get_vector_store
+
+        resp = vector_client.post("/products", json={"name": "向量上传空片段商品"})
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+
+        route = next(
+            r for r in vector_client.app.routes
+            if isinstance(r, APIRoute)
+            and r.path == "/products/{product_id}/knowledge/upload"
+        )
+        monkeypatch.setitem(
+            route.endpoint.__globals__,
+            "split_text",
+            lambda text: ["", "有内容的一段。", "   "],
+        )
+
+        resp = vector_client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("mix.txt", b"x", "text/plain")},
+        )
+        assert resp.status_code == 200
+
+        with SessionLocal() as db:
+            sql_count = (
+                db.query(ProductKnowledgeChunk)
+                .filter(ProductKnowledgeChunk.product_id == pid)
+                .count()
+            )
+        assert sql_count == 3  # SQL 保留原有切分逻辑
+
+        vs = get_vector_store()
+        assert vs.count_product_file_chunks(self._admin_user_id(), pid, "mix.txt") == 1
+
+    def test_reindex_embedding_error_returns_friendly_message(self, vector_client, monkeypatch):
+        """embedding API 抛异常时，响应不含底层错误文本。"""
+        from app.embeddings import get_embedding_service
+
+        pid = self._make_product_with_doc(
+            vector_client, "向量报错商品", "err.txt", "有内容。"
+        )
+        svc = get_embedding_service()
+
+        def _raise(texts):
+            raise RuntimeError("Error code: 400 - input.contents should not be larger than 10")
+
+        monkeypatch.setattr(svc, "embed_documents", _raise)
+        resp = vector_client.post(
+            f"/products/{pid}/knowledge/documents/err.txt/reindex"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["reindexed"] is False
+        assert "Error code" not in data["message"]
+        assert "400" not in data["message"]
+        assert "资料索引服务暂不可用" in data["message"]
+
+    def test_ask_does_not_use_empty_chunk_as_source(self, vector_client, monkeypatch):
+        """问答来源不得包含空内容片段。"""
+        from fastapi.routing import APIRoute
+
+        from app.database import SessionLocal
+        from app.models import ProductKnowledgeChunk
+
+        pid = self._make_product_with_doc(
+            vector_client, "向量问答空源商品", "ask.txt", "补水保湿的卖点内容。" + "水" * 100
+        )
+        with SessionLocal() as db:
+            max_idx = (
+                db.query(ProductKnowledgeChunk)
+                .filter(ProductKnowledgeChunk.product_id == pid)
+                .count()
+            )
+            db.add(ProductKnowledgeChunk(
+                user_id=self._admin_user_id(),
+                product_id=pid,
+                filename="ask.txt",
+                chunk_index=max_idx + 1,
+                content="   ",
+            ))
+            db.commit()
+
+        route = next(
+            r for r in vector_client.app.routes
+            if isinstance(r, APIRoute)
+            and r.path == "/products/{product_id}/knowledge/ask"
+        )
+        monkeypatch.setitem(
+            route.endpoint.__globals__, "call_llm", lambda *a, **k: "回答内容"
+        )
+        resp = vector_client.post(
+            f"/products/{pid}/knowledge/ask", json={"question": "补水保湿"}
+        )
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        assert sources, "应返回有效片段"
+        for s in sources:
+            assert (s["content"] or "").strip(), "空内容不得作为问答来源"
+
     def test_vector_search_scoped_by_user(self, vector_client_dual_user):
         """向量检索不允许跨用户召回；业务接口同样隔离。"""
         from app.database import SessionLocal

@@ -61,7 +61,19 @@ def split_text(text: str, chunk_size: int = 800, overlap: int = 120) -> List[str
     return chunks
 
 
+def non_empty_chunks(chunks: list) -> list:
+    """过滤空内容片段（strip 后为空则排除）。
+
+    空片段会导致 Embedding API 400、TF-IDF 空词表等异常，索引与检索前必须过滤。
+    """
+    return [c for c in chunks if (c.content or "").strip()]
+
+
 def retrieve_chunks(question: str, chunks: List[DocumentChunk], top_k: int = 4) -> List[DocumentChunk]:
+    if not chunks:
+        return []
+
+    chunks = non_empty_chunks(chunks)
     if not chunks:
         return []
 
@@ -81,12 +93,13 @@ def retrieve_chunks(question: str, chunks: List[DocumentChunk], top_k: int = 4) 
 
 def _load_user_chunks(db: Session, user_id: int) -> List[DocumentChunk]:
     """Load all chunks for a user from SQL (used as TF-IDF fallback input)."""
-    return (
+    chunks = (
         db.query(DocumentChunk)
         .filter(DocumentChunk.user_id == user_id)
         .order_by(DocumentChunk.id.asc())
         .all()
     )
+    return non_empty_chunks(chunks)
 
 
 def retrieve_chunks_vector(
@@ -189,6 +202,9 @@ def retrieve_product_chunks_vector(
       3. 向量索引不完整（SQL 片段数 > 已索引数）→ TF-IDF
       4. embedding / 检索异常 → TF-IDF
     """
+    # 防御：空内容片段不参与检索，也不进入 LLM
+    chunks = non_empty_chunks(chunks)
+
     # Layer 1: config switch
     if not settings.VECTOR_SEARCH_ENABLED:
         return retrieve_chunks(question, chunks, top_k)
