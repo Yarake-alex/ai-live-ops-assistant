@@ -134,6 +134,31 @@ class ProductKnowledgeDocument(BaseModel):
     updated_at: Optional[str] = None
 
 
+# ─── Product readiness (商品资料完整度 + 开播准备) ───
+
+
+class ProductCompleteness(BaseModel):
+    """商品资料完整度评分（后端实时计算，不落库）。"""
+
+    score: int
+    missing_items: List[str]
+    suggestions: List[str]
+
+
+class PrepChecklistItem(BaseModel):
+    """开播准备清单项（阶段 4 为最小占位结构，后续阶段填充）。"""
+
+    key: str
+    label: str
+    status: str  # done | todo | recommended
+    detail: str = ""
+
+
+class ProductReadinessOut(BaseModel):
+    completeness: ProductCompleteness
+    prep_checklist: List[PrepChecklistItem]
+
+
 # ─── Live review (直播复盘) ───
 
 

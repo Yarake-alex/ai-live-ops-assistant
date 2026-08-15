@@ -49,6 +49,9 @@ from app.schemas import (
     RagDocument,
     RagChunkOut,
     RagChunkList,
+    ProductCompleteness,
+    PrepChecklistItem,
+    ProductReadinessOut,
     UserOut,
     UserCreateRequest,
     UserStatusUpdate,
@@ -1223,6 +1226,111 @@ def ask_product_knowledge(
         for c in top
     ]
     return ProductKnowledgeAnswer(answer=answer, sources=sources)
+
+
+# ─── Product readiness (商品资料完整度评分，实时计算) ───
+
+
+# 评分维度：12 项，逐项命中计分。文件名关键词匹配大小写不敏感。
+_COMPLETENESS_DIMENSIONS = [
+    ("商品名称", lambda p, filenames, has_chunks: bool((p.name or "").strip())),
+    ("价格", lambda p, filenames, has_chunks: (p.price or 0) > 0),
+    ("库存", lambda p, filenames, has_chunks: (p.stock or 0) > 0),
+    ("直播状态", lambda p, filenames, has_chunks: bool((p.live_status or "").strip())),
+    ("核心卖点", lambda p, filenames, has_chunks: bool((p.selling_points or "").strip())),
+    ("适用人群", lambda p, filenames, has_chunks: bool((p.target_audience or "").strip())),
+    ("用户痛点", lambda p, filenames, has_chunks: bool((p.pain_points or "").strip())),
+    ("优惠信息", lambda p, filenames, has_chunks: bool((p.promotion or "").strip())),
+    ("商品资料文档", lambda p, filenames, has_chunks: has_chunks),
+    (
+        "FAQ 或问答资料",
+        lambda p, filenames, has_chunks: any(
+            any(k in fn.lower() for k in ("faq", "问答", "q&a")) for fn in filenames
+        ),
+    ),
+    (
+        "售后规则",
+        lambda p, filenames, has_chunks: any(
+            any(k in fn.lower() for k in ("售后", "退换", "after")) for fn in filenames
+        ),
+    ),
+    (
+        "风险边界",
+        lambda p, filenames, has_chunks: bool((p.notes or "").strip())
+        or any(
+            any(k in fn.lower() for k in ("风险", "边界", "禁用", "不可承诺", "合规"))
+            for fn in filenames
+        ),
+    ),
+]
+
+# 缺失项 → 固定建议文案（确定性映射，不调用 LLM）
+_COMPLETENESS_SUGGESTIONS = {
+    "商品名称": "补充商品名称",
+    "价格": "填写商品价格",
+    "库存": "填写库存数量",
+    "直播状态": "设置直播状态",
+    "核心卖点": "补充核心卖点",
+    "适用人群": "补充适用人群",
+    "用户痛点": "补充用户痛点",
+    "优惠信息": "补充优惠信息",
+    "商品资料文档": "上传商品资料文档",
+    "FAQ 或问答资料": "建议上传 FAQ 或问答资料",
+    "售后规则": "建议补充售后规则文档",
+    "风险边界": "建议补充禁用话术或不可承诺内容",
+}
+
+
+def _compute_product_completeness(
+    product: Product, filenames: List[str], has_chunks: bool
+) -> ProductCompleteness:
+    """按确定性规则实时计算商品资料完整度（不落库、不调用 LLM）。"""
+    missing: List[str] = []
+    hit = 0
+    for label, check in _COMPLETENESS_DIMENSIONS:
+        if check(product, filenames, has_chunks):
+            hit += 1
+        else:
+            missing.append(label)
+
+    total = len(_COMPLETENESS_DIMENSIONS)
+    return ProductCompleteness(
+        score=int(hit * 100 / total),
+        missing_items=missing,
+        suggestions=[_COMPLETENESS_SUGGESTIONS[label] for label in missing],
+    )
+
+
+@app.get("/products/{product_id}/readiness", response_model=ProductReadinessOut)
+def product_readiness(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """商品资料完整度与开播准备状态（实时计算，不落库）。
+
+    归属校验与商品资料接口一致：仅当前用户可见，admin 不跨用户查看。
+    """
+    product = get_product_for_user(db, product_id, current_user)
+
+    filenames = [
+        row[0]
+        for row in db.query(ProductKnowledgeChunk.filename)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+        )
+        .distinct()
+        .all()
+    ]
+
+    return ProductReadinessOut(
+        completeness=_compute_product_completeness(
+            product, filenames, has_chunks=bool(filenames)
+        ),
+        # 阶段 4 占位：开播准备清单在后续阶段实现
+        prep_checklist=[],
+    )
 
 
 # ─── Live review routes (直播复盘) ───

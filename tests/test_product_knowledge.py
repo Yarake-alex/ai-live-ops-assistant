@@ -259,6 +259,107 @@ class TestDashboardStats:
         assert stats["knowledge_documents"] == 0
 
 
+class TestProductReadiness:
+    """商品资料完整度评分接口测试（GET /products/{id}/readiness）。
+
+    纯确定性规则计算：不调用 LLM、不依赖 Embedding API。
+    """
+
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    def test_empty_product_returns_low_score_with_missing_items(self, client):
+        resp = client.post("/products", json={"name": "完整度空商品"})
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+        data = client.get(f"/products/{pid}/readiness").json()
+        comp = data["completeness"]
+        assert 0 <= comp["score"] <= 100
+        assert comp["score"] <= 30, f"空商品分数应较低，got {comp['score']}"
+        assert "商品资料文档" in comp["missing_items"]
+        assert "售后规则" in comp["missing_items"]
+        assert "风险边界" in comp["missing_items"]
+        assert "上传商品资料文档" in comp["suggestions"]
+        assert data["prep_checklist"] == []
+
+    def test_full_product_and_docs_reach_full_score(self, client):
+        resp = client.post("/products", json={
+            "name": "完整度完整商品",
+            "price": 99,
+            "stock": 50,
+            "selling_points": "核心卖点",
+            "target_audience": "适用人群",
+            "pain_points": "用户痛点",
+            "promotion": "优惠信息",
+            "live_status": "直播中",
+            "notes": "不可承诺治疗功效",
+        })
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("FAQ.md", "常见问题内容".encode("utf-8"), "text/markdown")},
+        )
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("售后政策.md", "七天无理由退换".encode("utf-8"), "text/markdown")},
+        )
+        comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert comp["score"] == 100, f"完整商品应为 100 分，got {comp['score']}: {comp}"
+        assert comp["missing_items"] == []
+        assert comp["suggestions"] == []
+
+    def test_faq_filename_detection(self, client):
+        resp = client.post("/products", json={"name": "完整度FAQ商品", "price": 10, "stock": 5})
+        pid = resp.json()["id"]
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("产品Q&A.txt", "问答内容".encode("utf-8"), "text/plain")},
+        )
+        comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert "FAQ 或问答资料" not in comp["missing_items"]
+
+    def test_aftersale_filename_detection(self, client):
+        resp = client.post("/products", json={"name": "完整度售后商品", "price": 10, "stock": 5})
+        pid = resp.json()["id"]
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("AfterSales说明.txt", "售后说明".encode("utf-8"), "text/plain")},
+        )
+        comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert "售后规则" not in comp["missing_items"]
+
+    def test_risk_notes_detection(self, client):
+        resp = client.post(
+            "/products",
+            json={"name": "完整度风险商品", "price": 10, "stock": 5, "notes": "不要承诺治疗功效"},
+        )
+        pid = resp.json()["id"]
+        comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert "风险边界" not in comp["missing_items"]
+
+    def test_risk_filename_detection(self, client):
+        resp = client.post("/products", json={"name": "完整度风险文件商品", "price": 10, "stock": 5})
+        pid = resp.json()["id"]
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("禁用话术.txt", "不可承诺内容".encode("utf-8"), "text/plain")},
+        )
+        comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert "风险边界" not in comp["missing_items"]
+
+    def test_readiness_scoped_by_user(self, client):
+        resp = client.post("/products", json={"name": "完整度隔离商品"})
+        pid = resp.json()["id"]
+        other = _create_second_user(client, "readiness-other-user")
+        assert other.get(f"/products/{pid}/readiness").status_code == 404
+
+    def test_readiness_requires_login(self, client):
+        client.cookies.clear()
+        assert client.get("/products/1/readiness").status_code == 401
+
+
 class TestProductKnowledgeVector:
     """商品资料向量检索最小闭环测试（ChromaDB + test embedding provider）。
 
