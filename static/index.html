@@ -545,6 +545,47 @@
         }
         .quick-card .qc-action:hover { text-decoration: underline; }
 
+        /* ── 商品资料页 Tabs 与开播准备概览 ── */
+        .product-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .product-tab-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .product-tab-btn.active {
+            background: var(--primary-gradient);
+            color: #fff;
+            border-color: transparent;
+        }
+        .prep-summary-item {
+            flex: 1;
+            min-width: 90px;
+            text-align: center;
+            padding: 8px 6px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card-bg);
+        }
+        .prep-summary-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .prep-summary-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
         /* ═══════════════════════════════════════════
            Product Page 2-Column Layout（左侧商品列表 320px，右侧详情自适应）
            ═══════════════════════════════════════════ */
@@ -1419,81 +1460,132 @@
                             </div>
                         </div>
 
-                        <!-- 选中商品后展示：资料完整度 → 问题洞察 → 商品资料文档 → 开播话术 → 直播复盘 -->
+                        <!-- 选中商品后展示：开播准备概览 → Tabs（资料文档/资料问答/问题洞察/开播话术/直播复盘） -->
                         <div id="productDetailModules" style="display:none;">
-                            <!-- ── Readiness Card（资料完整度） ── -->
-                            <div class="card" style="padding:16px;margin-top:12px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                                    <h3 style="margin:0;font-size:15px;">✅ 资料完整度</h3>
-                                    <button class="light" onclick="loadProductReadiness()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                            <!-- ── 开播准备概览（摘要区，只放关键数字） ── -->
+                            <div class="card" style="padding:14px 16px;margin-top:12px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                                    <h3 style="margin:0;font-size:15px;">🎯 开播准备概览</h3>
+                                    <button class="light" onclick="refreshPrepSummary()" style="font-size:12px;padding:4px 10px;">刷新</button>
                                 </div>
-                                <div id="productReadinessBox">
-                                    <div class="result-empty">选择商品后可查看资料完整度。</div>
-                                </div>
-                            </div>
-
-                            <!-- ── Question Insights Card（问题洞察） ── -->
-                            <div class="card" style="padding:16px;margin-top:12px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                                    <h3 style="margin:0;font-size:15px;">❓ 问题洞察</h3>
-                                    <button class="light" onclick="loadProductQuestionInsights()" style="font-size:12px;padding:4px 10px;">刷新</button>
-                                </div>
-                                <div id="productQuestionInsightsBox">
-                                    <div class="result-empty">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>
-                                </div>
-                            </div>
-
-                            <!-- ── Product Knowledge Card ── -->
-                            <div class="card" style="padding:16px;margin-top:12px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                                    <h3 style="margin:0;font-size:15px;">📚 商品资料文档</h3>
-                                    <div style="display:flex;gap:6px;">
-                                        <button class="light" onclick="triggerProductKnowledgeUpload()" style="font-size:12px;padding:4px 10px;">上传资料</button>
-                                        <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                    <div class="prep-summary-item">
+                                        <div class="prep-summary-value" id="prepSummaryScore">—</div>
+                                        <div class="prep-summary-label">资料完整度</div>
+                                    </div>
+                                    <div class="prep-summary-item">
+                                        <div class="prep-summary-value" id="prepSummaryDocs">—</div>
+                                        <div class="prep-summary-label">资料文档</div>
+                                    </div>
+                                    <div class="prep-summary-item">
+                                        <div class="prep-summary-value" id="prepSummaryQuestions">—</div>
+                                        <div class="prep-summary-label">高频问题</div>
+                                    </div>
+                                    <div class="prep-summary-item">
+                                        <div class="prep-summary-value" id="prepSummaryUnanswered">—</div>
+                                        <div class="prep-summary-label">未覆盖问题</div>
                                     </div>
                                 </div>
-                                <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" style="display:none;" onchange="handleProductKnowledgeUpload(event)">
-                                <div class="muted" style="font-size:12px;margin-bottom:8px;">支持 PDF / TXT / MD / CSV；基于商品资料检索，无需额外配置。</div>
-                                <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
-                                <div style="display:flex;gap:6px;margin-bottom:10px;">
-                                    <input id="productKnowledgeQuestion" placeholder="向商品资料提问，例如：这款商品怎么介绍卖点？" style="flex:1;font-size:13px;">
-                                    <button onclick="askProductKnowledge()">提问</button>
-                                </div>
-                                <div id="productKnowledgeAnswer" class="result" style="min-height:60px;">
-                                    <div class="result-empty">基于商品资料的回答会显示在这里。</div>
-                                </div>
                             </div>
 
-                            <!-- ── Live Script Card ── -->
-                            <div class="card" id="liveScriptCard" style="display:none;padding:16px;margin-top:12px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                                    <h3 style="margin:0;font-size:15px;">开播话术</h3>
-                                    <span id="liveScriptStatus" class="muted" style="font-size:12px;"></span>
-                                </div>
-                                <div id="liveScriptResult" class="result" style="min-height:120px;margin-bottom:12px;">
-                                    <div class="result-empty">选择商品后可生成直播带货话术。</div>
-                                </div>
-                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                                    <span style="font-weight:700;font-size:14px;">历史话术</span>
-                                    <button class="light" onclick="loadProductLiveScripts()" style="font-size:12px;padding:4px 10px;">刷新</button>
-                                </div>
-                                <div id="liveScriptHistory" style="max-height:220px;overflow-y:auto;"></div>
+                            <!-- ── Tabs ── -->
+                            <div class="product-tabs" style="margin-top:12px;">
+                                <button class="product-tab-btn active" id="prodTabBtn-docs" onclick="switchProductTab('docs')">资料文档</button>
+                                <button class="product-tab-btn" id="prodTabBtn-ask" onclick="switchProductTab('ask')">资料问答</button>
+                                <button class="product-tab-btn" id="prodTabBtn-insights" onclick="switchProductTab('insights')">问题洞察</button>
+                                <button class="product-tab-btn" id="prodTabBtn-script" onclick="switchProductTab('script')">开播话术</button>
+                                <button class="product-tab-btn" id="prodTabBtn-review" onclick="switchProductTab('review')">直播复盘</button>
                             </div>
 
-                            <!-- ── Live Review Card ── -->
-                            <div class="card" style="padding:16px;margin-top:12px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                                    <h3 style="margin:0;font-size:15px;">📋 直播复盘</h3>
-                                    <div style="display:flex;gap:6px;">
-                                        <button id="generateReviewBtn" onclick="generateLiveReview()">生成复盘</button>
-                                        <button class="light" onclick="loadLiveReviewHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                            <!-- ── Tab: 资料文档（默认，顶部含资料完整度详情） ── -->
+                            <div class="prod-tab-panel" id="prodTabPanel-docs">
+                                <!-- Readiness Card（资料完整度详情） -->
+                                <div class="card" style="padding:16px;margin-top:12px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                        <h3 style="margin:0;font-size:15px;">✅ 资料完整度</h3>
+                                        <button class="light" onclick="loadProductReadiness()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                    </div>
+                                    <div id="productReadinessBox">
+                                        <div class="result-empty">选择商品后可查看资料完整度。</div>
                                     </div>
                                 </div>
-                                <div id="liveReviewResult" class="result" style="min-height:100px;margin-bottom:10px;">
-                                    <div class="result-empty">选择商品后可生成直播复盘。</div>
+
+                                <!-- Product Knowledge Card（文档管理） -->
+                                <div class="card" style="padding:16px;margin-top:12px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                        <h3 style="margin:0;font-size:15px;">📚 商品资料文档</h3>
+                                        <div style="display:flex;gap:6px;">
+                                            <button class="light" onclick="triggerProductKnowledgeUpload()" style="font-size:12px;padding:4px 10px;">上传资料</button>
+                                            <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                        </div>
+                                    </div>
+                                    <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" style="display:none;" onchange="handleProductKnowledgeUpload(event)">
+                                    <div class="muted" style="font-size:12px;margin-bottom:8px;">支持 PDF / TXT / MD / CSV；基于商品资料检索，无需额外配置。</div>
+                                    <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
                                 </div>
-                                <div style="font-weight:700;font-size:13px;margin-bottom:6px;">历史复盘</div>
-                                <div id="liveReviewHistory" style="max-height:180px;overflow-y:auto;"></div>
+                            </div>
+
+                            <!-- ── Tab: 资料问答 ── -->
+                            <div class="prod-tab-panel" id="prodTabPanel-ask" style="display:none;">
+                                <div class="card" style="padding:16px;margin-top:12px;">
+                                    <h3 style="margin:0;font-size:15px;margin-bottom:10px;">💬 资料问答</h3>
+                                    <div style="display:flex;gap:6px;margin-bottom:10px;">
+                                        <input id="productKnowledgeQuestion" placeholder="向商品资料提问，例如：这款商品怎么介绍卖点？" style="flex:1;font-size:13px;min-width:0;">
+                                        <button onclick="askProductKnowledge()" style="flex-shrink:0;">提问</button>
+                                    </div>
+                                    <div id="productKnowledgeAnswer" class="result" style="min-height:60px;">
+                                        <div class="result-empty">基于商品资料的回答会显示在这里。</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── Tab: 问题洞察 ── -->
+                            <div class="prod-tab-panel" id="prodTabPanel-insights" style="display:none;">
+                                <div class="card" style="padding:16px;margin-top:12px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                        <h3 style="margin:0;font-size:15px;">❓ 问题洞察</h3>
+                                        <button class="light" onclick="loadProductQuestionInsights()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                    </div>
+                                    <div id="productQuestionInsightsBox">
+                                        <div class="result-empty">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── Tab: 开播话术 ── -->
+                            <div class="prod-tab-panel" id="prodTabPanel-script" style="display:none;">
+                                <div class="card" id="liveScriptCard" style="padding:16px;margin-top:12px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                                        <h3 style="margin:0;font-size:15px;">开播话术</h3>
+                                        <span id="liveScriptStatus" class="muted" style="font-size:12px;"></span>
+                                    </div>
+                                    <div id="liveScriptResult" class="result" style="min-height:120px;margin-bottom:12px;">
+                                        <div class="result-empty">选择商品后可生成直播带货话术。</div>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                        <span style="font-weight:700;font-size:14px;">历史话术</span>
+                                        <button class="light" onclick="loadProductLiveScripts()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                    </div>
+                                    <div id="liveScriptHistory" style="max-height:220px;overflow-y:auto;"></div>
+                                </div>
+                            </div>
+
+                            <!-- ── Tab: 直播复盘 ── -->
+                            <div class="prod-tab-panel" id="prodTabPanel-review" style="display:none;">
+                                <div class="card" style="padding:16px;margin-top:12px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                        <h3 style="margin:0;font-size:15px;">📋 直播复盘</h3>
+                                        <div style="display:flex;gap:6px;">
+                                            <button id="generateReviewBtn" onclick="generateLiveReview()">生成复盘</button>
+                                            <button class="light" onclick="loadLiveReviewHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                        </div>
+                                    </div>
+                                    <div id="liveReviewResult" class="result" style="min-height:100px;margin-bottom:10px;">
+                                        <div class="result-empty">选择商品后可生成直播复盘。</div>
+                                    </div>
+                                    <div style="font-weight:700;font-size:13px;margin-bottom:6px;">历史复盘</div>
+                                    <div id="liveReviewHistory" style="max-height:180px;overflow-y:auto;"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2464,7 +2556,8 @@ async function selectProduct(id) {
 
     document.getElementById("productDetailActions").style.display = "flex";
     document.getElementById("productDetailModules").style.display = "block";
-    document.getElementById("liveScriptCard").style.display = "block";
+    _resetPrepSummary();
+    switchProductTab("docs");
     _resetLiveScriptResult();
     await loadProductLiveScripts(id);
     document.getElementById("liveReviewResult").innerHTML = '<div class="result-empty">选择商品后可生成直播复盘。</div>';
@@ -2533,6 +2626,7 @@ async function generateLiveScript() {
         alert("请先选择商品");
         return;
     }
+    switchProductTab("script");
 
     const btn = document.getElementById("generateLiveScriptBtn");
     const statusEl = document.getElementById("liveScriptStatus");
@@ -2582,7 +2676,6 @@ function clearSelectedProduct() {
     document.getElementById("productDetail").innerHTML = '<div style="text-align:center;padding:40px 0;"><div style="font-size:40px;margin-bottom:12px;">📦</div><div>请选择一个商品以查看详情</div></div>';
     document.getElementById("productDetailActions").style.display = "none";
     document.getElementById("productDetailModules").style.display = "none";
-    document.getElementById("liveScriptCard").style.display = "none";
     document.getElementById("liveScriptHistory").innerHTML = "";
     _resetLiveScriptResult();
     document.getElementById("liveReviewResult").innerHTML = '<div class="result-empty">选择商品后可生成直播复盘。</div>';
@@ -2937,6 +3030,37 @@ async function handleProductKnowledgeUpload(event) {
     }
 }
 
+// ─── 商品资料页 Tabs 与开播准备概览 ───
+
+const PRODUCT_TAB_NAMES = ["docs", "ask", "insights", "script", "review"];
+let currentProductTab = "docs";
+
+function switchProductTab(name) {
+    currentProductTab = name;
+    PRODUCT_TAB_NAMES.forEach(t => {
+        const panel = document.getElementById("prodTabPanel-" + t);
+        const btn = document.getElementById("prodTabBtn-" + t);
+        if (panel) panel.style.display = (t === name) ? "block" : "none";
+        if (btn) btn.classList.toggle("active", t === name);
+    });
+}
+
+function _setPrepSummaryValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function _resetPrepSummary() {
+    ["prepSummaryScore", "prepSummaryDocs", "prepSummaryQuestions", "prepSummaryUnanswered"]
+        .forEach(id => _setPrepSummaryValue(id, "—"));
+}
+
+function refreshPrepSummary() {
+    loadProductReadiness();
+    loadProductKnowledgeDocs();
+    loadProductQuestionInsights();
+}
+
 async function loadProductReadiness() {
     if (!selectedProductId) return;
     const box = document.getElementById("productReadinessBox");
@@ -2970,8 +3094,10 @@ async function loadProductReadiness() {
             html += `<div style="font-size:13px;color:#10b981;">资料已完善，可以开始准备开播。</div>`;
         }
         box.innerHTML = html;
+        _setPrepSummaryValue("prepSummaryScore", pct + "%");
     } catch (e) {
         box.innerHTML = '<div class="muted" style="font-size:12px;">完整度暂不可用，不影响其他功能。</div>';
+        _setPrepSummaryValue("prepSummaryScore", "—");
     }
 }
 
@@ -3011,8 +3137,14 @@ async function loadProductQuestionInsights() {
         if (!res.ok) throw new Error("insights unavailable");
         const data = await res.json();
         renderProductQuestionInsights(data);
+        const topCount = (data.top_questions || []).reduce((a, b) => a + (b.count || 0), 0);
+        const unansweredCount = (data.unanswered_questions || []).reduce((a, b) => a + (b.count || 0), 0);
+        _setPrepSummaryValue("prepSummaryQuestions", topCount);
+        _setPrepSummaryValue("prepSummaryUnanswered", unansweredCount);
     } catch (e) {
         box.innerHTML = '<div class="muted" style="font-size:12px;">问题洞察暂不可用，不影响其他功能。</div>';
+        _setPrepSummaryValue("prepSummaryQuestions", "—");
+        _setPrepSummaryValue("prepSummaryUnanswered", "—");
     }
 }
 
@@ -3089,11 +3221,13 @@ async function loadProductKnowledgeDocs() {
     const box = document.getElementById("productKnowledgeDocs");
     try {
         const docs = await request(`/products/${selectedProductId}/knowledge/documents`);
+        _setPrepSummaryValue("prepSummaryDocs", docs.length);
         if (!docs.length) {
             box.innerHTML = '<div class="muted" style="font-size:12px;">暂无资料，可上传 PDF / TXT / MD / CSV。</div>';
             return;
         }
         box.innerHTML = docs.map(d => `
+
             <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
                 <div style="min-width:0;">
                     <b style="font-size:13px;">📄 ${escapeHtml(d.filename)}</b>
@@ -3106,6 +3240,7 @@ async function loadProductKnowledgeDocs() {
         `).join("");
     } catch (e) {
         box.innerHTML = '<div class="result-empty">资料列表加载失败。</div>';
+        _setPrepSummaryValue("prepSummaryDocs", "—");
     }
 }
 
@@ -3134,6 +3269,7 @@ async function viewProductKnowledgeChunks(encodedFilename) {
             </div>`;
         });
         box.innerHTML = html;
+        switchProductTab("ask");
     } catch (e) {
         box.innerHTML = '<div class="result-empty">加载片段失败。</div>';
     }
