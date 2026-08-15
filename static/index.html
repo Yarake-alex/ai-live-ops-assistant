@@ -2248,6 +2248,37 @@ async function askRag() {
 }
 
 
+function _setModalField(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+}
+
+function _clearProductModalFields() {
+    _setModalField("productName", "");
+    _setModalField("productPrice", "");
+    _setModalField("productStock", "");
+    _setModalField("productSellingPoints", "");
+    _setModalField("productTargetAudience", "");
+    _setModalField("productPainPoints", "");
+    _setModalField("productPromotion", "");
+    _setModalField("productLiveStatus", "未上播");
+    _setModalField("productNotes", "");
+    _setModalField("editProductId", "");
+}
+
+function _fillProductModalFromData(p) {
+    _setModalField("productName", p.name || "");
+    _setModalField("productPrice", p.price ?? "");
+    _setModalField("productStock", p.stock ?? "");
+    _setModalField("productSellingPoints", p.selling_points || "");
+    _setModalField("productTargetAudience", p.target_audience || "");
+    _setModalField("productPainPoints", p.pain_points || "");
+    _setModalField("productPromotion", p.promotion || "");
+    _setModalField("productLiveStatus", p.live_status || "未上播");
+    _setModalField("productNotes", p.notes || "");
+    _setModalField("editProductId", p.id != null ? String(p.id) : "");
+}
+
 function openProductModal(isEdit) {
     _clearProductModalFields();
     document.getElementById("editProductId").value = "";
