@@ -1519,9 +1519,10 @@
                                             <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
                                         </div>
                                     </div>
-                                    <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" multiple style="display:none;" onchange="handleProductKnowledgeUpload(event)">
-                                    <div class="muted" style="font-size:12px;margin-bottom:8px;">支持一次选择多个 PDF / TXT / MD / CSV 文件；上传后可用于商品资料问答。</div>
-                                    <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
+                                    <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" multiple style="display:none;" onchange="updateProductKnowledgeFileSelection(event)">
+                                    <div class="muted" style="font-size:12px;margin-bottom:4px;">支持一次选择多个 PDF / TXT / MD / CSV 文件；上传后可用于商品资料问答。</div>
+                                    <div id="productKnowledgeFileStatus" class="muted" style="font-size:12px;margin-bottom:8px;">尚未选择资料文件</div>
+                                    <div id="productKnowledgeDocs" style="margin-bottom:10px;max-height:360px;overflow-y:auto;"></div>
                                 </div>
                             </div>
 
@@ -1726,7 +1727,7 @@
                             <div class="card-header">
                                 <h2>资料问答</h2>
                             </div>
-                            <textarea id="ragQuestion" placeholder="例如：这款商品适合什么人群？敏感肌能不能用？售后规则是什么？"></textarea>
+                            <textarea id="ragQuestion" placeholder="例如：直播间退换货规则是什么？活动赠品怎么说？哪些话不能承诺？"></textarea>
                             <button class="success" onclick="askRag()">基于资料回答</button>
                             <div id="ragResult" class="result">
                                 <div class="result-empty">上传资料后，可以在这里提问。</div>
@@ -2347,7 +2348,10 @@ async function askRag() {
     let html = renderAIText(data.answer);
 
     if (data.sources && data.sources.length) {
-        html += '<div class="source-box"><b>参考资料片段：</b>';
+        html += '<div class="source-box">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b>参考资料片段：</b>'
+            + '<button class="light" id="ragSourcesToggleBtn" onclick="toggleRagSources()" style="font-size:12px;padding:4px 10px;">显示参考资料</button></div>'
+            + '<div id="ragSourcesDetail" style="display:none;">';
         data.sources.forEach((s, index) => {
             html += `
                 <div style="margin-top:8px;">
@@ -2356,10 +2360,19 @@ async function askRag() {
                 </div>
             `;
         });
-        html += '</div>';
+        html += '</div></div>';
     }
 
     document.getElementById("ragResult").innerHTML = html;
+}
+
+function toggleRagSources() {
+    const detail = document.getElementById("ragSourcesDetail");
+    const btn = document.getElementById("ragSourcesToggleBtn");
+    if (!detail || !btn) return;
+    const show = detail.style.display === "none";
+    detail.style.display = show ? "block" : "none";
+    btn.textContent = show ? "隐藏参考资料" : "显示参考资料";
 }
 
 
@@ -3012,11 +3025,37 @@ function triggerProductKnowledgeUpload() {
         alert("请先选择商品");
         return;
     }
-    document.getElementById("productKnowledgeFile").click();
+    const input = document.getElementById("productKnowledgeFile");
+    if (input && input.files && input.files.length) {
+        // 已选择文件 → 执行上传
+        uploadSelectedProductKnowledgeFiles(input.files);
+    } else {
+        input.click();
+    }
 }
 
-async function handleProductKnowledgeUpload(event) {
+function updateProductKnowledgeFileSelection(event) {
     const files = Array.from(event.target.files || []);
+    const el = document.getElementById("productKnowledgeFileStatus");
+    if (!el) return;
+    if (!files.length) {
+        el.textContent = "尚未选择资料文件";
+    } else if (files.length === 1) {
+        el.textContent = `已选择 1 个文件：${files[0].name}`;
+    } else {
+        el.textContent = `已选择 ${files.length} 个文件`;
+    }
+}
+
+function _resetProductKnowledgeFileSelection() {
+    const input = document.getElementById("productKnowledgeFile");
+    const el = document.getElementById("productKnowledgeFileStatus");
+    if (input) input.value = "";
+    if (el) el.textContent = "尚未选择资料文件";
+}
+
+async function uploadSelectedProductKnowledgeFiles(fileList) {
+    const files = Array.from(fileList || []);
     if (!files.length) {
         alert("请选择要上传的资料文件");
         return;
@@ -3070,7 +3109,7 @@ async function handleProductKnowledgeUpload(event) {
     await loadProductReadiness();
     loadOpsSuggestions();
     loadProductQuestionInsights();
-    event.target.value = "";
+    _resetProductKnowledgeFileSelection();
 }
 
 // ─── 商品资料页 Tabs 与开播准备概览 ───
