@@ -1,7 +1,8 @@
 # MVP 范围说明（给后续开发者）
 
 本文档说明当前「商品资料文档 + 开播话术 + 评论助手 + 直播复盘 + 运营工作台」MVP 的实现范围
-（含 V2「资料检索增强 + 开播准备工作流」轻量版），方便后续交付、复查和继续开发。
+（含 V2「资料检索增强 + 开播准备工作流」与 V3「直播问题洞察 + 高频问题本地快答」轻量版），
+方便后续交付、复查和继续开发。
 
 ---
 
@@ -65,14 +66,33 @@
 
 ### 9. 测试
 - pytest + FastAPI TestClient，临时 SQLite + mock LLM + 内置 `test` embedding provider（不依赖真实外部 API）。
-- 当前验证结果：`tests/test_product_knowledge.py` 38 个用例通过；全量 325 个用例通过、1 个既有 fixture 弃用 warning。
+- 当前验证结果：`tests/test_question_insights.py` 35 个用例通过；全量 360 个用例通过、1 个既有 fixture 弃用 warning。
 - 覆盖：知识库上传/列表/片段/重建/删除、问答 prompt 结构、商品资料向量检索与 TF-IDF 降级（配置关闭 /
   存储不可用 / 不支持 / embedding 异常 / 失效 id）、重建资料索引、删除/重传索引清理、用户/商品隔离、
-  完整度评分（低分/满分/文件名规则/隔离/鉴权）、话术与回复、复盘四标题与兜底缺失判断、看板字段与用户隔离、
+  完整度评分（低分/满分/文件名规则/隔离/鉴权）、问题归一化与 9 类分类（risk 优先）、问题日志写入与
+  best-effort、本地快答（5 类命中、字段为空不强答、高风险不快答、**monkeypatch 证明零 LLM 调用与零向量检索**）、
+  问题洞察统计与 user/product 隔离、话术与回复、复盘四标题与兜底缺失判断、看板字段与用户隔离、
   鉴权、上传大小限制等。
 - 真实 Embedding + Chroma 已手工验证通过：直播素材库 `vector_indexed == chunks`；商品资料
   `product_knowledge_chunks` 向量数与 SQL 片段对齐；同义问题可召回目标片段（资料写「换季脆弱肌适用」，
   提问「敏感肌能不能用？」命中该片段）。
+
+### 10. 问题洞察与本地快答（V3）
+- **问题记录**：`product_question_logs`（模型 `ProductQuestionLog`），商品问答与评论助手输入均落一条轻量日志
+  （source / question / normalized_question / category / answer_mode / was_answered / created_at）；
+  只记问题不记回答内容；按 `user_id + product_id` 隔离；写入 best-effort，失败仅记 warning，不影响主流程。
+- **问题分类**：纯关键词规则 9 类（price / stock / promotion / audience / selling_points / usage /
+  after_sales / risk / other），不调 LLM、不新增 NLP 依赖；**risk 优先级最高**，避免「孕妇/过敏/禁忌」
+  等问题被误判为低风险人群问题。
+- **本地快答**：价格（`price > 0`）、库存（`stock > 0`）、优惠、适用人群、核心卖点五类低风险问题由商品字段
+  模板直接回答（`answer_mode=local_rule`，`sources=[]`，**不调 LLM、不走向量**）；字段为空不强答，
+  继续走商品资料检索；risk / after_sales / usage / other 不本地快答。
+- **问题洞察接口**：`GET /products/{id}/question-insights` 返回 `top_questions`（按归一化问题分组 Top 5）、
+  `category_counts`（9 类全量，无数据 count=0）、`recent_questions`（最近 10 条）、
+  `unanswered_questions`（`was_answered=false` Top 5）；只统计当前用户 + 当前商品，不跨用户、不跨商品；
+  Python 聚合，适合 MVP 数据量，不做分页/导出。
+- **前端面板**：商品资料页「资料完整度」下方新增「问题洞察」卡片（高频问题 / 分类统计 / 未覆盖问题 /
+  最近问题，空态与失败态友好提示）；不引入图表库、不展示技术词；选中商品 / 提问 / 评论生成后自动刷新。
 
 ---
 
@@ -89,6 +109,9 @@
 | 部门 / 主管 / 人事权限、复杂 RBAC | 仅管理员 + 普通用户两级，数据按 `user_id` 隔离；公开注册默认关闭 |
 | 多租户 SaaS | 单部署单组织，不做租户隔离 |
 | 手机 App / 小程序 | 仅 Web 页面（桌面/移动浏览器自适应） |
+| 复杂 BI 大屏 / 趋势图 / 词云 | 问题洞察仅单商品轻量面板（Top N 列表 + 分类标签），无图表库、无大屏 |
+| 自动运营日报 | 无定时任务与报告生成，问题数据仅做实时洞察展示 |
+| 语音识别 | 问题输入为文本，不做语音转写 |
 | Redis / Celery / Kubernetes / 消息队列 | 无异步任务，AI 调用同步执行；无编排依赖 |
 | 前端框架 | 单文件 `static/index.html` 原生 JS，未引入构建工具 |
 
@@ -107,6 +130,10 @@
 5. **数据库**：默认 SQLite（`customer_assistant.db`），适合单机演示；生产可用 PostgreSQL（已支持连接串）。
 6. **真实 LLM 依赖外网**：断网时各功能走本地兜底，status 为 `fallback`。
 7. **真实 LLM 输出不可完全预测**：prompt 已约束不编造，但回复措辞会随模型变化（例如会引用资料中的库存数字）。
+8. **本地快答依赖商品字段质量**：价格/库存/优惠/人群/卖点直答完全取自已维护字段，字段过时则答案过时；
+   文案已带"以直播间/下单页面实际为准"弱提示，但仍需运营及时维护商品资料。
+9. **"未覆盖问题"的判定边界**：向量检索启用时，检索总会返回最近邻片段，多数问题由 LLM 基于资料回答
+   （"资料中未明确提到"），`was_answered=false` 主要出现在无资料商品或检索完全无匹配的场景。
 
 ---
 
@@ -114,6 +141,8 @@
 
 1. **向量检索生产扩展（可选）**：商品资料文档与直播素材库已完成真实 Embedding + 本地 Chroma 语义检索；
    如需 PostgreSQL 生产部署，可评估 pgvector 方案（当前 pgvector 场景自动降级基础检索）。
+1b. **复盘与话术引用高频问题**：将问题洞察的高频/未覆盖问题作为直播复盘与话术生成的输入，
+   支撑"下场直播优化建议"更精准（需同步调 prompt 与测试）。
 2. **直播场次模型**：增加场次表，评论助手、复盘、看板按场次聚合，支撑"下场直播优化建议"更精准。
 3. **真实平台接入**：通过平台 Webhook 接收真实评论、自动触发回复（需运营审核），逐步替换模拟输入。
 4. **看板可视化**：统计卡片之外增加趋势图（话术/回复/复盘随时间变化）、高频问题词云。
@@ -128,8 +157,9 @@
 - 启动与配置：`README.md`、`.env.example`
 - 演示步骤：`docs/demo-guide.md`
 - V2 设计说明：`docs/v2-design.md`
-- 接口实现：`app/main.py`（路由、完整度评分）、`app/llm.py`（prompt 与兜底）、
+- V3 设计说明：`docs/v3-design.md`
+- 接口实现：`app/main.py`（路由、完整度评分、问题洞察）、`app/llm.py`（prompt 与兜底）、
   `app/rag.py`（解析/分块/检索与降级）、`app/vector_store.py`（本地 Chroma 商品资料与通用素材双 collection）、
-  `app/embeddings.py`（OpenAI-compatible Embedding）
-- 数据模型：`app/models.py`（`Product`、`ProductKnowledgeChunk`、`LiveScript`、`LiveCommentReply`、`LiveReview`）
-- 测试：`tests/test_product_knowledge.py`、`tests/test_live_reviews.py`、`tests/test_comment_replies.py`、`tests/test_live_scripts.py`
+  `app/embeddings.py`（OpenAI-compatible Embedding）、`app/question_insights.py`（问题记录/分类/本地快答/洞察聚合）
+- 数据模型：`app/models.py`（`Product`、`ProductKnowledgeChunk`、`LiveScript`、`LiveCommentReply`、`LiveReview`、`ProductQuestionLog`）
+- 测试：`tests/test_product_knowledge.py`、`tests/test_question_insights.py`、`tests/test_live_reviews.py`、`tests/test_comment_replies.py`、`tests/test_live_scripts.py`
