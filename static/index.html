@@ -1419,7 +1419,7 @@
                             </div>
                         </div>
 
-                        <!-- 选中商品后展示：资料完整度 → 商品资料文档 → 开播话术 → 直播复盘 -->
+                        <!-- 选中商品后展示：资料完整度 → 问题洞察 → 商品资料文档 → 开播话术 → 直播复盘 -->
                         <div id="productDetailModules" style="display:none;">
                             <!-- ── Readiness Card（资料完整度） ── -->
                             <div class="card" style="padding:16px;margin-top:12px;">
@@ -1429,6 +1429,17 @@
                                 </div>
                                 <div id="productReadinessBox">
                                     <div class="result-empty">选择商品后可查看资料完整度。</div>
+                                </div>
+                            </div>
+
+                            <!-- ── Question Insights Card（问题洞察） ── -->
+                            <div class="card" style="padding:16px;margin-top:12px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                    <h3 style="margin:0;font-size:15px;">❓ 问题洞察</h3>
+                                    <button class="light" onclick="loadProductQuestionInsights()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                </div>
+                                <div id="productQuestionInsightsBox">
+                                    <div class="result-empty">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>
                                 </div>
                             </div>
 
@@ -2463,6 +2474,7 @@ async function selectProduct(id) {
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
     await loadProductKnowledgeDocs();
     await loadProductReadiness();
+    await loadProductQuestionInsights();
     closeProductModal();
 }
 
@@ -2578,6 +2590,7 @@ function clearSelectedProduct() {
     document.getElementById("productKnowledgeDocs").innerHTML = "";
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
     document.getElementById("productReadinessBox").innerHTML = '<div class="result-empty">选择商品后可查看资料完整度。</div>';
+    resetProductQuestionInsights();
     closeProductModal();
 }
 
@@ -2753,6 +2766,10 @@ async function generateCommentReply() {
         });
         _renderCommentReplyRecord(record);
         await loadCommentReplyHistory();
+        // 若商品资料页当前选中的就是该商品，同步刷新问题洞察
+        if (selectedProductId && selectedProductId === Number(productId)) {
+            loadProductQuestionInsights();
+        }
     } catch (e) {
         resultEl.innerHTML = '<div class="result-empty">生成失败，请稍后重试。</div>';
     } finally {
@@ -2958,6 +2975,115 @@ async function loadProductReadiness() {
     }
 }
 
+// ─── 问题洞察（V3） ───
+
+const QUESTION_CATEGORY_LABELS = {
+    price: "价格",
+    stock: "库存",
+    promotion: "优惠",
+    audience: "适用人群",
+    selling_points: "卖点",
+    usage: "使用方法",
+    after_sales: "售后",
+    risk: "风险边界",
+    other: "其他",
+};
+
+function _questionCategoryLabel(category) {
+    return QUESTION_CATEGORY_LABELS[category] || "其他";
+}
+
+function resetProductQuestionInsights() {
+    const box = document.getElementById("productQuestionInsightsBox");
+    if (box) box.innerHTML = '<div class="result-empty">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>';
+}
+
+async function loadProductQuestionInsights() {
+    if (!selectedProductId) return;
+    const box = document.getElementById("productQuestionInsightsBox");
+    if (!box) return;
+    try {
+        const res = await fetch(`/products/${selectedProductId}/question-insights`, { credentials: "include" });
+        if (res.status === 401) {
+            showLogin("登录已失效，请重新登录");
+            return;
+        }
+        if (!res.ok) throw new Error("insights unavailable");
+        const data = await res.json();
+        renderProductQuestionInsights(data);
+    } catch (e) {
+        box.innerHTML = '<div class="muted" style="font-size:12px;">问题洞察暂不可用，不影响其他功能。</div>';
+    }
+}
+
+function renderProductQuestionInsights(data) {
+    const box = document.getElementById("productQuestionInsightsBox");
+    if (!box) return;
+    const top = data.top_questions || [];
+    const counts = data.category_counts || [];
+    const recent = (data.recent_questions || []).slice(0, 5);
+    const unanswered = data.unanswered_questions || [];
+
+    if (!top.length && !counts.some(c => c.count > 0) && !recent.length) {
+        box.innerHTML = '<div class="result-empty">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>';
+        return;
+    }
+
+    let html = "";
+
+    // 高频问题 Top 5
+    if (top.length) {
+        html += '<div style="font-weight:700;font-size:13px;margin-bottom:6px;">🔥 高频问题</div>';
+        html += top.map(t => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:4px 0;">
+                <span style="font-size:13px;min-width:0;word-break:break-all;flex:1;">${escapeHtml(t.question)}</span>
+                <span style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                    <span class="tag">${escapeHtml(_questionCategoryLabel(t.category))}</span>
+                    <span class="muted" style="font-size:12px;">${t.count} 次</span>
+                </span>
+            </div>`).join("");
+    }
+
+    // 分类统计（只显示 count > 0）
+    const activeCounts = counts.filter(c => c.count > 0);
+    if (activeCounts.length) {
+        html += '<div style="font-weight:700;font-size:13px;margin:10px 0 6px;">📊 分类统计</div>';
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+            + activeCounts.map(c =>
+                `<span class="tag" style="display:inline-flex;align-items:center;gap:4px;">${escapeHtml(c.label)} <b>${c.count}</b></span>`
+            ).join("")
+            + '</div>';
+    }
+
+    // 未覆盖问题
+    if (unanswered.length) {
+        html += '<div style="font-weight:700;font-size:13px;margin:10px 0 6px;">⚠️ 未覆盖问题</div>';
+        html += unanswered.map(u => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:4px 0;">
+                <span style="font-size:13px;min-width:0;word-break:break-all;flex:1;">${escapeHtml(u.question)}</span>
+                <span style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                    <span class="tag">${escapeHtml(_questionCategoryLabel(u.category))}</span>
+                    <span class="muted" style="font-size:12px;">${u.count} 次 · 建议补充资料</span>
+                </span>
+            </div>`).join("");
+    }
+
+    // 最近问题（最多 5 条，不展示 answer_mode 原始值）
+    if (recent.length) {
+        html += '<div style="font-weight:700;font-size:13px;margin:10px 0 6px;">🕒 最近问题</div>';
+        html += recent.map(r => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:4px 0;">
+                <span style="font-size:13px;min-width:0;word-break:break-all;flex:1;">${escapeHtml(r.question)}</span>
+                <span style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                    <span class="tag">${escapeHtml(_questionCategoryLabel(r.category))}</span>
+                    <span class="${r.was_answered ? 'status-tag' : 'tag'}" style="${r.was_answered ? 'background:#ecfdf5;color:#065f46;' : ''}">${r.was_answered ? '已回答' : '未覆盖'}</span>
+                </span>
+            </div>`).join("");
+    }
+
+    box.innerHTML = html;
+}
+
 async function loadProductKnowledgeDocs() {
     if (!selectedProductId) return;
     const box = document.getElementById("productKnowledgeDocs");
@@ -3058,6 +3184,8 @@ async function askProductKnowledge() {
                 + '</div>';
         }
         box.innerHTML = html;
+        // 提问成功后刷新问题洞察
+        loadProductQuestionInsights();
     } catch (e) {
         box.innerHTML = '<div class="result-empty">提问失败，请稍后重试。</div>';
     }
