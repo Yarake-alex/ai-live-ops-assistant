@@ -406,3 +406,109 @@ class TestLocalProductAnswer:
             f"/products/{pid}/knowledge/ask", json={"question": "多少钱"}
         ).status_code == 404
         assert self._logs_for_product(client, pid) == []
+
+
+# ─── 问题洞察接口（V3 阶段 C） ───
+
+
+class TestQuestionInsightsEndpoint:
+    """GET /products/{id}/question-insights。
+
+    纯数据库聚合，不依赖真实 Embedding API 或 LLM（session client + mock）。
+    """
+
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    @staticmethod
+    def _create_product(client, name="洞察商品"):
+        resp = client.post("/products", json={**FULL_PRODUCT, "name": name})
+        assert resp.status_code == 200
+        return resp.json()["id"]
+
+    @staticmethod
+    def _ask(client, pid, question):
+        return client.post(f"/products/{pid}/knowledge/ask", json={"question": question})
+
+    @staticmethod
+    def _insights(client, pid):
+        resp = client.get(f"/products/{pid}/question-insights")
+        assert resp.status_code == 200
+        return resp.json()
+
+    def test_empty_logs_return_empty_lists_and_zero_counts(self, client):
+        pid = self._create_product(client)
+        data = self._insights(client, pid)
+        assert data["top_questions"] == []
+        assert data["recent_questions"] == []
+        assert data["unanswered_questions"] == []
+        assert len(data["category_counts"]) == 9
+        assert all(c["count"] == 0 for c in data["category_counts"])
+        assert {c["category"] for c in data["category_counts"]} == {
+            "price", "stock", "promotion", "audience", "selling_points",
+            "usage", "after_sales", "risk", "other",
+        }
+
+    def test_top_questions_aggregate_normalized(self, client):
+        pid = self._create_product(client)
+        for q in ["多少钱？", "多少钱", "多少钱！"]:
+            self._ask(client, pid, q)
+        data = self._insights(client, pid)
+        top = data["top_questions"]
+        assert len(top) == 1
+        assert top[0]["count"] == 3
+        assert top[0]["category"] == "price"
+        # question 取组内最新一条原始文本
+        assert top[0]["question"] == "多少钱！"
+
+    def test_category_counts(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "多少钱")       # price（本地快答）
+        self._ask(client, pid, "有库存吗")     # stock（本地快答）
+        self._ask(client, pid, "有什么优惠")   # promotion（本地快答）
+        counts = {c["category"]: c["count"] for c in self._insights(client, pid)["category_counts"]}
+        assert counts["price"] == 1
+        assert counts["stock"] == 1
+        assert counts["promotion"] == 1
+        assert counts["other"] == 0
+
+    def test_recent_questions_limit_and_order(self, client):
+        pid = self._create_product(client)
+        for i in range(12):
+            self._ask(client, pid, f"第{i}个问题")
+        recent = self._insights(client, pid)["recent_questions"]
+        assert len(recent) == 10
+        assert recent[0]["question"] == "第11个问题"
+        assert recent[-1]["question"] == "第2个问题"
+
+    def test_unanswered_questions_only_unanswered(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "怎么用？")  # usage 非快答且无资料 → no_match
+        self._ask(client, pid, "怎么用？")
+        self._ask(client, pid, "多少钱")    # 本地快答命中
+        un = self._insights(client, pid)["unanswered_questions"]
+        assert len(un) == 1
+        assert un[0]["question"] == "怎么用？"
+        assert un[0]["count"] == 2
+        assert un[0]["category"] == "usage"
+
+    def test_insights_scoped_by_user(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "多少钱")
+        other = TestQuestionLogRecording._create_second_user(client, "insights-other")
+        assert other.get(f"/products/{pid}/question-insights").status_code == 404
+
+    def test_insights_scoped_by_product(self, client):
+        pid_a = self._create_product(client, "洞察商品A")
+        pid_b = self._create_product(client, "洞察商品B")
+        self._ask(client, pid_a, "多少钱")
+        self._ask(client, pid_b, "有库存吗")
+        top_a = {t["category"]: t["count"] for t in self._insights(client, pid_a)["top_questions"]}
+        top_b = {t["category"]: t["count"] for t in self._insights(client, pid_b)["top_questions"]}
+        assert top_a == {"price": 1}
+        assert top_b == {"stock": 1}
+
+    def test_insights_requires_login(self, client):
+        client.cookies.clear()
+        assert client.get("/products/1/question-insights").status_code == 401

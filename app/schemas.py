@@ -159,6 +159,36 @@ class ProductReadinessOut(BaseModel):
     prep_checklist: List[PrepChecklistItem]
 
 
+# ─── Product question insights (V3 商品问题洞察) ───
+
+
+class QuestionTopItem(BaseModel):
+    question: str
+    count: int
+    category: str
+
+
+class QuestionCategoryCount(BaseModel):
+    category: str
+    label: str
+    count: int
+
+
+class RecentQuestionItem(BaseModel):
+    question: str
+    category: str
+    answer_mode: str
+    was_answered: bool
+    created_at: datetime
+
+
+class ProductQuestionInsightsOut(BaseModel):
+    top_questions: List[QuestionTopItem]
+    category_counts: List[QuestionCategoryCount]
+    recent_questions: List[RecentQuestionItem]
+    unanswered_questions: List[QuestionTopItem]
+
+
 # ─── Live review (直播复盘) ───
 
 

@@ -54,6 +54,19 @@ def classify_question(text: str) -> str:
 # risk / after_sales / usage / other 一律不快答，继续走商品资料检索。
 LOCAL_ANSWER_CATEGORIES = ("price", "stock", "promotion", "audience", "selling_points")
 
+# 分类 → 中文标签（问题洞察展示用）
+CATEGORY_LABELS = {
+    "price": "价格",
+    "stock": "库存",
+    "promotion": "优惠",
+    "audience": "适用人群",
+    "selling_points": "卖点",
+    "usage": "使用方法",
+    "after_sales": "售后",
+    "risk": "风险边界",
+    "other": "其他",
+}
+
 
 def _format_price(price) -> str:
     """把 Decimal 价格转成简洁字符串（129.00 → 129，129.50 → 129.5）。"""
@@ -110,6 +123,87 @@ def build_local_product_answer(product, category: str):
         }
 
     return None
+
+
+def build_question_insights(db: Session, user_id: int, product_id: int):
+    """统计当前用户 + 当前商品的问题日志（MVP：Python 聚合，不做复杂 SQL）。
+
+    - top_questions：按 normalized_question 分组计数 Top 5，question/category 取组内最新一条
+    - category_counts：9 类全量返回，无数据 count=0
+    - recent_questions：最近 10 条（id 倒序）
+    - unanswered_questions：was_answered=false 分组计数 Top 5
+    """
+    from app.schemas import (
+        ProductQuestionInsightsOut,
+        QuestionCategoryCount,
+        QuestionTopItem,
+        RecentQuestionItem,
+    )
+
+    logs = (
+        db.query(ProductQuestionLog)
+        .filter(
+            ProductQuestionLog.user_id == user_id,
+            ProductQuestionLog.product_id == product_id,
+        )
+        .order_by(ProductQuestionLog.id.desc())
+        .all()
+    )
+
+    # 分组计数（logs 已按 id 倒序，组内第一次出现即最新一条）
+    top_groups: dict = {}
+    unanswered_groups: dict = {}
+    category_counts = {cat: 0 for cat in CATEGORY_LABELS}
+
+    for log in logs:
+        key = log.normalized_question or log.question
+        if log.category in category_counts:
+            category_counts[log.category] += 1
+
+        if key not in top_groups:
+            top_groups[key] = {
+                "question": log.question,
+                "category": log.category,
+                "count": 0,
+            }
+        top_groups[key]["count"] += 1
+
+        if not log.was_answered:
+            if key not in unanswered_groups:
+                unanswered_groups[key] = {
+                    "question": log.question,
+                    "category": log.category,
+                    "count": 0,
+                }
+            unanswered_groups[key]["count"] += 1
+
+    top_questions = [
+        QuestionTopItem(**item)
+        for item in sorted(top_groups.values(), key=lambda x: -x["count"])[:5]
+    ]
+    unanswered_questions = [
+        QuestionTopItem(**item)
+        for item in sorted(unanswered_groups.values(), key=lambda x: -x["count"])[:5]
+    ]
+
+    return ProductQuestionInsightsOut(
+        top_questions=top_questions,
+        category_counts=[
+            QuestionCategoryCount(category=cat, label=CATEGORY_LABELS[cat], count=n)
+            for cat, n in category_counts.items()
+        ],
+        recent_questions=[
+            RecentQuestionItem(
+                question=log.question,
+                category=log.category,
+                answer_mode=log.answer_mode,
+                was_answered=log.was_answered,
+                created_at=log.created_at,
+            )
+            for log in logs[:10]
+        ],
+        unanswered_questions=unanswered_questions,
+    )
 
 
 def record_product_question(

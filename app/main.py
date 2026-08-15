@@ -52,6 +52,7 @@ from app.schemas import (
     ProductCompleteness,
     PrepChecklistItem,
     ProductReadinessOut,
+    ProductQuestionInsightsOut,
     UserOut,
     UserCreateRequest,
     UserStatusUpdate,
@@ -81,6 +82,7 @@ from app.question_insights import (
     record_product_question,
     classify_question,
     build_local_product_answer,
+    build_question_insights,
     SOURCE_PRODUCT_ASK,
     SOURCE_COMMENT_REPLY,
 )
@@ -1396,6 +1398,20 @@ def product_readiness(
         # 阶段 4 占位：开播准备清单在后续阶段实现
         prep_checklist=[],
     )
+
+
+@app.get("/products/{product_id}/question-insights", response_model=ProductQuestionInsightsOut)
+def product_question_insights(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """商品级问题洞察（高频问题 / 分类统计 / 最近问题 / 未覆盖问题）。
+
+    只统计当前用户 + 当前商品，不允许跨用户、跨商品。
+    """
+    product = get_product_for_user(db, product_id, current_user)
+    return build_question_insights(db, current_user.id, product.id)
 
 
 # ─── Live review routes (直播复盘) ───
