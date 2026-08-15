@@ -1519,8 +1519,8 @@
                                             <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
                                         </div>
                                     </div>
-                                    <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" style="display:none;" onchange="handleProductKnowledgeUpload(event)">
-                                    <div class="muted" style="font-size:12px;margin-bottom:8px;">支持 PDF / TXT / MD / CSV；基于商品资料检索，无需额外配置。</div>
+                                    <input id="productKnowledgeFile" type="file" accept=".pdf,.txt,.md,.csv" multiple style="display:none;" onchange="handleProductKnowledgeUpload(event)">
+                                    <div class="muted" style="font-size:12px;margin-bottom:8px;">支持一次选择多个 PDF / TXT / MD / CSV 文件；上传后可用于商品资料问答。</div>
                                     <div id="productKnowledgeDocs" style="margin-bottom:10px;"></div>
                                 </div>
                             </div>
@@ -3016,33 +3016,61 @@ function triggerProductKnowledgeUpload() {
 }
 
 async function handleProductKnowledgeUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-        const res = await fetch(`/products/${selectedProductId}/knowledge/upload`, {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-        });
-        if (res.status === 401) {
-            showLogin("登录已失效，请重新登录");
-            return;
-        }
-        const data = await res.json();
-        if (!res.ok) {
-            alert(data.detail || "上传失败");
-            return;
-        }
-        alert(`上传成功！共 ${data.chunks} 个片段。`);
-        await loadProductKnowledgeDocs();
-        await loadProductReadiness();
-    } catch (err) {
-        alert("网络错误，上传失败");
-    } finally {
-        event.target.value = "";
+    const files = Array.from(event.target.files || []);
+    if (!files.length) {
+        alert("请选择要上传的资料文件");
+        return;
     }
+    if (!selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+
+    const failed = [];
+    let successCount = 0;
+
+    // 逐个文件上传：单个失败不影响后续文件
+    for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+            const res = await fetch(`/products/${selectedProductId}/knowledge/upload`, {
+                method: "POST",
+                body: formData,
+                credentials: "include",
+            });
+            if (res.status === 401) {
+                showLogin("登录已失效，请重新登录");
+                return;
+            }
+            const data = await res.json();
+            if (!res.ok) {
+                failed.push(file.name);
+                console.warn("上传失败:", file.name, data.detail || res.status);
+                continue;
+            }
+            successCount += 1;
+        } catch (err) {
+            failed.push(file.name);
+            console.warn("上传失败(网络):", file.name, err);
+        }
+    }
+
+    // 汇总提示（不暴露底层错误信息）
+    if (successCount === files.length) {
+        alert(`上传完成：${successCount} 个文件已加入资料`);
+    } else if (successCount > 0) {
+        alert(`上传完成：${successCount} 个成功，${failed.length} 个失败。失败文件：${failed.join("、")}`);
+    } else {
+        alert(`上传失败：${failed.length} 个文件未能上传。失败文件：${failed.join("、")}`);
+    }
+
+    // 全部处理完成后统一刷新，避免逐个刷新闪烁
+    await loadProductKnowledgeDocs();
+    await loadProductReadiness();
+    loadOpsSuggestions();
+    loadProductQuestionInsights();
+    event.target.value = "";
 }
 
 // ─── 商品资料页 Tabs 与开播准备概览 ───
