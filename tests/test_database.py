@@ -665,6 +665,7 @@ class TestPostgresEmptyDbInit:
                 "live_reviews",
                 "document_chunks",
                 "ai_call_logs",
+                "product_question_logs",
             }
             missing = expected_tables - set(table_names)
             assert not missing, (

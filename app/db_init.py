@@ -92,6 +92,13 @@ def upgrade_database() -> None:
         from app.models import LiveCommentReply
         LiveCommentReply.__table__.create(bind=engine, checkfirst=True)
 
+    # ── Phase 10: product question logs (V3 问题记录) ──
+    inspector = inspect(engine)
+    if "product_question_logs" not in inspector.get_table_names():
+        # table doesn't exist at all — create it
+        from app.models import ProductQuestionLog
+        ProductQuestionLog.__table__.create(bind=engine, checkfirst=True)
+
     # ── Phase 9: product knowledge chunks + live review records ──
     inspector = inspect(engine)
     if "product_knowledge_chunks" not in inspector.get_table_names():
@@ -151,6 +158,15 @@ def create_indexes() -> None:
         )
         conn.execute(
             text("CREATE INDEX IF NOT EXISTS ix_live_comment_replies_status ON live_comment_replies (status)")
+        )
+
+    # ── Phase 10: product question log indexes (V3) ──
+    with engine.begin() as conn:
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_product_question_logs_user_product ON product_question_logs (user_id, product_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_product_question_logs_created_at ON product_question_logs (created_at)")
         )
 
     # ── Phase 9: product knowledge + live review indexes ──

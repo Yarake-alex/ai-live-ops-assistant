@@ -155,6 +155,26 @@ class DocumentChunk(Base):
     owner: Mapped["User"] = relationship(back_populates="document_chunks")
 
 
+class ProductQuestionLog(Base):
+    """V3 商品问题记录 — 轻量日志，只记问题不记回答内容，按用户与商品隔离。"""
+
+    __tablename__ = "product_question_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    # product_knowledge_ask | comment_reply
+    source: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    question: Mapped[str] = mapped_column(String(500), nullable=False)
+    normalized_question: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    # price | stock | promotion | audience | selling_points | usage | after_sales | risk | other
+    category: Mapped[str] = mapped_column(String(30), default="other", nullable=False, index=True)
+    # product_knowledge | llm | fallback | no_match（local_rule 为后续阶段预留）
+    answer_mode: Mapped[str] = mapped_column(String(30), default="llm", nullable=False)
+    was_answered: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
 class AiCallLog(Base):
     """AI 调用日志 — 轻量用量记录，不保存 prompt 原文和 API Key。"""
 

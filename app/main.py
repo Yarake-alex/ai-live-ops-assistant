@@ -77,6 +77,11 @@ from app.rag import (
     build_rag_prompt,
 )
 from app.db_init import init_database
+from app.question_insights import (
+    record_product_question,
+    SOURCE_PRODUCT_ASK,
+    SOURCE_COMMENT_REPLY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -828,6 +833,19 @@ def generate_comment_reply(
     db.add(record)
     db.commit()
     db.refresh(record)
+
+    # V3 问题记录：只记输入评论与结果模式，不改变生成逻辑
+    record_product_question(
+        db,
+        user_id=current_user.id,
+        product_id=product.id,
+        source=SOURCE_COMMENT_REPLY,
+        question=comment,
+        answer_mode={"success": "llm", "fallback": "fallback", "failed": "no_match"}.get(
+            status, "fallback"
+        ),
+        was_answered=(status != "failed"),
+    )
     return record
 
 
@@ -1188,6 +1206,15 @@ def ask_product_knowledge(
         .all()
     )
     if not chunks:
+        record_product_question(
+            db,
+            user_id=current_user.id,
+            product_id=product.id,
+            source=SOURCE_PRODUCT_ASK,
+            question=data.question,
+            answer_mode="no_match",
+            was_answered=False,
+        )
         return ProductKnowledgeAnswer(
             answer="该商品还没有知识库资料，请先在商品详情页上传资料。",
             sources=[],
@@ -1202,6 +1229,15 @@ def ask_product_knowledge(
         top_k=4,
     )
     if not top:
+        record_product_question(
+            db,
+            user_id=current_user.id,
+            product_id=product.id,
+            source=SOURCE_PRODUCT_ASK,
+            question=data.question,
+            answer_mode="no_match",
+            was_answered=False,
+        )
         return ProductKnowledgeAnswer(
             answer="没有检索到与问题相关的商品资料，建议补充相关资料或换个问法。",
             sources=[],
@@ -1214,7 +1250,8 @@ def ask_product_knowledge(
         user_id=current_user.id,
         db=db,
     )
-    if not answer or FALLBACK_MESSAGE in answer:
+    is_fallback = not answer or FALLBACK_MESSAGE in answer
+    if is_fallback:
         answer = "AI 服务暂时不可用，请稍后重试；可先查看资料列表确认已上传内容。"
 
     sources = [
@@ -1225,6 +1262,16 @@ def ask_product_knowledge(
         )
         for c in top
     ]
+    # V3 问题记录：fallback 也计为已应答（用户拿到了可用提示），分类仍用于洞察
+    record_product_question(
+        db,
+        user_id=current_user.id,
+        product_id=product.id,
+        source=SOURCE_PRODUCT_ASK,
+        question=data.question,
+        answer_mode="fallback" if is_fallback else "product_knowledge",
+        was_answered=True,
+    )
     return ProductKnowledgeAnswer(answer=answer, sources=sources)
 
 
