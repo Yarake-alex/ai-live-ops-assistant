@@ -898,3 +898,82 @@ class TestProductKnowledgeVector:
             user2_vc.post(f"/products/{pid}/knowledge/ask", json={"question": "x"}).status_code
             == 404
         )
+
+
+class TestEmbeddingBatch:
+    """Embedding API 批量分批（单次最多 10 条，OpenAI-compatible 限制）。
+
+    用伪造客户端直接测 EmbeddingService 层，不依赖真实 API。
+    """
+
+    @staticmethod
+    def _make_service():
+        from app.embeddings import EmbeddingService
+
+        svc = EmbeddingService()
+        svc._loaded = True
+        svc._provider = "openai_compatible"
+        svc._model = None
+
+        calls = []
+        counter = {"n": 0}
+
+        class _Item:
+            def __init__(self):
+                self.embedding = [float(counter["n"])]
+                counter["n"] += 1
+
+        class _Resp:
+            def __init__(self, texts):
+                self.data = [_Item() for _ in texts]
+
+        class _Embeddings:
+            def create(self, **kwargs):
+                texts = list(kwargs["input"])
+                calls.append(texts)
+                return _Resp(texts)
+
+        class _FakeClient:
+            def __init__(self):
+                self.embeddings = _Embeddings()
+
+        svc._client = _FakeClient()
+        return svc, calls
+
+    def test_eleven_texts_split_into_two_batches(self):
+        svc, calls = self._make_service()
+        texts = [f"文本{i}" for i in range(11)]
+        result = svc.embed_documents(texts)
+
+        assert len(calls) == 2
+        assert [len(c) for c in calls] == [10, 1]
+        assert len(result) == 11
+        # 顺序不乱：第 i 条结果的 embedding 值等于 i
+        assert result == [[float(i)] for i in range(11)]
+
+    def test_twenty_five_texts_split_into_three_batches(self):
+        svc, calls = self._make_service()
+        texts = [f"文本{i}" for i in range(25)]
+        result = svc.embed_documents(texts)
+
+        assert [len(c) for c in calls] == [10, 10, 5]
+        assert len(result) == 25
+        assert result == [[float(i)] for i in range(25)]
+
+    def test_small_batch_single_call(self):
+        svc, calls = self._make_service()
+        result = svc.embed_documents(["a", "b", "c"])
+
+        assert len(calls) == 1
+        assert len(calls[0]) == 3
+        assert len(result) == 3
+
+    def test_batch_failure_propagates(self):
+        svc, calls = self._make_service()
+
+        def _raise(**kwargs):
+            raise RuntimeError("batch size is invalid, it should not be larger than 10")
+
+        svc._client.embeddings.create = _raise
+        with pytest.raises(RuntimeError):
+            svc.embed_documents(["a"] * 11)

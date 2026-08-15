@@ -16,6 +16,10 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# OpenAI-compatible Embedding API（如阿里百炼 text-embedding-v4）单次
+# input.contents 上限为 10 条。统一在此分批，业务调用点无需关心。
+EMBEDDING_MAX_BATCH_SIZE = 10
+
 
 class EmbeddingService:
     """Unified embedding interface with lazy initialization."""
@@ -48,12 +52,25 @@ class EmbeddingService:
         return resp.data[0].embedding
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Batch-embed multiple document strings."""
+        """Batch-embed multiple document strings.
+
+        统一按 EMBEDDING_MAX_BATCH_SIZE 分批调用，合并后保持输入顺序；
+        返回长度与输入长度一致。单批失败按原有异常逻辑向上抛，
+        由业务层转换为运营语言提示。
+        """
         if not texts:
             return []
 
         self._ensure_loaded()
 
+        results: List[List[float]] = []
+        for start in range(0, len(texts), EMBEDDING_MAX_BATCH_SIZE):
+            batch = texts[start : start + EMBEDDING_MAX_BATCH_SIZE]
+            results.extend(self._embed_batch(batch))
+        return results
+
+    def _embed_batch(self, texts: List[str]) -> List[List[float]]:
+        """Embed a single batch (caller 保证非空且 <= EMBEDDING_MAX_BATCH_SIZE)。"""
         if self._provider == "test":
             return [self._test_embed(t, True) for t in texts]
 
