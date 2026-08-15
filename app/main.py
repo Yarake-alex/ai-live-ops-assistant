@@ -85,6 +85,7 @@ from app.question_insights import (
     build_local_product_answer,
     build_question_insights,
     build_ops_suggestions,
+    build_script_context_from_questions,
     SOURCE_PRODUCT_ASK,
     SOURCE_COMMENT_REPLY,
 )
@@ -687,7 +688,13 @@ def generate_live_script(
     current_user: User = Depends(get_current_user),
 ):
     product = get_product_for_user(db, product_id, current_user)
-    prompt = build_live_script_prompt(product)
+    # V4 阶段 5：话术上下文来自当前用户+商品的问题洞察（best-effort，失败不影响生成）
+    try:
+        script_context = build_script_context_from_questions(db, current_user.id, product.id)
+    except Exception as exc:
+        logger.warning("Script context unavailable for product %s: %s", product.id, exc)
+        script_context = None
+    prompt = build_live_script_prompt(product, script_context=script_context)
     provider, model = resolve_llm_provider_model()
     status = "success"
     error_message = None
@@ -712,9 +719,9 @@ def generate_live_script(
     if content and FALLBACK_MESSAGE not in content:
         status = "success"
     else:
-        # AI 不可用 → 尝试本地兜底话术
+        # AI 不可用 → 尝试本地兜底话术（同样带上问题洞察上下文）
         try:
-            content = build_live_script_fallback(product)
+            content = build_live_script_fallback(product, script_context=script_context)
             status = "fallback"
             error_message = "AI 服务暂时不可用，已返回本地兜底话术"
         except Exception:

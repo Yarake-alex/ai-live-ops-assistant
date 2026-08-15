@@ -135,9 +135,37 @@ def _safe_product_value(value, default: str = "未填写") -> str:
     return text or default
 
 
-def build_live_script_prompt(product) -> str:
+def _format_script_context(script_context: dict | None) -> str:
+    """把问题洞察上下文格式化为 prompt 片段；无数据时返回空字符串。"""
+    if not script_context:
+        return ""
+    top = script_context.get("top_questions") or []
+    unanswered = script_context.get("unanswered_questions") or []
+    focus = script_context.get("script_focus") or []
+    risk = script_context.get("risk_reminders") or []
+    if not (top or unanswered or focus or risk):
+        return ""
+
+    lines = ["直播间问题洞察（来自真实观众/运营提问，如为空则跳过本节）："]
+    if top:
+        lines.append("- 高频问题：")
+        for t in top[:5]:
+            lines.append(f"  - “{t['question']}”（{t['count']} 次）")
+    if focus:
+        lines.append("- 话术主动讲解点（低风险高频问题）：" + "、".join(f["question"] for f in focus[:5]))
+    if unanswered:
+        lines.append("- 未覆盖问题（资料未明确）：")
+        for u in unanswered[:5]:
+            lines.append(f"  - “{u['question']}”")
+    if risk:
+        lines.append("- 风险问题：" + "、".join(r["question"] for r in risk[:3]))
+    return "\n".join(lines) + "\n"
+
+
+def build_live_script_prompt(product, script_context: dict | None = None) -> str:
     """Build a maintainable prompt for AI live commerce script generation."""
     sections = "\n".join(f"- {title}" for title in LIVE_SCRIPT_SECTION_TITLES)
+    context_text = _format_script_context(script_context)
     return f"""
 你是一个谨慎、专业的直播电商运营助手。请基于商品资料生成一份主播可直接口播的直播带货话术。
 
@@ -152,6 +180,7 @@ def build_live_script_prompt(product) -> str:
 - 直播状态：{_safe_product_value(product.live_status)}
 - 备注：{_safe_product_value(product.notes)}
 
+{context_text}
 必须输出以下七个模块，每个模块都要有清晰标题：
 {sections}
 
@@ -161,10 +190,44 @@ def build_live_script_prompt(product) -> str:
 3. 不要涉及医疗、绝对化保证等高风险表达。
 4. 不要使用“全网最低”“百分百有效”“永久解决”等绝对化表述。
 5. 如果商品资料不足，请在对应模块提醒补充信息，并给出保守表达。
+6. 如存在高频问题，在七个模块之外新增「八、直播间常问应答」模块：用主播口吻主动回应高频问题；
+   低风险问题直接结合商品资料讲清；未覆盖问题提示“资料暂未明确，建议补充后再承诺”，不得编造答案；
+   风险问题只做谨慎引导，不做医疗、功效、绝对化承诺。
+7. 如无问题洞察数据，不要新增第八模块，也不要编造常见问题。
 """
 
 
-def build_live_script_fallback(product) -> str:
+_FALLBACK_QNA_CATEGORY_LABELS = {
+    "price": "价格",
+    "stock": "库存",
+    "promotion": "优惠",
+    "audience": "适用人群",
+    "selling_points": "卖点",
+}
+
+
+def _build_fallback_qna_module(script_context: dict | None) -> str:
+    """按问题上下文生成兜底话术的「直播间常问应答」模块；无数据时返回空字符串。"""
+    if not script_context:
+        return ""
+    focus = script_context.get("script_focus") or []
+    unanswered = script_context.get("unanswered_questions") or []
+    risk = script_context.get("risk_reminders") or []
+    if not (focus or unanswered or risk):
+        return ""
+
+    lines = ["", "", "直播间常问应答"]
+    for f in focus[:3]:
+        label = _FALLBACK_QNA_CATEGORY_LABELS.get(f["category"], "商品信息")
+        lines.append(f"「{f['question']}」——建议结合商品资料的{label}信息直接讲清，以直播间实际信息为准。")
+    for u in unanswered[:3]:
+        lines.append(f"「{u['question']}」——该问题资料暂未明确，建议补充资料后再回答，不要临时编造。")
+    for r in risk[:2]:
+        lines.append(f"「{r['question']}」——涉及风险边界，只做谨慎引导，不做医疗、功效或绝对化承诺。")
+    return "\n".join(lines)
+
+
+def build_live_script_fallback(product, script_context: dict | None = None) -> str:
     """Local fallback script used when the LLM is unavailable."""
     name = _safe_product_value(product.name, "这款商品")
     price = _safe_product_value(product.price)
@@ -175,6 +238,8 @@ def build_live_script_fallback(product) -> str:
     stock = _safe_product_value(product.stock)
     live_status = _safe_product_value(product.live_status)
     notes = _safe_product_value(product.notes, "暂无备注")
+
+    qna_module = _build_fallback_qna_module(script_context)
 
     return f"""开场引入
 欢迎大家来到直播间，今天给大家介绍的是{name}。这款商品当前直播状态是{live_status}，如果你正在对比同类产品，可以先听我用一分钟讲清楚它适合谁、解决什么问题。
@@ -195,7 +260,7 @@ def build_live_script_fallback(product) -> str:
 如果你担心不适合自己，建议先看商品资料里的适用人群：{target_audience}。如果还不确定，可以先留言说明你的使用场景，主播根据已知信息做保守建议，不做绝对保证。
 
 结尾转化
-最后再帮大家总结一下：{name} 适合关注「{selling_points}」的用户，补充备注为：{notes}。确认需要的朋友可以查看直播间商品卡，犹豫的朋友可以先收藏或留言补充问题。"""
+最后再帮大家总结一下：{name} 适合关注「{selling_points}」的用户，补充备注为：{notes}。确认需要的朋友可以查看直播间商品卡，犹豫的朋友可以先收藏或留言补充问题。{qna_module}"""
 
 
 def build_live_comment_reply_prompt(product, comment: str) -> str:

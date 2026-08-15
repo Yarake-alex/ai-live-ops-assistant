@@ -170,6 +170,171 @@ class TestLiveScriptGeneration:
         assert (data["provider"], data["model"]) == resolve_llm_provider_model()
 
 
+class TestScriptQuestionContext:
+    """V4 阶段 5：话术生成参考商品问题洞察。"""
+
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    @staticmethod
+    def _create_product(client, name):
+        resp = client.post("/products", json={**PRODUCT_DATA, "name": name})
+        assert resp.status_code == 200
+        return resp.json()["id"]
+
+    @staticmethod
+    def _ask(client, pid, question):
+        return client.post(f"/products/{pid}/knowledge/ask", json={"question": question})
+
+    def _capture_prompt(self, client, monkeypatch):
+        from fastapi.routing import APIRoute
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/live-scripts"
+        )
+        captured = {}
+
+        def fake_llm(prompt, *args, **kwargs):
+            captured["prompt"] = prompt
+            return "话术内容"
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", fake_llm)
+        return captured
+
+    def test_script_without_questions_has_no_qna_module(self, client, monkeypatch):
+        pid = self._create_product(client, "话术上下文-无问题商品")
+        captured = self._capture_prompt(client, monkeypatch)
+        resp = client.post(f"/products/{pid}/live-scripts")
+        assert resp.status_code == 200
+        # 无问题数据时，prompt 不带问题洞察数据段（指令性文字始终存在）
+        assert "直播间问题洞察（来自真实观众" not in captured["prompt"]
+        assert "多少钱" not in captured["prompt"]
+
+    def test_script_with_high_freq_questions_contains_qna_module(self, client, monkeypatch):
+        pid = self._create_product(client, "话术上下文-高频商品")
+        self._ask(client, pid, "多少钱")
+        self._ask(client, pid, "多少钱")
+        captured = self._capture_prompt(client, monkeypatch)
+        resp = client.post(f"/products/{pid}/live-scripts")
+        assert resp.status_code == 200
+        prompt = captured["prompt"]
+        assert "直播间常问应答" in prompt
+        assert "多少钱" in prompt
+        assert "直播间问题洞察" in prompt
+
+    def test_risk_question_prompt_requires_no_commitment(self, client, monkeypatch):
+        pid = self._create_product(client, "话术上下文-风险商品")
+        self._ask(client, pid, "孕妇能不能用")
+        captured = self._capture_prompt(client, monkeypatch)
+        resp = client.post(f"/products/{pid}/live-scripts")
+        assert resp.status_code == 200
+        prompt = captured["prompt"]
+        assert "孕妇能不能用" in prompt
+        assert "不做医疗" in prompt
+        assert "资料暂未明确" in prompt
+
+    def test_fallback_script_contains_qna_module_with_questions(self, client, monkeypatch):
+        from fastapi.routing import APIRoute
+
+        pid = self._create_product(client, "话术上下文-兜底商品")
+        self._ask(client, pid, "多少钱")
+        self._ask(client, pid, "多少钱")
+        self._ask(client, pid, "孕妇能不能用")
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/live-scripts"
+        )
+
+        def unavailable_llm(*args, **kwargs):
+            return route.endpoint.__globals__["FALLBACK_MESSAGE"]
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", unavailable_llm)
+        resp = client.post(f"/products/{pid}/live-scripts")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "fallback"
+        assert "直播间常问应答" in data["content"]
+        assert "多少钱" in data["content"]
+        assert "孕妇能不能用" in data["content"]
+        assert "不做医疗" in data["content"]
+
+    def test_helper_failure_does_not_break_script(self, client, monkeypatch):
+        from fastapi.routing import APIRoute
+
+        pid = self._create_product(client, "话术上下文-兜底异常商品")
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/live-scripts"
+        )
+
+        def _raise(*args, **kwargs):
+            raise RuntimeError("context helper down")
+
+        monkeypatch.setitem(
+            route.endpoint.__globals__, "build_script_context_from_questions", _raise
+        )
+        resp = client.post(f"/products/{pid}/live-scripts")
+        assert resp.status_code == 200
+        assert resp.json()["content"]
+
+    def test_script_context_scoped_by_user(self, client, monkeypatch):
+        # user2 在自己的商品上提问，管理员商品的话术 prompt 不应包含该问题
+        pid_admin = self._create_product(client, "话术上下文-用户隔离A")
+        other = _create_second_user(client, "script-ctx-other")
+        resp = other.post("/products", json={**PRODUCT_DATA, "name": "话术上下文-用户隔离B"})
+        assert resp.status_code == 200
+        pid_other = resp.json()["id"]
+        other.post(f"/products/{pid_other}/knowledge/ask", json={"question": "多少钱"})
+        other.post(f"/products/{pid_other}/knowledge/ask", json={"question": "多少钱"})
+
+        login(client)
+        from fastapi.routing import APIRoute
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/live-scripts"
+        )
+        captured = {}
+
+        def fake_llm(prompt, *args, **kwargs):
+            captured["prompt"] = prompt
+            return "话术内容"
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", fake_llm)
+        resp = client.post(f"/products/{pid_admin}/live-scripts")
+        assert resp.status_code == 200
+        assert "多少钱" not in captured["prompt"]
+
+    def test_script_context_scoped_by_user_and_product(self, client, monkeypatch):
+        # 商品 A 有"多少钱"问题；商品 B 无问题 → B 的话术 prompt 不应出现"多少钱"
+        pid_a = self._create_product(client, "话术上下文-隔离A")
+        pid_b = self._create_product(client, "话术上下文-隔离B")
+        self._ask(client, pid_a, "多少钱")
+        self._ask(client, pid_a, "多少钱")
+
+        captured_b = {}
+        from fastapi.routing import APIRoute
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/live-scripts"
+        )
+
+        def fake_llm(prompt, *args, **kwargs):
+            captured_b["prompt"] = prompt
+            return "话术内容"
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", fake_llm)
+        resp = client.post(f"/products/{pid_b}/live-scripts")
+        assert resp.status_code == 200
+        # B 商品没有"多少钱"问题 → 其 prompt 不应包含该问题数据
+        assert "多少钱" not in captured_b["prompt"]
+        assert "直播间问题洞察（来自真实观众" not in captured_b["prompt"]
+
+
 class TestResolveProviderModel:
     def test_mock_provider_returns_mock(self, monkeypatch):
         from app.config import settings

@@ -362,6 +362,63 @@ def build_ops_suggestions(db: Session, user_id: int, product_id: int, product, c
     )
 
 
+def build_script_context_from_questions(db: Session, user_id: int, product_id: int) -> dict:
+    """为直播话术生成提供问题上下文（V4 阶段 5，best-effort）。
+
+    只统计当前 user_id + product_id；任何异常返回空上下文，不影响话术生成。
+
+    返回:
+    {
+      "top_questions":       [{"question": str, "count": int, "category": str}],
+      "unanswered_questions":[{"question": str, "category": str}],
+      "script_focus":        [{"category": str, "question": str}],
+      "risk_reminders":      [{"question": str}],
+    }
+    """
+    empty = {
+        "top_questions": [],
+        "unanswered_questions": [],
+        "script_focus": [],
+        "risk_reminders": [],
+    }
+    try:
+        insights = build_question_insights(db, user_id, product_id)
+        groups = _group_logs_by_question(db, user_id, product_id)
+
+        script_focus = [
+            {"category": g["category"], "question": g["question"]}
+            for g in groups.values()
+            if g["local_rule_count"] >= 2
+            and g["category"] in LOCAL_RULE_FOCUS_CATEGORIES
+        ][:5]
+        risk_reminders = [
+            {"question": g["question"]}
+            for g in groups.values()
+            if g["category"] == "risk"
+        ][:3]
+
+        return {
+            "top_questions": [
+                {"question": t.question, "count": t.count, "category": t.category}
+                for t in insights.top_questions
+            ],
+            "unanswered_questions": [
+                {"question": u.question, "category": u.category}
+                for u in insights.unanswered_questions
+            ],
+            "script_focus": script_focus,
+            "risk_reminders": risk_reminders,
+        }
+    except Exception as exc:
+        logger.warning(
+            "Failed to build script context (user=%s, product=%s): %s",
+            user_id,
+            product_id,
+            exc,
+        )
+        return empty
+
+
 def record_product_question(
     db: Session,
     *,
