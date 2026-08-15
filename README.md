@@ -1,22 +1,22 @@
 # AI 直播运营助手 MVP
 
-AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示系统，当前交付重点是「商品知识库 RAG + 直播复盘 + 轻量运营看板」：运营人员可以为商品上传 PDF/TXT/MD/CSV 资料，基于资料进行 RAG 问答；基于商品信息生成直播话术、自动回复模拟观众评论、生成四模块直播复盘；并在轻量运营看板中查看商品、话术、评论回复、复盘等统计。
+AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示系统，当前交付重点是「商品资料文档 + 开播话术 + 评论助手 + 直播复盘 + 运营工作台」：运营人员可以为商品上传 PDF/TXT/MD/CSV 资料，基于资料进行 RAG 问答；基于商品信息生成直播话术、自动回复模拟观众评论、生成四模块直播复盘；并在运营工作台中查看商品、话术、评论回复、复盘等统计。
 
-项目同时保留了通用 RAG 知识库（独立于商品维度的知识库问答），以及安全加固、数据库工程化、pytest 自动化测试和 Docker 部署支持，适合作为 AI 应用工程师方向的综合展示项目。旧版 CRM（客户管理、跟进分析、待跟进、Agent 跟进助手）已在 `chore: remove legacy CRM features` 系列提交中下线。
+项目同时保留了通用「直播素材库」（独立于商品维度的资料问答），以及安全加固、数据库工程化、pytest 自动化测试和 Docker 部署支持，适合作为 AI 应用工程师方向的综合展示项目。旧版 CRM（客户管理、跟进分析、待跟进、Agent 跟进助手）已在 `chore: remove legacy CRM features` 系列提交中下线。
 
 ## 当前 MVP 功能（直播运营）
 
-- **商品管理**：商品新增、列表、详情、修改、删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持搜索、筛选、分页与 CSV 导入导出。
-- **商品知识库（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持文档列表、查看片段、重建该文件索引、删除；基于商品维度 TF-IDF 检索相关片段后调用大模型回答（回答附带参考片段来源）。
+- **商品资料**：商品新增、列表、详情、修改、删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持搜索、筛选、分页与 CSV 导入导出。
+- **商品资料文档（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持文档列表、查看片段、重建该文件索引、删除；基于商品维度 TF-IDF 检索相关片段后调用大模型回答（回答附带参考片段来源）。
 - **直播话术**：基于商品资料生成七模块主播口播话术（开场引入 → 结尾转化）；AI 不可用时自动降级为本地兜底话术并诚实标注资料缺失项。
-- **评论回复**：针对模拟观众评论，结合商品信息生成主播口吻回复；不做绝对化承诺，资料未覆盖的内容不编造。
+- **评论助手**：针对模拟观众评论，结合商品信息生成主播口吻回复；不做绝对化承诺，资料未覆盖的内容不编造。
 - **直播复盘**：基于商品资料与已记录的评论/回复生成复盘，固定四个模块：用户关注点、常见异议、高频问题、下场直播优化建议；不编造直播场次、销量、GMV 等未统计指标。
-- **轻量运营看板**：`GET /live-ops/dashboard` 返回商品数、话术数、评论回复数、复盘数、高频评论（hot_questions）与最近记录；保留旧接口 `/dashboard/stats` 兼容回退。
+- **运营工作台**：`GET /live-ops/dashboard` 返回商品数、话术数、评论回复数、复盘数、高频评论（hot_questions）与最近记录；保留旧接口 `/dashboard/stats` 兼容回退。
 
 ## 核心功能
 
-- **商品管理**：支持商品新增、列表查看、详情查看、修改和删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持关键词搜索、直播状态筛选、分页和 CSV 导入导出。
-- **通用 RAG 知识库问答**（辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，基于 TF-IDF 检索相关片段后调用大模型回答问题；商品维度的知识库问答见「当前 MVP 功能（直播运营）」。
+- **商品资料**：支持商品新增、列表查看、详情查看、修改和删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持关键词搜索、直播状态筛选、分页和 CSV 导入导出。
+- **直播素材库**（通用资料问答，辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，基于 TF-IDF 检索相关片段后调用大模型回答问题；商品维度的资料问答见「当前 MVP 功能（直播运营）」。
 - **安全加固**：支持 CORS 白名单、访问密码登录页 + HttpOnly Cookie 登录态、上传文件大小限制。
 - **测试体系**：使用 pytest + FastAPI TestClient 覆盖核心接口、鉴权逻辑和上传限制。
 - **Docker 部署**：支持通过 Dockerfile 和 docker-compose.yml 在云服务器上部署运行。
@@ -320,7 +320,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 # 全量测试
 python -m pytest -q
 
-# 直播运营核心模块测试（商品知识库 / 直播复盘 / 评论回复 / 直播话术）
+# 直播运营核心模块测试（商品资料文档 / 直播复盘 / 评论助手 / 直播话术）
 python -m pytest tests/test_product_knowledge.py tests/test_live_reviews.py tests/test_comment_replies.py tests/test_live_scripts.py -q
 ```
 
@@ -415,22 +415,22 @@ docker compose down
 | `/products/import` | POST | 商品 CSV 导入（支持中英文表头） | 是 |
 | `/products/export` | GET | 商品 CSV 导出（仅当前用户） | 是 |
 | `/products/{id}` | GET / PUT / DELETE | 商品详情 / 修改 / 删除 | 是 |
-| `/products/{id}/knowledge/upload` | POST | 上传商品知识库文档（PDF/TXT/MD/CSV） | 是 |
-| `/products/{id}/knowledge/documents` | GET | 商品知识库文档列表 | 是 |
+| `/products/{id}/knowledge/upload` | POST | 上传商品资料文档（PDF/TXT/MD/CSV） | 是 |
+| `/products/{id}/knowledge/documents` | GET | 商品资料文档列表 | 是 |
 | `/products/{id}/knowledge/documents/{filename}/chunks` | GET | 查看文档片段 | 是 |
 | `/products/{id}/knowledge/documents/{filename}/reindex` | POST | 重建该文件索引 | 是 |
-| `/products/{id}/knowledge/documents/{filename}` | DELETE | 删除商品知识库文档 | 是 |
+| `/products/{id}/knowledge/documents/{filename}` | DELETE | 删除商品资料文档 | 是 |
 | `/products/{id}/knowledge/ask` | POST | 基于商品资料问答（RAG） | 是 |
 | `/products/{id}/live-scripts` | GET / POST | 直播话术列表 / 生成直播话术 | 是 |
 | `/products/{id}/comment-replies` | GET / POST | 评论回复历史 / 生成评论回复 | 是 |
 | `/products/{id}/live-reviews` | GET / POST | 复盘历史 / 生成直播复盘 | 是 |
-| `/live-ops/dashboard` | GET | 轻量运营看板 | 是 |
+| `/live-ops/dashboard` | GET | 运营工作台 | 是 |
 | `/dashboard/stats` | GET | 旧版统计（前端回退兼容） | 是 |
-| `/rag/upload` | POST | 上传通用知识库文档 | 是 |
-| `/rag/documents` | GET | 通用知识库文档列表 | 是 |
+| `/rag/upload` | POST | 上传通用素材文档 | 是 |
+| `/rag/documents` | GET | 通用素材文档列表 | 是 |
 | `/rag/documents/{filename}` | DELETE | 删除指定文档 | 是 |
-| `/rag/documents` | DELETE | 清空通用知识库 | 是 |
-| `/rag/ask` | POST | 基于通用知识库问答 | 是 |
+| `/rag/documents` | DELETE | 清空直播素材库 | 是 |
+| `/rag/ask` | POST | 基于直播素材库问答 | 是 |
 
 登录方式：打开页面后输入访问密码，登录成功后通过 HttpOnly Cookie 自动携带登录态。
 
@@ -491,9 +491,9 @@ python -m pytest
 测试覆盖内容：
 
 - 商品新增、列表查询、搜索、CSV 导入导出；
-- 商品知识库上传、片段查看、重建索引、删除与 RAG 问答；
-- 直播话术、评论回复、直播复盘与本地兜底；
-- 轻量运营看板字段、计数与用户隔离；
+- 商品资料文档上传、片段查看、重建索引、删除与 RAG 问答；
+- 直播话术、评论助手、直播复盘与本地兜底；
+- 运营工作台字段、计数与用户隔离；
 - 未登录请求业务接口返回 401；
 - 错误密码登录返回 401；
 - 正确密码登录成功并返回 HttpOnly Cookie；
@@ -516,20 +516,20 @@ python -m pytest
 | 版本 | 能力 | 说明 |
 |---|---|---|
 | V1 | 客户管理 + AI 跟进建议 | 实现客户信息维护、跟进记录和基础 AI 建议（已下线） |
-| V2 | RAG 知识库问答 | 增加资料上传、文本切分、知识库检索和资料问答 |
+| V2 | 通用资料问答 | 增加资料上传、文本切分、资料检索和资料问答（原称 RAG 知识库问答） |
 | V3 | Agent 跟进助手 | 自动组合客户信息、跟进记录和知识库资料生成跟进方案（已下线） |
 | V4 | 企业增强版 | 增加安全加固、数据库工程化、索引优化、测试体系和 Docker 部署 |
-| V5 | 直播运营 MVP（当前） | 商品知识库 RAG、直播话术、评论回复、直播复盘、轻量运营看板；旧 CRM 功能下线 |
+| V5 | 直播运营 MVP（当前） | 商品资料文档 RAG、开播话术、评论助手、直播复盘、运营工作台；旧 CRM 功能下线 |
 
 ## 后续规划
 
 - 引入 Alembic 管理正式数据库迁移；
 - 增加 GitHub Actions 自动测试；
-- 将 TF-IDF 检索升级为 Embedding + 向量数据库（含商品知识库真实重建索引）；
+- 将 TF-IDF 检索升级为 Embedding + 向量数据库（含商品资料文档真实重建索引）；
 - 增加直播场次模型，按场次聚合复盘与看板数据；
 - 接入真实直播平台评论流；
 - 支持 Nginx 反向代理和域名部署。
 
 ## 项目说明
 
-本项目为 AI 直播运营助手 MVP，当前聚焦「商品知识库 RAG + 直播复盘 + 轻量运营看板」演示链路，同时保留了安全、测试、配置、数据库和 Docker 部署等工程实践内容，适合作为 AI 应用工程师方向的综合项目展示。旧版 CRM 客户管理 / 跟进分析 / 待跟进 / Agent 跟进助手相关代码、页面与测试已在 `chore: remove legacy CRM` 系列提交中移除，历史实现可查看 Git 历史。
+本项目为 AI 直播运营助手 MVP，当前聚焦「商品资料文档 + 开播话术 + 评论助手 + 直播复盘 + 运营工作台」演示链路，同时保留了安全、测试、配置、数据库和 Docker 部署等工程实践内容，适合作为 AI 应用工程师方向的综合项目展示。旧版 CRM 客户管理 / 跟进分析 / 待跟进 / Agent 跟进助手相关代码、页面与测试已在 `chore: remove legacy CRM` 系列提交中移除，历史实现可查看 Git 历史。
