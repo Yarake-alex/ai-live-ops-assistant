@@ -512,3 +512,126 @@ class TestQuestionInsightsEndpoint:
     def test_insights_requires_login(self, client):
         client.cookies.clear()
         assert client.get("/products/1/question-insights").status_code == 401
+
+
+# ─── 运营建议接口（V4 阶段 2） ───
+
+
+class TestOpsSuggestionsEndpoint:
+    """GET /products/{id}/ops-suggestions。
+
+    纯确定性规则：不调用 LLM、不走向量检索（session client + monkeypatch 证明）。
+    """
+
+    @pytest.fixture(autouse=True)
+    def _auth(self, client):
+        login(client)
+
+    @staticmethod
+    def _create_product(client, data=None):
+        resp = client.post("/products", json=data if data is not None else FULL_PRODUCT)
+        assert resp.status_code == 200
+        return resp.json()["id"]
+
+    @staticmethod
+    def _ask(client, pid, question):
+        return client.post(f"/products/{pid}/knowledge/ask", json={"question": question})
+
+    @staticmethod
+    def _suggest(client, pid):
+        resp = client.get(f"/products/{pid}/ops-suggestions")
+        assert resp.status_code == 200
+        return resp.json()
+
+    @staticmethod
+    def _by_type(data, s_type):
+        return [s for s in data["suggestions"] if s["type"] == s_type]
+
+    def test_empty_logs_return_empty_suggestions(self, client):
+        pid = self._create_product(client)
+        data = self._suggest(client, pid)
+        assert data["summary"] == {
+            "total": 0, "high_priority": 0, "needs_material_update": False,
+        }
+        assert data["suggestions"] == []
+
+    def test_risk_unanswered_generates_high_material_gap(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "孕妇能不能用")
+        gaps = self._by_type(self._suggest(client, pid), "material_gap")
+        assert any(g["priority"] == "high" and "风险边界" in g["title"] for g in gaps)
+
+    def test_risk_question_generates_risk_reminder(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "孕妇能不能用")
+        reminders = self._by_type(self._suggest(client, pid), "risk_reminder")
+        assert len(reminders) == 1
+        assert reminders[0]["priority"] == "high"
+        assert "确认风险边界" in reminders[0]["action_label"]
+        assert "孕妇能不能用" in reminders[0]["source_questions"]
+
+    def test_after_sales_high_freq_generates_material_gap(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "有售后吗")
+        self._ask(client, pid, "有售后吗")
+        data = self._suggest(client, pid)
+        gaps = self._by_type(data, "material_gap")
+        assert any("售后规则" in g["title"] for g in gaps)
+
+    def test_faq_candidate_for_repeated_question(self, client):
+        pid = self._create_product(client)
+        for _ in range(3):
+            self._ask(client, pid, "多少钱")
+        faqs = self._by_type(self._suggest(client, pid), "faq_candidate")
+        assert any("多少钱" in f["title"] for f in faqs)
+        assert any("3 次" in f["detail"] for f in faqs)
+
+    def test_script_focus_for_local_rule_questions(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "多少钱")
+        self._ask(client, pid, "多少钱")
+        data = self._suggest(client, pid)
+        focus = self._by_type(data, "script_focus")
+        assert any(f["priority"] == "low" and "价格" in f["title"] for f in focus)
+        # 仅本地快答问题时不要求补资料
+        assert data["summary"]["needs_material_update"] is False
+
+    def test_suggestions_scoped_by_user(self, client):
+        pid = self._create_product(client)
+        self._ask(client, pid, "孕妇能不能用")
+        other = TestQuestionLogRecording._create_second_user(client, "ops-other")
+        assert other.get(f"/products/{pid}/ops-suggestions").status_code == 404
+
+    def test_suggestions_scoped_by_product(self, client):
+        pid_a = self._create_product(client, {**FULL_PRODUCT, "name": "建议商品A"})
+        pid_b = self._create_product(client, {**FULL_PRODUCT, "name": "建议商品B"})
+        self._ask(client, pid_a, "孕妇能不能用")
+        data_b = self._suggest(client, pid_b)
+        assert data_b["summary"]["total"] == 0
+        assert data_b["suggestions"] == []
+
+    def test_suggestions_requires_login(self, client):
+        client.cookies.clear()
+        assert client.get("/products/1/ops-suggestions").status_code == 401
+
+    def test_suggestions_do_not_call_llm_or_vector(self, client, monkeypatch):
+        from fastapi.routing import APIRoute
+
+        pid = self._create_product(client)
+        self._ask(client, pid, "多少钱")
+        self._ask(client, pid, "多少钱")
+
+        def _raise(*a, **k):
+            raise RuntimeError("must not be called")
+
+        for path in ("/products/{product_id}/knowledge/ask",):
+            route = next(
+                r for r in client.app.routes
+                if isinstance(r, APIRoute) and r.path == path
+            )
+            monkeypatch.setitem(route.endpoint.__globals__, "call_llm", _raise)
+            monkeypatch.setitem(
+                route.endpoint.__globals__, "retrieve_product_chunks_vector", _raise
+            )
+        data = self._suggest(client, pid)
+        assert data["summary"]["total"] >= 1

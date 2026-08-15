@@ -189,6 +189,29 @@ class ProductQuestionInsightsOut(BaseModel):
     unanswered_questions: List[QuestionTopItem]
 
 
+# ─── Product ops suggestions (V4 运营建议) ───
+
+
+class OpsSuggestionSummary(BaseModel):
+    total: int
+    high_priority: int
+    needs_material_update: bool
+
+
+class OpsSuggestionItem(BaseModel):
+    type: str  # material_gap | faq_candidate | script_focus | risk_reminder
+    priority: str  # high | medium | low
+    title: str
+    detail: str
+    source_questions: List[str]
+    action_label: str
+
+
+class ProductOpsSuggestionsOut(BaseModel):
+    summary: OpsSuggestionSummary
+    suggestions: List[OpsSuggestionItem]
+
+
 # ─── Live review (直播复盘) ───
 
 

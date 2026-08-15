@@ -53,6 +53,7 @@ from app.schemas import (
     PrepChecklistItem,
     ProductReadinessOut,
     ProductQuestionInsightsOut,
+    ProductOpsSuggestionsOut,
     UserOut,
     UserCreateRequest,
     UserStatusUpdate,
@@ -83,6 +84,7 @@ from app.question_insights import (
     classify_question,
     build_local_product_answer,
     build_question_insights,
+    build_ops_suggestions,
     SOURCE_PRODUCT_ASK,
     SOURCE_COMMENT_REPLY,
 )
@@ -1412,6 +1414,36 @@ def product_question_insights(
     """
     product = get_product_for_user(db, product_id, current_user)
     return build_question_insights(db, current_user.id, product.id)
+
+
+@app.get("/products/{product_id}/ops-suggestions", response_model=ProductOpsSuggestionsOut)
+def product_ops_suggestions(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """商品运营建议（资料补齐 / FAQ 候选 / 话术强化 / 风险提醒）。
+
+    纯确定性规则生成，不调 LLM、不走向量；只统计当前用户 + 当前商品。
+    """
+    product = get_product_for_user(db, product_id, current_user)
+
+    filenames = [
+        row[0]
+        for row in db.query(ProductKnowledgeChunk.filename)
+        .filter(
+            ProductKnowledgeChunk.product_id == product.id,
+            ProductKnowledgeChunk.user_id == current_user.id,
+        )
+        .distinct()
+        .all()
+    ]
+    completeness = _compute_product_completeness(
+        product, filenames, has_chunks=bool(filenames)
+    )
+    return build_ops_suggestions(
+        db, current_user.id, product.id, product, completeness=completeness
+    )
 
 
 # ─── Live review routes (直播复盘) ───

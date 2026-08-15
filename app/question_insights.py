@@ -206,6 +206,162 @@ def build_question_insights(db: Session, user_id: int, product_id: int):
     )
 
 
+# V4 运营建议：纯确定性规则，不调 LLM、不走向量。
+# 建议类型：material_gap（资料补齐）/ faq_candidate（FAQ 候选）/ script_focus（话术强化）/ risk_reminder（风险提醒）。
+SUGGESTION_PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
+MAX_OPS_SUGGESTIONS = 8
+LOCAL_RULE_FOCUS_CATEGORIES = ("price", "stock", "promotion", "audience", "selling_points")
+
+
+def _group_logs_by_question(db: Session, user_id: int, product_id: int) -> dict:
+    """按归一化问题聚合当前用户+商品的日志（Python 聚合，MVP 数据量）。"""
+    logs = (
+        db.query(ProductQuestionLog)
+        .filter(
+            ProductQuestionLog.user_id == user_id,
+            ProductQuestionLog.product_id == product_id,
+        )
+        .order_by(ProductQuestionLog.id.desc())
+        .all()
+    )
+    groups: dict = {}
+    for log in logs:
+        key = log.normalized_question or log.question
+        group = groups.setdefault(
+            key,
+            {
+                "question": log.question,
+                "category": log.category,
+                "count": 0,
+                "local_rule_count": 0,
+                "unanswered": False,
+            },
+        )
+        group["count"] += 1
+        if log.answer_mode == "local_rule":
+            group["local_rule_count"] += 1
+        if not log.was_answered:
+            group["unanswered"] = True
+    return groups
+
+
+def build_ops_suggestions(db: Session, user_id: int, product_id: int, product, completeness=None):
+    """按规则生成运营建议（最多 8 条，同类同标题去重）。
+
+    completeness 为可选的 ProductCompleteness（由调用方实时计算传入），
+    用于「完整度不足且未覆盖问题多」的高优建议；不传入时跳过该规则。
+    """
+    from app.schemas import OpsSuggestionItem, OpsSuggestionSummary, ProductOpsSuggestionsOut
+
+    groups = _group_logs_by_question(db, user_id, product_id)
+    suggestions: list = []
+    seen: set = set()
+
+    def add(item: dict) -> None:
+        key = (item["type"], item["title"])
+        if key in seen:
+            return
+        seen.add(key)
+        suggestions.append(item)
+
+    def questions_for(category: str, only_unanswered: bool = False, limit: int = 3) -> list:
+        out = []
+        for g in groups.values():
+            if g["category"] == category and (not only_unanswered or g["unanswered"]):
+                out.append(g["question"])
+                if len(out) >= limit:
+                    break
+        return out
+
+    def is_high_freq(category: str, threshold: int = 2) -> bool:
+        return any(g["category"] == category and g["count"] >= threshold for g in groups.values())
+
+    risk_questions = questions_for("risk")
+    risk_unanswered = questions_for("risk", only_unanswered=True)
+    risk_active = bool(risk_questions)
+
+    # 1) risk_reminder：只要出现风险类问题（尤其未覆盖/高频）
+    if risk_active:
+        add({
+            "type": "risk_reminder", "priority": "high",
+            "title": "开播前确认风险边界",
+            "detail": "近期出现孕妇/过敏等风险相关问题，开播前请确认风险边界与不可承诺内容，不做医疗或功效承诺。",
+            "source_questions": risk_questions,
+            "action_label": "确认风险边界",
+        })
+    # 2) material_gap（risk）：未覆盖或高频
+    if risk_unanswered or is_high_freq("risk"):
+        add({
+            "type": "material_gap", "priority": "high",
+            "title": "建议补充风险边界资料",
+            "detail": "观众多次问到风险相关问题，建议在资料中写明禁用话术与不可承诺内容。",
+            "source_questions": risk_questions,
+            "action_label": "补充风险说明",
+        })
+    # 3) material_gap：售后 / 使用方法 / 适用人群（未覆盖或高频 → medium）
+    for cat, title, detail, action in [
+        ("after_sales", "建议补充售后规则",
+         "观众多次问到退换/售后问题，建议补充售后规则与退换政策。", "补充售后规则"),
+        ("usage", "建议补充使用方法",
+         "观众多次问到使用方法，建议补充使用步骤与注意事项。", "补充使用方法"),
+        ("audience", "建议补充适用人群",
+         "观众多次问到适合谁用，建议补充适用/不适用人群说明。", "补充人群说明"),
+    ]:
+        if questions_for(cat, only_unanswered=True) or is_high_freq(cat):
+            add({
+                "type": "material_gap", "priority": "medium",
+                "title": title, "detail": detail,
+                "source_questions": questions_for(cat),
+                "action_label": action,
+            })
+    # 4) faq_candidate：已回答且 count >= 2、分类非 other
+    for g in groups.values():
+        if g["count"] >= 2 and g["category"] != "other" and not g["unanswered"]:
+            add({
+                "type": "faq_candidate", "priority": "medium",
+                "title": f"建议新增 FAQ：{g['question']}",
+                "detail": f"该问题已被问 {g['count']} 次，建议沉淀为 FAQ 资料。",
+                "source_questions": [g["question"]],
+                "action_label": "新增 FAQ 资料",
+            })
+    # 5) script_focus：本地快答已覆盖的低风险高频问题 → 话术主动讲解点
+    for g in groups.values():
+        if g["local_rule_count"] >= 2 and g["category"] in LOCAL_RULE_FOCUS_CATEGORIES:
+            label = CATEGORY_LABELS.get(g["category"], "其他")
+            add({
+                "type": "script_focus", "priority": "low",
+                "title": f"话术主动讲清：{label}",
+                "detail": f"观众多次问到「{g['question']}」，直播间可主动讲清{label}信息。",
+                "source_questions": [g["question"]],
+                "action_label": f"讲清{label}",
+            })
+    # 6) 完整度明显不足且未覆盖问题多 → high
+    if completeness is not None and completeness.score < 80:
+        unanswered_questions = [g["question"] for g in groups.values() if g["unanswered"]]
+        if unanswered_questions:
+            add({
+                "type": "material_gap", "priority": "high",
+                "title": "开播前建议先补资料",
+                "detail": "资料完整度不足，且存在未覆盖问题，建议开播前补充资料。",
+                "source_questions": unanswered_questions[:3],
+                "action_label": "补充资料",
+            })
+
+    suggestions.sort(key=lambda s: SUGGESTION_PRIORITY_ORDER.get(s["priority"], 2))
+    suggestions = suggestions[:MAX_OPS_SUGGESTIONS]
+
+    return ProductOpsSuggestionsOut(
+        summary=OpsSuggestionSummary(
+            total=len(suggestions),
+            high_priority=sum(1 for s in suggestions if s["priority"] == "high"),
+            needs_material_update=any(
+                s["type"] in ("material_gap", "risk_reminder") for s in suggestions
+            ),
+        ),
+        suggestions=[OpsSuggestionItem(**s) for s in suggestions],
+    )
+
+
 def record_product_question(
     db: Session,
     *,
