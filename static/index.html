@@ -1266,6 +1266,11 @@
                     <p>围绕商品资料完成开播准备、实时评论回复和下播复盘</p>
                 </div>
 
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;">
+                    <div style="font-size:13px;color:var(--text-secondary);min-width:0;">🎯 开播准备：在「商品资料」选中商品后查看资料完整度，缺什么补什么，开播更从容。</div>
+                    <button onclick="showPage('product')" style="font-size:12px;padding:6px 12px;flex-shrink:0;">去完善商品资料</button>
+                </div>
+
                 <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:18px 0 14px;">运营概览</h3>
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -1414,8 +1419,19 @@
                             </div>
                         </div>
 
-                        <!-- 选中商品后展示：商品资料文档 → 开播话术 → 直播复盘 -->
+                        <!-- 选中商品后展示：资料完整度 → 商品资料文档 → 开播话术 → 直播复盘 -->
                         <div id="productDetailModules" style="display:none;">
+                            <!-- ── Readiness Card（资料完整度） ── -->
+                            <div class="card" style="padding:16px;margin-top:12px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                    <h3 style="margin:0;font-size:15px;">✅ 资料完整度</h3>
+                                    <button class="light" onclick="loadProductReadiness()" style="font-size:12px;padding:4px 10px;">刷新</button>
+                                </div>
+                                <div id="productReadinessBox">
+                                    <div class="result-empty">选择商品后可查看资料完整度。</div>
+                                </div>
+                            </div>
+
                             <!-- ── Product Knowledge Card ── -->
                             <div class="card" style="padding:16px;margin-top:12px;">
                                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
@@ -2415,6 +2431,7 @@ async function selectProduct(id) {
     document.getElementById("productKnowledgeDocs").innerHTML = "";
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
     await loadProductKnowledgeDocs();
+    await loadProductReadiness();
     closeProductModal();
 }
 
@@ -2529,6 +2546,7 @@ function clearSelectedProduct() {
     document.getElementById("liveReviewHistory").innerHTML = "";
     document.getElementById("productKnowledgeDocs").innerHTML = "";
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
+    document.getElementById("productReadinessBox").innerHTML = '<div class="result-empty">选择商品后可查看资料完整度。</div>';
     closeProductModal();
 }
 
@@ -2863,10 +2881,49 @@ async function handleProductKnowledgeUpload(event) {
         }
         alert(`上传成功！共 ${data.chunks} 个片段。`);
         await loadProductKnowledgeDocs();
+        await loadProductReadiness();
     } catch (err) {
         alert("网络错误，上传失败");
     } finally {
         event.target.value = "";
+    }
+}
+
+async function loadProductReadiness() {
+    if (!selectedProductId) return;
+    const box = document.getElementById("productReadinessBox");
+    try {
+        const res = await fetch(`/products/${selectedProductId}/readiness`, { credentials: "include" });
+        if (res.status === 401) {
+            showLogin("登录已失效，请重新登录");
+            return;
+        }
+        if (!res.ok) throw new Error("readiness unavailable");
+        const data = await res.json();
+        const c = data.completeness || {};
+        const pct = Number.isFinite(c.score) ? c.score : 0;
+        const color = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
+        let html = `
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+                <div style="font-size:28px;font-weight:700;color:${color};">${pct}%</div>
+                <div style="flex:1;min-width:120px;">
+                    <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;"></div>
+                    </div>
+                    <div class="muted" style="font-size:11px;margin-top:4px;">资料完整度</div>
+                </div>
+            </div>`;
+        if (c.missing_items && c.missing_items.length) {
+            html += `<div style="font-size:13px;margin-bottom:6px;word-break:break-all;"><b>缺失项：</b>${c.missing_items.map(escapeHtml).join("、")}</div>`;
+        }
+        if (c.suggestions && c.suggestions.length) {
+            html += `<div class="muted" style="font-size:12px;line-height:1.8;"><b>下一步建议：</b><br>${c.suggestions.map(s => "· " + escapeHtml(s)).join("<br>")}</div>`;
+        } else if (!(c.missing_items && c.missing_items.length)) {
+            html += `<div style="font-size:13px;color:#10b981;">资料已完善，可以开始准备开播。</div>`;
+        }
+        box.innerHTML = html;
+    } catch (e) {
+        box.innerHTML = '<div class="muted" style="font-size:12px;">完整度暂不可用，不影响其他功能。</div>';
     }
 }
 
@@ -2901,6 +2958,7 @@ async function deleteProductKnowledgeDoc(filename) {
     try {
         await request(`/products/${selectedProductId}/knowledge/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
         await loadProductKnowledgeDocs();
+        await loadProductReadiness();
     } catch (e) {
         // request() 已处理错误
     }
@@ -2939,6 +2997,7 @@ async function reindexProductKnowledgeDoc(encodedFilename) {
             return;
         }
         alert(data.message || "重建完成");
+        await loadProductReadiness();
     } catch (e) {
         alert("文件索引重建请求失败");
     }
