@@ -9,6 +9,7 @@ export default defineConfig({
     proxy: {
       "/rag": "http://127.0.0.1:8000",
       "/auth": "http://127.0.0.1:8000",
+      "/products": "http://127.0.0.1:8000",
     },
   },
 });
