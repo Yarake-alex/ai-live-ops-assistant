@@ -5,17 +5,19 @@
       <SearchBox v-model="q" @search="loadDocs" />
     </div>
     <MaterialList :docs="docs" :loading="loading" :error="error" :query="q" />
+    <MaterialUpload @uploaded="loadDocs" />
   </section>
 </template>
 
 <script setup>
-// 阶段 3.1：仅迁移「直播素材库」列表展示与搜索。
-// 接口与旧页面完全一致：GET /rag/documents（可选 ?q= 参数），返回结构不变。
-// 上传确认、片段预览、删除等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
+// 阶段 3.1 + 3.2：迁移「直播素材库」列表、搜索与上传确认。
+// 接口与旧页面完全一致：GET /rag/documents（可选 ?q= 参数）、POST /rag/upload，返回结构不变。
+// 片段预览、删除等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
 import { ref, onMounted } from "vue";
 import { apiGet } from "../api/client";
 import SearchBox from "../components/SearchBox.vue";
 import MaterialList from "../components/MaterialList.vue";
+import MaterialUpload from "../components/MaterialUpload.vue";
 
 const q = ref("");
 const docs = ref([]);

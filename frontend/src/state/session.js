@@ -10,11 +10,11 @@ export const session = reactive({
   error: "",
 });
 
-// 页面加载时尝试恢复登录态（Cookie 会话有效则 /auth/me 返回当前用户）
+// 页面加载时尝试恢复登录态（/auth/me：已登录返回用户信息，未登录返回 { logged_in: false }）
 export async function loadSession() {
   try {
     const me = await apiGet("/auth/me");
-    session.user = me;
+    session.user = me && me.logged_in !== false ? me : null;
     session.error = "";
   } catch (e) {
     session.user = null;
