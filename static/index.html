@@ -1727,7 +1727,16 @@
                             </div>
                             <div class="muted" style="margin-bottom:8px;">支持 PDF、TXT、MD、CSV，可一次选择多个文件。</div>
                             <div id="ragVectorStatus" class="muted" style="margin-bottom:8px;"></div>
-                            <div id="ragDocumentList"></div>
+                            <div id="ragDocumentList" style="max-height:420px;overflow-y:auto;"></div>
+
+                            <!-- 资料片段预览（点击文档列表中的「查看片段」后在此显示，不离开本页面） -->
+                            <div id="ragChunkPreview" style="display:none;margin-top:8px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                                    <b id="ragChunkPreviewTitle" style="font-size:13px;">资料片段预览</b>
+                                    <button class="light" onclick="hideRagChunkPreview()" style="font-size:12px;padding:4px 10px;">收起片段</button>
+                                </div>
+                                <div id="ragChunkPreviewBody" style="max-height:320px;overflow-y:auto;"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -2224,22 +2233,41 @@ function searchRagDocuments() {
     loadRagDocuments();
 }
 
+// 当前正在预览片段的资料文件名（用于删除该文件时清空预览）
+let ragPreviewFilename = null;
+
 async function viewFileChunks(encodedFilename) {
-    const resultEl = document.getElementById("ragResult");
-    resultEl.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>加载片段...</span></div>';
+    const filename = decodeURIComponent(encodedFilename);
+    const previewBox = document.getElementById("ragChunkPreview");
+    const bodyEl = document.getElementById("ragChunkPreviewBody");
+    previewBox.style.display = "block";
+    document.getElementById("ragChunkPreviewTitle").textContent = `当前文件：${filename}`;
+    bodyEl.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>加载片段...</span></div>';
     try {
         const data = await request(`/rag/documents/${encodedFilename}/chunks`);
-        let html = `<h3>📄 ${escapeHtml(data.filename)} — ${data.chunks.length} 个片段</h3>`;
-        data.chunks.forEach(c => {
-            html += `<div style="background:#f8f9fa;padding:8px;margin:6px 0;border-radius:4px;font-size:0.9em;">
-                <div class="muted" style="font-size:0.8em;margin-bottom:4px;">片段 ${c.chunk_index} · ${c.created_at.slice(0,16).replace('T',' ')}</div>
-                <div style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(c.content)}</div>
-            </div>`;
-        });
-        resultEl.innerHTML = html;
+        const chunks = data.chunks.filter(c => c.content && c.content.trim());
+        if (!chunks.length) {
+            bodyEl.innerHTML = '<div class="result-empty">该资料暂无可预览片段</div>';
+        } else {
+            bodyEl.innerHTML = chunks.map(c => `
+                <div style="background:#f8f9fa;padding:8px;margin:6px 0;border-radius:4px;font-size:0.9em;">
+                    <div class="muted" style="font-size:0.8em;margin-bottom:4px;">片段 ${c.chunk_index}${c.created_at ? " · " + c.created_at.slice(0,16).replace('T',' ') : ""}</div>
+                    <div style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(c.content)}</div>
+                </div>`).join("");
+        }
+        ragPreviewFilename = data.filename;
     } catch (e) {
-        resultEl.innerHTML = '<div class="result-empty">加载片段失败。</div>';
+        bodyEl.innerHTML = '<div class="result-empty">加载片段失败。</div>';
+        ragPreviewFilename = null;
     }
+}
+
+function hideRagChunkPreview() {
+    ragPreviewFilename = null;
+    const previewBox = document.getElementById("ragChunkPreview");
+    if (previewBox) previewBox.style.display = "none";
+    const bodyEl = document.getElementById("ragChunkPreviewBody");
+    if (bodyEl) bodyEl.innerHTML = "";
 }
 
 async function reindexFile(encodedFilename) {
@@ -2280,6 +2308,7 @@ async function deleteRagDocument(encodedFilename) {
         method: "DELETE"
     });
 
+    if (ragPreviewFilename === filename) hideRagChunkPreview();
     document.getElementById("ragResult").innerHTML = '<div class="result-empty">资料已删除。请重新提问或上传新资料。</div>';
     await loadRagDocuments();
     alert("资料已删除");
@@ -2296,6 +2325,7 @@ async function clearRagDocuments() {
         method: "DELETE"
     });
 
+    hideRagChunkPreview();
     document.getElementById("ragResult").innerHTML = '<div class="result-empty">素材库已清空，请重新上传资料后再提问。</div>';
     await loadRagDocuments();
     alert("素材库已清空");
