@@ -21,10 +21,10 @@
 </template>
 
 <script setup>
-// 基础布局壳：页头承载标题与会话状态（登录用户显示 修改密码 / 退出登录），
-// 占位风格从简，不做视觉重设计。
-import { ref, onMounted } from "vue";
-import { session, loadSession, logout } from "../state/session";
+// 基础布局壳：页头承载标题与会话状态（登录用户显示 修改密码 / 退出登录）。
+// 会话恢复由 App.vue 统一处理，此处仅消费会话状态。
+import { ref } from "vue";
+import { session, logout } from "../state/session";
 import ChangePasswordModal from "./ChangePasswordModal.vue";
 
 const cpVisible = ref(false);
@@ -32,8 +32,6 @@ const cpVisible = ref(false);
 async function onLogout() {
   await logout();
 }
-
-onMounted(loadSession);
 </script>
 
 <style scoped>

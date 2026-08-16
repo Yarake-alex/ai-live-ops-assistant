@@ -9,6 +9,12 @@ export class SessionExpiredError extends Error {
   }
 }
 
+// 401 全局回调：由会话状态模块注册，用于自动回到登录页（旧页面 showLogin 行为）
+let sessionExpiredHandler = null;
+export function onSessionExpired(fn) {
+  sessionExpiredHandler = fn;
+}
+
 export class ApiError extends Error {
   constructor(status, detail) {
     super(detail || `请求失败（HTTP ${status}）`);
@@ -43,6 +49,7 @@ export async function apiRequest(url, options = {}) {
   const data = await parseBody(resp);
 
   if (resp.status === 401) {
+    if (sessionExpiredHandler) sessionExpiredHandler();
     throw new SessionExpiredError();
   }
   if (!resp.ok) {
