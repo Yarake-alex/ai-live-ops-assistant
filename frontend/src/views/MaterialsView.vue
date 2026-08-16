@@ -92,7 +92,7 @@ onMounted(loadDocs);
 
 <style scoped>
 .materials-view {
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px 20px;
 }

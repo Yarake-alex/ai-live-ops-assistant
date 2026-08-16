@@ -13,6 +13,8 @@
   --gray-600: #4b5563;
   --gray-700: #374151;
   --gray-900: #111827;
+  /* 工作台背景 */
+  --bg: #f7f8fa;
   /* 主操作色 */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
@@ -55,7 +57,7 @@ body {
 body {
   font-family: var(--font-sans);
   color: var(--gray-900);
-  background: var(--gray-100);
+  background: var(--bg);
   font-size: var(--text-base);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;

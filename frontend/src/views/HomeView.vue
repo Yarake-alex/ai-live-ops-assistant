@@ -1,32 +1,61 @@
 <template>
-  <section class="home-view">
-    <h2>AI 直播运营助手 · Vue3 前端骨架</h2>
-    <p>V5 阶段 2：基础层（API client / 会话状态 / 布局壳）已就绪，业务页面尚未迁移。</p>
-    <p>当前演示仍使用原 static/index.html 单页版本。</p>
+  <section class="about-view">
+    <div class="card about-card">
+      <div class="card-head">
+        <h3>关于本系统</h3>
+      </div>
+      <p class="about-desc">
+        AI 直播运营助手 MVP —— 面向直播电商运营场景的 AI 演示系统：商品资料维护、资料文档问答（语义检索 +
+        基础检索降级）、开播话术、评论助手、直播复盘、资料完整度、问题洞察与运营建议，
+        把「开播前 → 直播中 → 下播后」串成一条可演示的轻量工作流。
+      </p>
+      <div class="about-meta">
+        <div class="meta-row"><span class="meta-label">当前版本</span>直播运营 V4 · 前端 Vue3（V5 迁移完成）· V6 UI 统一优化</div>
+        <div class="meta-row"><span class="meta-label">技术栈</span>FastAPI + SQLAlchemy · Vue3 + Vite（无 UI 框架、无状态库）</div>
+        <div class="meta-row"><span class="meta-label">旧版入口</span>旧版单页前端保留为回退入口 <code>/legacy</code></div>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
-// 占位页：无业务逻辑。
+// V6 阶段 2：原「骨架页」占位改为「关于/版本信息」，移除未完成感文案。
 </script>
 
 <style scoped>
-.home-view {
+.about-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.about-desc {
+  margin: 0 0 16px;
+  color: var(--gray-600);
+  font-size: 14px;
+  line-height: 1.9;
+}
+.about-meta {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 64px 24px;
-  color: #333;
+  border-top: 1px solid var(--gray-100);
+  padding-top: 14px;
 }
-h2 {
-  font-size: 20px;
-  margin: 0;
+.meta-row {
+  font-size: 13px;
+  color: var(--gray-600);
 }
-p {
-  margin: 0;
-  color: #777;
-  font-size: 14px;
+.meta-label {
+  display: inline-block;
+  min-width: 72px;
+  color: var(--gray-400);
+  font-size: 12px;
+}
+code {
+  background: var(--gray-100);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  color: var(--gray-700);
 }
 </style>
