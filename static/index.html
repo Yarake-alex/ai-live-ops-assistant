@@ -1514,6 +1514,7 @@
                                         <h3 style="margin:0;font-size:15px;">📚 商品资料文档</h3>
                                         <div style="display:flex;gap:6px;">
                                             <button class="light" onclick="triggerProductKnowledgeUpload()" style="font-size:12px;padding:4px 10px;">上传资料</button>
+                                            <button class="light" onclick="reorganizeProductKnowledge()" style="font-size:12px;padding:4px 10px;">重新整理资料</button>
                                             <button class="light" onclick="loadProductKnowledgeDocs()" style="font-size:12px;padding:4px 10px;">刷新</button>
                                         </div>
                                     </div>
@@ -1720,7 +1721,7 @@
                                 <button class="danger" onclick="clearRagDocuments()">清空全部</button>
                             </div>
                             <div class="btn-group" style="margin-top:6px;">
-                                <button class="outline" onclick="reindexRag()" title="重新整理资料检索索引，一般在资料检索异常时使用">🔄 重建资料索引</button>
+                                <button class="outline" onclick="reindexRag()" title="重新整理全部直播素材，一般在资料问答异常时使用">🔄 重新整理素材</button>
                             </div>
                             <div class="muted" style="margin-bottom:8px;">支持 PDF、TXT、MD、CSV，可一次选择多个文件。</div>
                             <div id="ragVectorStatus" class="muted" style="margin-bottom:8px;"></div>
@@ -2181,8 +2182,8 @@ async function loadRagDocuments() {
             totalIndexed += d.vector_indexed;
         }
         const vecInfo = d.vector_indexed != null
-            ? `资料索引: ${d.vector_indexed}/${d.chunks}`
-            : "资料索引功能未启用";
+            ? `资料整理进度：${d.vector_indexed}/${d.chunks}`
+            : "资料整理功能未启用";
         const updatedInfo = d.updated_at
             ? ` · 更新于 ${d.updated_at.slice(0, 16).replace('T',' ')}`
             : "";
@@ -2196,7 +2197,6 @@ async function loadRagDocuments() {
                 ${previewHtml}
                 <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
                     <button onclick="viewFileChunks('${encodeURIComponent(d.filename)}')">查看片段</button>
-                    <button onclick="reindexFile('${encodeURIComponent(d.filename)}')">重建该文件索引</button>
                     <button class="danger" onclick="deleteRagDocument('${encodeURIComponent(d.filename)}')">删除</button>
                 </div>
             </div>
@@ -2207,13 +2207,13 @@ async function loadRagDocuments() {
     const statusEl = document.getElementById("ragVectorStatus");
     if (hasVectorInfo) {
         if (totalIndexed === 0) {
-            statusEl.innerHTML = '⚠️ 资料索引未完成，请点击「🔄 重建资料索引」重新整理资料。当前仍可使用基础资料检索。';
+            statusEl.innerHTML = '⚠️ 资料整理未完成，请点击「🔄 重新整理素材」重新整理资料。当前仍可使用基础资料检索。';
             statusEl.style.color = '#e67e22';
         } else if (totalIndexed < totalChunks) {
-            statusEl.innerHTML = `⚠️ 资料索引不完整（${totalIndexed}/${totalChunks}），部分资料可能只支持基础检索。建议重建资料索引。`;
+            statusEl.innerHTML = `⚠️ 资料整理不完整（${totalIndexed}/${totalChunks}），部分资料可能只支持基础检索。建议重新整理素材。`;
             statusEl.style.color = '#e67e22';
         } else {
-            statusEl.innerHTML = `✅ 资料索引完整（${totalIndexed} 个片段），可用于资料问答。`;
+            statusEl.innerHTML = `✅ 资料整理完整（${totalIndexed} 个片段），可用于资料问答。`;
             statusEl.style.color = '#27ae60';
         }
     } else {
@@ -2266,32 +2266,6 @@ function hideRagChunkPreview() {
     if (bodyEl) bodyEl.innerHTML = "";
 }
 
-async function reindexFile(encodedFilename) {
-    const filename = decodeURIComponent(encodedFilename);
-    const ok = confirm(`将为文件「${filename}」重新整理资料索引。确定吗？`);
-    if (!ok) return;
-    try {
-        const resp = await fetch(`/rag/documents/${encodedFilename}/reindex`, {
-            method: "POST",
-            credentials: "include",
-        });
-        if (resp.status === 401) { showLogin("登录已失效，请重新登录"); return; }
-        const data = await resp.json();
-        if (!resp.ok) {
-            alert(data.detail || "重建失败");
-            return;
-        }
-        if (data.reindexed) {
-            alert(data.message || "文件索引重建完成");
-        } else {
-            alert(data.message || "资料索引功能未启用");
-        }
-        await loadRagDocuments();
-    } catch (e) {
-        alert("文件索引重建请求失败");
-    }
-}
-
 async function deleteRagDocument(encodedFilename) {
     const filename = decodeURIComponent(encodedFilename);
     const ok = confirm(`确定要删除资料“${filename}”吗？删除后，该资料不会再参与资料检索。`);
@@ -2328,11 +2302,23 @@ async function clearRagDocuments() {
 }
 
 async function reindexRag() {
-    const ok = confirm("将重新整理所有资料的检索索引。\n\n此操作可能需要一些时间，期间资料问答仍可使用基础检索。\n\n确定要重建吗？");
+    // 没有素材文档时给出提示，不调用后端
+    let docs;
+    try {
+        docs = await request("/rag/documents");
+    } catch (e) {
+        return; // request() 已处理错误
+    }
+    if (!docs.length) {
+        alert("当前暂无直播素材");
+        return;
+    }
+
+    const ok = confirm("将重新整理全部直播素材。\n\n此操作可能需要一些时间，期间素材问答仍可使用。\n\n确定要重新整理吗？");
     if (!ok) return;
 
     const statusEl = document.getElementById("ragVectorStatus");
-    statusEl.innerHTML = '🔄 正在重建资料索引...';
+    statusEl.innerHTML = '🔄 正在重新整理素材...';
     statusEl.style.color = '#3498db';
 
     try {
@@ -2349,20 +2335,27 @@ async function reindexRag() {
         const data = await resp.json();
 
         if (!resp.ok) {
-            statusEl.innerHTML = `❌ 重建失败：${data.detail || "未知错误"}`;
+            statusEl.innerHTML = '❌ 素材整理失败，请稍后重试';
             statusEl.style.color = '#e74c3c';
-            alert(`重建资料索引失败：${data.detail || "未知错误"}`);
+            alert("素材整理暂不可用，可继续使用基础资料检索");
             return;
         }
 
-        statusEl.innerHTML = `✅ 资料索引重建完成，共 ${data.chunks || 0} 个片段`;
+        if (!data.reindexed) {
+            statusEl.innerHTML = '⚠️ 素材整理暂不可用';
+            statusEl.style.color = '#e67e22';
+            alert("素材整理暂不可用，可继续使用基础资料检索");
+            return;
+        }
+
+        statusEl.innerHTML = `✅ 素材整理完成，共 ${data.chunks || 0} 个片段`;
         statusEl.style.color = '#27ae60';
-        alert(data.message || "资料索引重建完成");
+        alert("素材整理完成");
         await loadRagDocuments();
     } catch (error) {
-        statusEl.innerHTML = '❌ 重建失败：网络或服务异常';
+        statusEl.innerHTML = '❌ 素材整理失败，请稍后重试';
         statusEl.style.color = '#e74c3c';
-        alert("重建资料索引失败：网络或服务异常");
+        alert("素材整理暂不可用，可继续使用基础资料检索");
     }
 }
 
@@ -3424,7 +3417,6 @@ async function loadProductKnowledgeDocs() {
                     <div class="muted" style="font-size:11px;">${d.chunks} 个片段${d.preview ? " · " + escapeHtml(d.preview.slice(0, 40)) + "…" : ""}</div>
                 </div>
                 <button class="light" onclick="viewProductKnowledgeChunks('${encodeURIComponent(d.filename)}')" style="font-size:12px;padding:4px 10px;">查看片段</button>
-                <button class="light" onclick="reindexProductKnowledgeDoc('${encodeURIComponent(d.filename)}')" style="font-size:12px;padding:4px 10px;">重建该文件索引</button>
                 <button class="light" onclick="deleteProductKnowledgeDoc('${escapeHtml(d.filename)}')" style="font-size:12px;padding:4px 10px;">删除</button>
             </div>
         `).join("");
@@ -3485,25 +3477,50 @@ function hideProductKnowledgeChunkPreview() {
     if (bodyEl) bodyEl.innerHTML = "";
 }
 
-async function reindexProductKnowledgeDoc(encodedFilename) {
-    const filename = decodeURIComponent(encodedFilename);
-    if (!confirm(`将为资料「${filename}」重建索引。确定吗？`)) return;
+async function reorganizeProductKnowledge() {
+    if (!selectedProductId) return;
+    let docs;
     try {
-        const resp = await fetch(`/products/${selectedProductId}/knowledge/documents/${encodedFilename}/reindex`, {
-            method: "POST",
-            credentials: "include",
-        });
-        if (resp.status === 401) { showLogin("登录已失效，请重新登录"); return; }
-        const data = await resp.json();
-        if (!resp.ok) {
-            alert(data.detail || "重建失败");
-            return;
-        }
-        alert(data.message || "重建完成");
-        await loadProductReadiness();
+        docs = await request(`/products/${selectedProductId}/knowledge/documents`);
     } catch (e) {
-        alert("文件索引重建请求失败");
+        return; // request() 已处理错误
     }
+    if (!docs.length) {
+        alert("当前商品暂无资料文档");
+        return;
+    }
+    // 逐个调用现有单文件整理接口，某个文件失败不影响其他文件
+    let okCount = 0;
+    const failed = [];
+    for (const d of docs) {
+        try {
+            const resp = await fetch(`/products/${selectedProductId}/knowledge/documents/${encodeURIComponent(d.filename)}/reindex`, {
+                method: "POST",
+                credentials: "include",
+            });
+            if (resp.status === 401) { showLogin("登录已失效，请重新登录"); return; }
+            const data = await resp.json();
+            if (resp.ok && data.reindexed) {
+                okCount += 1;
+            } else {
+                failed.push(d.filename);
+            }
+        } catch (e) {
+            failed.push(d.filename);
+        }
+    }
+    let message;
+    if (!failed.length) {
+        message = `资料整理完成：${okCount} 个文件已更新`;
+    } else if (okCount === 0) {
+        message = `资料整理失败：${failed.length} 个文件未能整理。失败文件：${failed.join("、")}`;
+    } else {
+        message = `资料整理完成：${okCount} 个成功，${failed.length} 个失败。失败文件：${failed.join("、")}`;
+    }
+    // 统一刷新：文档列表、资料完整度、问题洞察/概览、运营建议
+    await refreshPrepSummary();
+    loadOpsSuggestions();
+    alert(message);
 }
 
 async function askProductKnowledge() {
