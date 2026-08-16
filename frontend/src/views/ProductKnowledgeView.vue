@@ -11,20 +11,22 @@
       <ProductQuestionInsights :product-id="selectedId" />
       <ProductOperationSuggestions :product-id="selectedId" />
       <ProductLiveScript :product-id="selectedId" />
+      <ProductLiveReview :product-id="selectedId" />
     </div>
   </section>
 </template>
 
 <script setup>
-// 阶段 4.1-4.6：迁移商品资料页的「商品选择 + 当前商品基础信息 +
+// 阶段 4.1-4.7：迁移商品资料页的「商品选择 + 当前商品基础信息 +
 // 资料完整度 + 资料文档列表 + 资料问答（本地快答/知识库问答）+ 问题洞察 +
-// 运营建议 + 直播话术」。
+// 运营建议 + 直播话术 + 直播复盘」。
 // 接口与旧页面完全一致：GET /products/search、GET /products/{id}、
 // GET /products/{id}/readiness、GET /products/{id}/knowledge/documents、
 // POST /products/{id}/knowledge/ask、GET /products/{id}/question-insights、
 // GET /products/{id}/ops-suggestions、POST /products/{id}/live-scripts、
-// GET /products/{id}/live-scripts、GET /live-scripts/{id}，返回结构不变。
-// 复盘等留待后续阶段。
+// GET /products/{id}/live-scripts、GET /live-scripts/{id}、
+// POST /products/{id}/live-reviews、GET /products/{id}/live-reviews、
+// GET /live-reviews/{id}，返回结构不变。
 import { ref } from "vue";
 import { apiGet } from "../api/client";
 import ProductSelector from "../components/ProductSelector.vue";
@@ -35,6 +37,7 @@ import ProductQa from "../components/ProductQa.vue";
 import ProductQuestionInsights from "../components/ProductQuestionInsights.vue";
 import ProductOperationSuggestions from "../components/ProductOperationSuggestions.vue";
 import ProductLiveScript from "../components/ProductLiveScript.vue";
+import ProductLiveReview from "../components/ProductLiveReview.vue";
 
 const selectedId = ref(null);
 const product = ref(null);
