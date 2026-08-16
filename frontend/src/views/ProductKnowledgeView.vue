@@ -6,7 +6,7 @@
     <ProductCsvTools @imported="selectorRef?.reload()" />
     <div class="product-grid">
       <ProductSelector ref="selectorRef" :selected-id="selectedId" @select="onSelect" @create="openCreateForm" />
-      <ProductSummary :product="product" @edit="openEditForm" />
+      <ProductSummary :product="product" :busy="removing" @edit="openEditForm" @remove="onRemoveProduct" />
     </div>
     <div class="product-modules">
       <ProductCompleteness :product-id="selectedId" />
@@ -39,7 +39,7 @@
 // POST /products/{id}/live-reviews、GET /products/{id}/live-reviews、
 // GET /live-reviews/{id}，返回结构不变。
 import { ref } from "vue";
-import { apiGet } from "../api/client";
+import { apiGet, apiDelete } from "../api/client";
 import ProductSelector from "../components/ProductSelector.vue";
 import ProductSummary from "../components/ProductSummary.vue";
 import ProductCompleteness from "../components/ProductCompleteness.vue";
@@ -85,6 +85,26 @@ function onProductSaved(saved) {
   selectorRef.value?.reload();
   if (saved && saved.id === selectedId.value) {
     onSelect(saved.id);
+  }
+}
+
+// 删除商品：确认 → 删除 → 清空选中状态 → 刷新列表（与旧页面一致）
+const removing = ref(false);
+
+async function onRemoveProduct() {
+  if (!selectedId.value || removing.value) return;
+  if (!confirm("确定要删除这个商品吗？")) return;
+  removing.value = true;
+  try {
+    await apiDelete(`/products/${selectedId.value}`);
+    selectedId.value = null;
+    product.value = null;
+    selectorRef.value?.reload();
+    alert("商品已删除");
+  } catch (e) {
+    alert(e.message || "删除失败，请稍后重试。");
+  } finally {
+    removing.value = false;
   }
 }
 </script>

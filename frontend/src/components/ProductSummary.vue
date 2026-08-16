@@ -7,7 +7,10 @@
     <template v-else>
       <div class="summary-name-row">
         <div class="summary-name">{{ product.name }}</div>
-        <button class="edit-btn" @click="$emit('edit')">✏️ 编辑商品</button>
+        <div class="summary-actions">
+          <button class="edit-btn" :disabled="busy" @click="$emit('edit')">✏️ 编辑商品</button>
+          <button class="delete-btn" :disabled="busy" @click="$emit('remove')">🗑 删除商品</button>
+        </div>
       </div>
       <div class="summary-sub">💰 ¥{{ product.price }} · 库存 {{ product.stock }}</div>
       <div class="summary-tags">
@@ -29,8 +32,9 @@
 // 删除等操作按钮留待后续阶段迁移。
 defineProps({
   product: { type: Object, default: null },
+  busy: Boolean,
 });
-defineEmits(["edit"]);
+defineEmits(["edit", "remove"]);
 </script>
 
 <style scoped>
@@ -66,6 +70,11 @@ defineEmits(["edit"]);
   font-weight: 700;
   margin-bottom: 4px;
 }
+.summary-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .edit-btn {
   font-size: 12px;
   padding: 4px 10px;
@@ -77,6 +86,20 @@ defineEmits(["edit"]);
 }
 .edit-btn:hover {
   background: #f9fafb;
+}
+.delete-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+}
+.edit-btn:disabled,
+.delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .summary-sub {
   color: #777;
