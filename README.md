@@ -375,13 +375,13 @@ docker logs -f ai-live-ops-assistant
 访问项目：
 
 ```text
-http://your-server-ip:8000
+http://your-server-ip:8003
 ```
 
 访问接口文档：
 
 ```text
-http://your-server-ip:8000/docs
+http://your-server-ip:8003/docs
 ```
 
 停止容器：
@@ -482,8 +482,8 @@ mkdir -p data
 docker compose up -d --build
 
 # 4. 检查健康状态
-curl http://127.0.0.1:8000/health
-# 或浏览器访问 http://your-server-ip:8000
+curl http://127.0.0.1:8003/health
+# 或浏览器访问 http://your-server-ip:8003
 
 # 5. 查看日志
 docker logs -f ai-live-ops-assistant

@@ -68,7 +68,7 @@ docker compose -f docker-compose.postgres.yml up -d --build
 
 ```bash
 # 健康检查
-curl http://your-server-ip:8000/health
+curl http://your-server-ip:8003/health
 
 # 查看日志
 docker logs -f ai-live-ops-assistant
@@ -110,7 +110,7 @@ docker compose -f docker-compose.postgres.yml down
 
 ```nginx
 location / {
-    proxy_pass http://127.0.0.1:8000;
+    proxy_pass http://127.0.0.1:8003;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -125,7 +125,7 @@ location / {
 
 ### 阿里云
 
-- 安全组开放 8000 端口（或反向代理端口）。
+- 安全组开放 8003 端口（或反向代理端口）。
 - 如需使用阿里云 RDS PostgreSQL，将 `DATABASE_URL` 改为 RDS 连接地址，并移除 compose 中的 postgres 服务。
 - 建议使用 ESSD 云盘提升数据库 IO 性能。
 
