@@ -25,10 +25,10 @@
           <div class="file-list">
             <div v-for="f in pendingFiles" :key="f.name" class="file-row">· {{ f.name }}</div>
           </div>
-          <div v-if="dupNames.length" class="warn-red">
+          <div v-if="dupNames.length" class="alert alert-danger">
             本次选择中包含重复文件，请重新选择<br />{{ dupNames.join("、") }}
           </div>
-          <div v-if="overlapNames.length" class="warn-amber">
+          <div v-if="overlapNames.length" class="alert alert-warning">
             以下文件已存在，继续上传将覆盖旧资料<br />{{ overlapNames.join("、") }}
           </div>
         </div>
@@ -158,19 +158,6 @@ async function confirmUpload() {
 .material-upload {
   margin-top: 12px;
 }
-.upload-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #16a34a;
-  color: #fff;
-  cursor: pointer;
-}
-.upload-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .upload-status {
   margin-top: 6px;
   font-size: 12px;
@@ -204,13 +191,6 @@ async function confirmUpload() {
   margin: 0;
   font-size: 15px;
 }
-.close-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #777;
-}
 .count-line {
   font-size: 13px;
   margin-bottom: 6px;
@@ -225,20 +205,7 @@ async function confirmUpload() {
 .file-row {
   word-break: break-all;
 }
-.warn-red {
-  background: #fef2f2;
-  color: #991b1b;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  margin-bottom: 8px;
-}
-.warn-amber {
-  background: #fffbeb;
-  color: #92400e;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
+.confirm-body .alert {
   margin-bottom: 8px;
 }
 .confirm-actions {
@@ -246,27 +213,5 @@ async function confirmUpload() {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
-}
-.light-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.primary-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

@@ -74,27 +74,4 @@ async function clearAll() {
   flex-wrap: wrap;
   margin-top: 12px;
 }
-.outline-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.danger-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #fff;
-  cursor: pointer;
-}
-.outline-btn:disabled,
-.danger-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 </style>

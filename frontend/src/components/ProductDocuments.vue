@@ -76,10 +76,10 @@
           <div class="file-list">
             <div v-for="f in pendingFiles" :key="f.name" class="file-row">· {{ f.name }}</div>
           </div>
-          <div v-if="dupNames.length" class="warn-red">
+          <div v-if="dupNames.length" class="alert alert-danger">
             本次选择中包含重复文件，请重新选择<br />{{ dupNames.join("、") }}
           </div>
-          <div v-if="overlapNames.length" class="warn-amber">
+          <div v-if="overlapNames.length" class="alert alert-warning">
             以下文件已存在，继续上传将覆盖旧资料<br />{{ overlapNames.join("、") }}
           </div>
         </div>
@@ -336,72 +336,20 @@ watch(() => props.productId, load, { immediate: true });
 
 <style scoped>
 .documents-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
 }
 .head-actions {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.danger-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #fff;
-  cursor: pointer;
-}
-.danger-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .muted-tip {
-  color: #777;
+  color: var(--gray-500);
   font-size: 12px;
   margin-bottom: 6px;
 }
-.muted {
-  color: #777;
+.documents-card .muted {
   font-size: 11px;
-}
-.hint {
-  padding: 20px 4px;
-  color: #999;
-  font-size: 13px;
-  text-align: center;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .doc-list {
   max-height: 360px;
@@ -430,9 +378,6 @@ watch(() => props.productId, load, { immediate: true });
 }
 .chunks-preview {
   margin-top: 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px 16px;
 }
 .preview-head {
   display: flex;
@@ -468,19 +413,6 @@ watch(() => props.productId, load, { immediate: true });
 .upload-area {
   margin-top: 10px;
 }
-.success-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #16a34a;
-  color: #fff;
-  cursor: pointer;
-}
-.success-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .upload-status {
   margin-top: 6px;
 }
@@ -512,13 +444,6 @@ watch(() => props.productId, load, { immediate: true });
   margin: 0;
   font-size: 15px;
 }
-.close-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #777;
-}
 .count-line {
   font-size: 13px;
   margin-bottom: 6px;
@@ -527,26 +452,13 @@ watch(() => props.productId, load, { immediate: true });
   max-height: 180px;
   overflow-y: auto;
   font-size: 12px;
-  color: #777;
+  color: var(--gray-500);
   margin-bottom: 8px;
 }
 .file-row {
   word-break: break-all;
 }
-.warn-red {
-  background: #fef2f2;
-  color: #991b1b;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  margin-bottom: 8px;
-}
-.warn-amber {
-  background: #fffbeb;
-  color: #92400e;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
+.confirm-body .alert {
   margin-bottom: 8px;
 }
 .confirm-actions {
@@ -554,18 +466,5 @@ watch(() => props.productId, load, { immediate: true });
   gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
-}
-.primary-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

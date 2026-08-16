@@ -80,35 +80,7 @@ watch(() => props.productId, load, { immediate: true });
 
 <style scoped>
 .prep-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 14px 16px;
   margin-top: 12px;
-}
-.prep-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.prep-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 .prep-items {
   display: flex;
@@ -116,18 +88,19 @@ watch(() => props.productId, load, { immediate: true });
   flex-wrap: wrap;
 }
 .prep-item {
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
   padding: 8px 14px;
   text-align: center;
   min-width: 90px;
+  background: var(--gray-50);
 }
 .prep-value {
   font-size: 16px;
   font-weight: 700;
 }
 .prep-label {
-  color: #777;
+  color: var(--gray-500);
   font-size: 11px;
 }
 </style>

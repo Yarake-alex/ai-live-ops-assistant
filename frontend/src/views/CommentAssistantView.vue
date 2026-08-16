@@ -200,27 +200,8 @@ onMounted(loadProducts);
     grid-template-columns: 1fr;
   }
 }
-.card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
 select,
 textarea {
-  width: 100%;
-  font-size: 13px;
   margin-bottom: 8px;
 }
 textarea {
@@ -232,50 +213,15 @@ textarea {
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .actions-row {
   margin-bottom: 10px;
 }
-.primary-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .result-box {
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
-  background: #fafafa;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
   padding: 10px 12px;
   min-height: 120px;
-}
-.hint {
-  color: #999;
-  font-size: 13px;
-  padding: 12px 4px;
-  text-align: center;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .record-meta {
   margin-bottom: 8px;
@@ -317,13 +263,6 @@ textarea {
 .history-top b {
   font-size: 13px;
 }
-.status-tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #555;
-}
 .history-reply {
   margin-top: 4px;
 }
@@ -332,9 +271,5 @@ textarea {
   align-items: center;
   justify-content: space-between;
   margin-top: 6px;
-}
-.muted {
-  color: #777;
-  font-size: 12px;
 }
 </style>

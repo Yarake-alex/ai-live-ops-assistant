@@ -128,52 +128,14 @@ watch(
 
 <style scoped>
 .review-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
 }
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.primary-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .review-result {
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
-  background: #fafafa;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
   padding: 10px 12px;
   min-height: 60px;
-}
-.hint {
-  color: #999;
-  font-size: 13px;
-  padding: 12px 4px;
-  text-align: center;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .review-meta {
   display: flex;
@@ -214,18 +176,5 @@ watch(
 }
 .history-info b {
   font-size: 13px;
-}
-.muted {
-  color: #777;
-  font-size: 12px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
 }
 </style>

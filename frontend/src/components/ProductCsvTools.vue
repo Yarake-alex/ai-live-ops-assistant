@@ -125,21 +125,8 @@ async function doExport() {
   flex-wrap: wrap;
   flex-shrink: 0;
 }
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .muted-tip {
-  color: #777;
+  color: var(--gray-500);
   font-size: 12px;
   min-width: 0;
 }

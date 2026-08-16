@@ -112,41 +112,7 @@ watch(() => props.productId, load, { immediate: true });
 
 <style scoped>
 .ops-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.hint {
-  padding: 16px 4px;
-  color: #999;
-  font-size: 13px;
-  text-align: center;
 }
 .summary-row {
   display: flex;
@@ -155,23 +121,24 @@ watch(() => props.productId, load, { immediate: true });
   margin-bottom: 10px;
 }
 .summary-item {
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
   padding: 8px 14px;
   text-align: center;
+  background: var(--gray-50);
 }
 .summary-value {
   font-size: 16px;
   font-weight: 600;
 }
 .summary-label {
-  color: #777;
+  color: var(--gray-500);
   font-size: 11px;
 }
 .suggestion-item {
   display: block;
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   margin-bottom: 8px;
 }
@@ -182,26 +149,19 @@ watch(() => props.productId, load, { immediate: true });
   flex-wrap: wrap;
   margin-bottom: 4px;
 }
-.tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #555;
-}
 .suggestion-title {
   font-size: 13px;
   min-width: 0;
   word-break: break-all;
 }
 .suggestion-detail {
-  color: #777;
+  color: var(--gray-500);
   font-size: 12px;
   line-height: 1.7;
   word-break: break-all;
 }
 .suggestion-questions {
-  color: #777;
+  color: var(--gray-500);
   font-size: 11px;
   margin-top: 4px;
   word-break: break-all;

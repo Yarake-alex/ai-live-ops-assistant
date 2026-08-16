@@ -64,18 +64,6 @@ async function onLogout() {
   font-size: 13px;
   color: #777;
 }
-.header-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.header-btn:hover {
-  background: #f9fafb;
-}
 .app-shell-main {
   flex: 1;
 }

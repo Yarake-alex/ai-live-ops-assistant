@@ -39,10 +39,6 @@ defineEmits(["edit", "remove"]);
 
 <style scoped>
 .product-summary {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 20px;
   min-height: 200px;
 }
 .summary-empty {
@@ -75,34 +71,8 @@ defineEmits(["edit", "remove"]);
   gap: 6px;
   flex-wrap: wrap;
 }
-.edit-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.edit-btn:hover {
-  background: #f9fafb;
-}
-.delete-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #fff;
-  cursor: pointer;
-}
-.edit-btn:disabled,
-.delete-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .summary-sub {
-  color: #777;
+  color: var(--gray-500);
   margin-bottom: 12px;
 }
 .summary-tags {
@@ -111,29 +81,15 @@ defineEmits(["edit", "remove"]);
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.status-tag {
-  font-size: 12px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #555;
-}
-.promo-tag {
-  font-size: 12px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: #fef3c7;
-  color: #92400e;
-}
 .summary-fields {
   line-height: 2;
   font-size: 14px;
-  color: #555;
+  color: var(--gray-600);
 }
 .summary-notes {
   margin-top: 8px;
   padding: 8px;
-  background: #f8fafc;
-  border-radius: 6px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
 }
 </style>

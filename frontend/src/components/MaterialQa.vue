@@ -80,22 +80,9 @@ async function ask() {
 
 <style scoped>
 .qa-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
 }
-.card-head {
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
 textarea {
-  width: 100%;
-  font-size: 13px;
   min-height: 60px;
 }
 .qa-actions {
@@ -103,34 +90,12 @@ textarea {
   justify-content: flex-end;
   margin: 8px 0;
 }
-.primary-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #16a34a;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .qa-result {
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
-  background: #fafafa;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
   padding: 10px 12px;
   min-height: 60px;
-}
-.hint {
-  color: #999;
-  font-size: 13px;
-  padding: 12px 4px;
-  text-align: center;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .answer-text {
   font-size: 14px;
@@ -153,15 +118,6 @@ textarea {
 .source-head b {
   font-size: 13px;
 }
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
 .source-detail {
   margin-top: 8px;
 }
@@ -169,9 +125,5 @@ textarea {
   margin-top: 8px;
   font-size: 13px;
   word-break: break-all;
-}
-.muted {
-  color: #777;
-  font-size: 12px;
 }
 </style>

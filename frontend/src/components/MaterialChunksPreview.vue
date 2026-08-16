@@ -2,7 +2,7 @@
   <div v-if="filename" class="chunks-preview">
     <div class="preview-head">
       <b>当前文件：{{ filename }}</b>
-      <button class="close-btn" @click="$emit('close')">收起片段</button>
+      <button class="light-btn" @click="$emit('close')">收起片段</button>
     </div>
     <div class="preview-body">
       <div v-if="loading" class="hint">加载片段...</div>
@@ -64,10 +64,6 @@ function timeInfo(c) {
 <style scoped>
 .chunks-preview {
   margin-top: 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 12px 16px;
 }
 .preview-head {
   display: flex;
@@ -80,27 +76,9 @@ function timeInfo(c) {
 .preview-head b {
   font-size: 13px;
 }
-.close-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
 .preview-body {
   max-height: 320px;
   overflow-y: auto;
-}
-.hint {
-  padding: 24px 12px;
-  text-align: center;
-  color: #999;
-  font-size: 13px;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .chunk {
   background: #f8f9fa;

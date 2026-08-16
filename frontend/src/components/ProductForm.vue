@@ -162,18 +162,9 @@ async function save() {
   margin: 0;
   font-size: 15px;
 }
-.close-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #777;
-}
-input,
-select,
-textarea {
-  width: 100%;
-  font-size: 13px;
+.form-box input,
+.form-box select,
+.form-box textarea {
   margin-bottom: 8px;
 }
 textarea {
@@ -187,31 +178,5 @@ textarea {
   display: flex;
   gap: 8px;
   margin-top: 8px;
-}
-.primary-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.light-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

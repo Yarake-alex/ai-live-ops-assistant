@@ -125,41 +125,7 @@ watch(() => props.productId, load, { immediate: true });
 
 <style scoped>
 .insights-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.hint {
-  padding: 16px 4px;
-  color: #999;
-  font-size: 13px;
-  text-align: center;
 }
 .section {
   margin-bottom: 10px;
@@ -189,27 +155,9 @@ watch(() => props.productId, load, { immediate: true });
   align-items: center;
   flex-shrink: 0;
 }
-.tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #555;
-}
-.status-ok {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #065f46;
-}
 .count-tags {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-}
-.muted {
-  color: #777;
-  font-size: 12px;
 }
 </style>

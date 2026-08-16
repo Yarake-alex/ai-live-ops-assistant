@@ -11,7 +11,7 @@
         :disabled="asking"
         @keydown.enter="ask"
       />
-      <button :disabled="asking || !question.trim()" @click="ask">提问</button>
+      <button class="primary-btn" :disabled="asking || !question.trim()" @click="ask">提问</button>
     </div>
     <div class="qa-result">
       <div v-if="asking" class="hint">检索资料中...</div>
@@ -85,18 +85,7 @@ watch(
 
 <style scoped>
 .qa-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
-}
-.card-head {
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
 }
 .qa-input-row {
   display: flex;
@@ -105,37 +94,17 @@ watch(
 }
 .qa-input-row input {
   flex: 1;
-  font-size: 13px;
   min-width: 0;
 }
-.qa-input-row button {
+.qa-input-row .primary-btn {
   flex-shrink: 0;
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.qa-input-row button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 .qa-result {
   min-height: 60px;
-  border: 1px solid #f3f4f6;
-  border-radius: 6px;
-  background: #fafafa;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
   padding: 10px 12px;
-}
-.hint {
-  color: #999;
-  font-size: 13px;
-  padding: 12px 4px;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .answer-text {
   font-size: 14px;
@@ -144,7 +113,7 @@ watch(
   word-break: break-all;
 }
 .answer-sources {
-  color: #777;
+  color: var(--gray-500);
   font-size: 12px;
   margin-top: 8px;
   word-break: break-all;

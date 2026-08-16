@@ -46,19 +46,16 @@ function updatedInfo(d) {
 
 <style scoped>
 .material-list {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
   min-height: 200px;
 }
 .list-hint {
   padding: 40px 16px;
   text-align: center;
-  color: #999;
+  color: var(--gray-400);
   font-size: 13px;
 }
 .list-error {
-  color: #b91c1c;
+  color: var(--danger-ink);
 }
 .list-items {
   max-height: 420px;
@@ -83,36 +80,6 @@ function updatedInfo(d) {
   flex-shrink: 0;
   display: flex;
   gap: 6px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:hover {
-  background: #f9fafb;
-}
-.danger-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #fff;
-  cursor: pointer;
-}
-.light-btn:disabled,
-.danger-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.muted {
-  color: #777;
-  font-size: 12px;
 }
 .item-preview {
   margin-top: 4px;

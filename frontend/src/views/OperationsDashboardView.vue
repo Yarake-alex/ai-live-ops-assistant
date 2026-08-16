@@ -137,15 +137,8 @@ onMounted(loadStats);
   color: #777;
   min-width: 0;
 }
-.primary-btn {
-  font-size: 12px;
-  padding: 6px 12px;
+.prep-banner .primary-btn {
   flex-shrink: 0;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
 }
 .section-title {
   font-size: 15px;

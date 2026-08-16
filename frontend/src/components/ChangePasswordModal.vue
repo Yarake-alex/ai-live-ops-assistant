@@ -111,16 +111,7 @@ async function submit() {
   margin: 0;
   font-size: 15px;
 }
-.close-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #777;
-}
-input {
-  width: 100%;
-  font-size: 13px;
+.cp-box input {
   margin-bottom: 8px;
 }
 .cp-msg {
@@ -130,31 +121,5 @@ input {
 .cp-actions {
   display: flex;
   gap: 8px;
-}
-.primary-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.light-btn {
-  padding: 6px 14px;
-  font-size: 13px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

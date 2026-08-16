@@ -70,36 +70,7 @@ watch(() => props.productId, load, { immediate: true });
 
 <style scoped>
 .completeness-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
   margin-top: 12px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.hint {
-  padding: 16px 4px;
-  color: #999;
-  font-size: 12px;
 }
 .score-row {
   display: flex;
@@ -118,7 +89,7 @@ watch(() => props.productId, load, { immediate: true });
 }
 .score-bar {
   height: 8px;
-  background: #e5e7eb;
+  background: var(--gray-200);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -127,7 +98,7 @@ watch(() => props.productId, load, { immediate: true });
   border-radius: 4px;
 }
 .score-label {
-  color: #777;
+  color: var(--gray-500);
   font-size: 11px;
   margin-top: 4px;
 }
@@ -137,12 +108,12 @@ watch(() => props.productId, load, { immediate: true });
   word-break: break-all;
 }
 .suggestions {
-  color: #777;
+  color: var(--gray-500);
   font-size: 12px;
   line-height: 1.8;
 }
 .done-line {
   font-size: 13px;
-  color: #10b981;
+  color: var(--success);
 }
 </style>

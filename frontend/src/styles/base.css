@@ -1,0 +1,334 @@
+/* V6 基础视觉系统（全局）。
+   设计 token + 基础元素 + 共享组件类：
+   组件本地 <style scoped> 只保留布局差异，按钮/表单/卡片/badge/alert/空态统一在此定义。
+   基调：轻量 SaaS 运营后台——中性色为主，蓝为主操作色，绿/黄/红只做状态语义。 */
+
+:root {
+  /* 中性色阶 */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  /* 主操作色 */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --primary-border: #bfdbfe;
+  /* 状态色 */
+  --success: #16a34a;
+  --success-soft: #ecfdf5;
+  --success-ink: #065f46;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --warning-ink: #92400e;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-ink: #991b1b;
+  /* 形状与投影 */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --shadow-md: 0 4px 16px rgba(17, 24, 39, 0.1);
+  /* 字号 */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--gray-900);
+  background: var(--gray-100);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 按钮 ── */
+
+button {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--gray-700);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--gray-50);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 主操作（蓝） */
+.primary-btn {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.primary-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+/* 次操作（白底描边）——light-btn / outline-btn / create-btn / edit-btn / reset-btn / header-btn 同义 */
+.light-btn,
+.outline-btn,
+.create-btn,
+.edit-btn,
+.reset-btn,
+.header-btn {
+  background: #fff;
+  border-color: var(--gray-200);
+  color: var(--gray-700);
+}
+.light-btn:hover:not(:disabled),
+.outline-btn:hover:not(:disabled),
+.create-btn:hover:not(:disabled),
+.edit-btn:hover:not(:disabled),
+.reset-btn:hover:not(:disabled),
+.header-btn:hover:not(:disabled) {
+  background: var(--gray-50);
+}
+
+/* 危险操作（红） */
+.danger-btn {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.danger-btn:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+/* 上传等主操作别名：V6 统一为蓝（绿色仅用于状态语义） */
+.success-btn,
+.upload-btn {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.success-btn:hover:not(:disabled),
+.upload-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+/* 幽灵按钮：弹窗右上角 ✕ 等 */
+.close-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--gray-500);
+  padding: 4px 8px;
+}
+.close-btn:hover:not(:disabled) {
+  background: var(--gray-100);
+}
+
+/* 搜索框清空 ✕（定位由组件提供） */
+.search-box-clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--gray-500);
+  padding: 2px 6px;
+}
+
+/* ── 表单 ── */
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="email"],
+select,
+textarea {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  color: var(--gray-900);
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--gray-400);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--gray-50);
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+label {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+/* ── 卡片 ── */
+
+.card,
+.qa-card,
+.prep-card,
+.completeness-card,
+.documents-card,
+.insights-card,
+.ops-card,
+.script-card,
+.review-card,
+.material-list,
+.product-selector,
+.product-summary,
+.chunks-preview {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+}
+
+/* ── 卡片标题行 ── */
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.card-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── badge / tag ── */
+
+.tag,
+.status-tag,
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-pill);
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.tag-primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.tag-success,
+.status-ok {
+  background: var(--success-soft);
+  color: var(--success-ink);
+}
+.tag-warning,
+.promo-tag {
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+}
+.tag-danger {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
+
+/* ── alert（信息 / 警告 / 错误） ── */
+
+.alert {
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.alert-info {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  color: #1e40af;
+}
+.alert-warning {
+  background: var(--warning-soft);
+  border-color: #fde68a;
+  color: var(--warning-ink);
+}
+.alert-danger {
+  background: var(--danger-soft);
+  border-color: #fecaca;
+  color: var(--danger-ink);
+}
+
+/* ── 提示 / 空态 / 弱化文本 ── */
+
+.hint {
+  padding: 16px 4px;
+  color: var(--gray-400);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+.hint-error {
+  color: var(--danger-ink);
+}
+.muted {
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}

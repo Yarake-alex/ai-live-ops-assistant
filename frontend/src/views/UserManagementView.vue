@@ -171,62 +171,13 @@ onMounted(loadUsers);
     grid-template-columns: 1fr;
   }
 }
-.card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.card-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-.count-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #777;
-}
 input,
 select {
-  width: 100%;
-  font-size: 13px;
   margin-bottom: 8px;
-}
-.primary-btn {
-  padding: 6px 16px;
-  font-size: 13px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 .create-msg {
   margin-top: 8px;
   font-size: 13px;
-}
-.hint {
-  color: #999;
-  font-size: 13px;
-  padding: 16px 4px;
-  text-align: center;
-}
-.hint-error {
-  color: #b91c1c;
 }
 .user-item {
   display: flex;
@@ -246,51 +197,11 @@ select {
 .user-info b {
   font-size: 13px;
 }
-.tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #555;
+.user-item .tag,
+.user-item .status-tag {
   margin-left: 6px;
-}
-.status-tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  margin-left: 6px;
-}
-.muted {
-  color: #777;
-  font-size: 11px;
-}
-.danger-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #fff;
-  cursor: pointer;
-}
-.danger-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 .list-footer {
   margin-top: 10px;
-}
-.light-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
-  color: #555;
-  cursor: pointer;
-}
-.light-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>
