@@ -14,7 +14,7 @@
   --gray-700: #374151;
   --gray-900: #111827;
   /* 工作台背景 */
-  --bg: #f7f8fa;
+  --bg: #f6f8fb;
   /* 主操作色 */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
@@ -35,8 +35,8 @@
   --radius: 8px;
   --radius-sm: 6px;
   --radius-pill: 999px;
-  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.06);
-  --shadow-md: 0 4px 16px rgba(17, 24, 39, 0.1);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
   /* 字号 */
   --text-xs: 12px;
   --text-sm: 13px;
@@ -61,6 +61,20 @@ body {
   font-size: var(--text-base);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* 全站统一背景层：浅冷灰底 + 顶部极淡蓝/青氛围光，向下自然过渡。
+   无图片、无玻璃拟态、无强阴影；z-index 在内容下方且不拦截交互。 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 280px at 50% -60px, rgba(59, 130, 246, 0.1), transparent 72%),
+    radial-gradient(42% 220px at 88% -40px, rgba(14, 165, 233, 0.06), transparent 72%),
+    linear-gradient(180deg, rgba(219, 234, 254, 0.28), transparent 300px);
 }
 
 /* ── 按钮 ── */
