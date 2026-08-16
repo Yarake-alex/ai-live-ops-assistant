@@ -1,8 +1,8 @@
 <template>
   <section class="product-view">
     <div class="product-grid">
-      <ProductSelector :selected-id="selectedId" @select="onSelect" />
-      <ProductSummary :product="product" />
+      <ProductSelector ref="selectorRef" :selected-id="selectedId" @select="onSelect" @create="openCreateForm" />
+      <ProductSummary :product="product" @edit="openEditForm" />
     </div>
     <div class="product-modules">
       <ProductCompleteness :product-id="selectedId" />
@@ -13,6 +13,13 @@
       <ProductLiveScript :product-id="selectedId" />
       <ProductLiveReview :product-id="selectedId" />
     </div>
+
+    <ProductForm
+      v-if="formOpen"
+      :edit-product="editingProduct"
+      @saved="onProductSaved"
+      @close="formOpen = false"
+    />
   </section>
 </template>
 
@@ -38,9 +45,13 @@ import ProductQuestionInsights from "../components/ProductQuestionInsights.vue";
 import ProductOperationSuggestions from "../components/ProductOperationSuggestions.vue";
 import ProductLiveScript from "../components/ProductLiveScript.vue";
 import ProductLiveReview from "../components/ProductLiveReview.vue";
+import ProductForm from "../components/ProductForm.vue";
 
 const selectedId = ref(null);
 const product = ref(null);
+const selectorRef = ref(null);
+const formOpen = ref(false);
+const editingProduct = ref(null);
 
 async function onSelect(id) {
   selectedId.value = id;
@@ -48,6 +59,27 @@ async function onSelect(id) {
     product.value = await apiGet(`/products/${id}`);
   } catch (e) {
     product.value = null;
+  }
+}
+
+function openCreateForm() {
+  editingProduct.value = null;
+  formOpen.value = true;
+}
+
+function openEditForm() {
+  if (!product.value) return;
+  editingProduct.value = product.value;
+  formOpen.value = true;
+}
+
+// 保存后：关闭表单、刷新列表；若编辑的是当前选中商品，重新拉取详情（与旧页面一致）
+function onProductSaved(saved) {
+  formOpen.value = false;
+  editingProduct.value = null;
+  selectorRef.value?.reload();
+  if (saved && saved.id === selectedId.value) {
+    onSelect(saved.id);
   }
 }
 </script>

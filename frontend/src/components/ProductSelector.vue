@@ -2,7 +2,10 @@
   <div class="product-selector">
     <div class="selector-head">
       <span class="selector-title">商品列表</span>
-      <span class="selector-count">{{ total }}</span>
+      <span class="selector-head-right">
+        <button class="create-btn" @click="$emit('create')">新增商品</button>
+        <span class="selector-count">{{ total }}</span>
+      </span>
     </div>
     <input
       v-model="q"
@@ -53,7 +56,10 @@ import { apiGet } from "../api/client";
 defineProps({
   selectedId: { type: Number, default: null },
 });
-const emit = defineEmits(["select"]);
+const emit = defineEmits(["select", "create"]);
+
+// 父组件在保存商品后调用 reload 刷新列表（与旧页面保存后重搜一致）
+defineExpose({ reload: loadProducts });
 
 const q = ref("");
 const liveStatus = ref("");
@@ -128,6 +134,23 @@ onMounted(loadProducts);
 .selector-title {
   font-weight: 700;
   font-size: 15px;
+}
+.selector-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.create-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+.create-btn:hover {
+  background: #f9fafb;
 }
 .selector-count {
   font-size: 11px;

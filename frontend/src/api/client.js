@@ -63,6 +63,13 @@ export function apiPost(url, body) {
   });
 }
 
+export function apiPut(url, body) {
+  return apiRequest(url, {
+    method: "PUT",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
 export function apiDelete(url) {
   return apiRequest(url, { method: "DELETE" });
 }

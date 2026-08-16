@@ -5,7 +5,10 @@
       <div>请选择一个商品以查看详情</div>
     </div>
     <template v-else>
-      <div class="summary-name">{{ product.name }}</div>
+      <div class="summary-name-row">
+        <div class="summary-name">{{ product.name }}</div>
+        <button class="edit-btn" @click="$emit('edit')">✏️ 编辑商品</button>
+      </div>
       <div class="summary-sub">💰 ¥{{ product.price }} · 库存 {{ product.stock }}</div>
       <div class="summary-tags">
         <span class="status-tag">{{ product.live_status || "未上播" }}</span>
@@ -22,11 +25,12 @@
 </template>
 
 <script setup>
-// 阶段 4.1：当前商品基础信息展示（与旧页面文案一致）。
-// 编辑/删除等操作按钮留待后续阶段迁移。
+// 阶段 4.1 + 5.3a：当前商品基础信息展示 + 编辑入口（与旧页面文案一致）。
+// 删除等操作按钮留待后续阶段迁移。
 defineProps({
   product: { type: Object, default: null },
 });
+defineEmits(["edit"]);
 </script>
 
 <style scoped>
@@ -50,10 +54,29 @@ defineProps({
 .empty-icon {
   font-size: 40px;
 }
+.summary-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .summary-name {
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 4px;
+}
+.edit-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+.edit-btn:hover {
+  background: #f9fafb;
 }
 .summary-sub {
   color: #777;
