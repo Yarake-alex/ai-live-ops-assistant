@@ -4,25 +4,64 @@
       <h2>📁 直播素材库</h2>
       <SearchBox v-model="q" @search="loadDocs" />
     </div>
-    <MaterialList :docs="docs" :loading="loading" :error="error" :query="q" @view-chunks="previewFilename = $event" />
+    <MaterialList
+      :docs="docs"
+      :loading="loading"
+      :error="error"
+      :query="q"
+      :busy="busy"
+      @view-chunks="previewFilename = $event"
+      @delete-doc="onDeleteDoc"
+    />
     <MaterialChunksPreview :filename="previewFilename" @close="previewFilename = ''" />
-    <MaterialUpload @uploaded="loadDocs" />
+    <div class="materials-bottom">
+      <MaterialUpload @uploaded="loadDocs" />
+      <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
+    </div>
   </section>
 </template>
 
 <script setup>
-// 阶段 3.1 + 3.2 + 3.3：迁移「直播素材库」列表、搜索、上传确认与片段预览。
+// 阶段 3.1-3.4：迁移「直播素材库」列表、搜索、上传确认、片段预览与
+// 删除/清空/重新整理等轻量管理操作。
 // 接口与旧页面完全一致：GET /rag/documents（可选 ?q= 参数）、POST /rag/upload、
-// GET /rag/documents/{filename}/chunks，返回结构不变。
-// 删除等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
+// GET /rag/documents/{filename}/chunks、DELETE /rag/documents/{filename}、
+// DELETE /rag/documents、POST /rag/reindex，返回结构不变。
+// 资料问答等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
 import { ref, onMounted } from "vue";
-import { apiGet } from "../api/client";
+import { apiGet, apiRequest } from "../api/client";
 import SearchBox from "../components/SearchBox.vue";
 import MaterialList from "../components/MaterialList.vue";
 import MaterialUpload from "../components/MaterialUpload.vue";
 import MaterialChunksPreview from "../components/MaterialChunksPreview.vue";
+import MaterialManage from "../components/MaterialManage.vue";
 
 const previewFilename = ref("");
+const busy = ref(false);
+
+async function onDeleteDoc(filename) {
+  if (busy.value) return;
+  const ok = confirm(`确定要删除资料「${filename}」吗？删除后，该资料不会再参与资料检索。`);
+  if (!ok) return;
+  busy.value = true;
+  try {
+    await apiRequest(`/rag/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+    // 删除正在预览的文件时清空预览（与旧页面一致）
+    if (previewFilename.value === filename) previewFilename.value = "";
+    alert("资料已删除");
+    await loadDocs();
+  } catch (e) {
+    alert("删除失败，请稍后重试。");
+  } finally {
+    busy.value = false;
+  }
+}
+
+function onCleared() {
+  // 清空素材库后预览一并清空（与旧页面一致）
+  previewFilename.value = "";
+  loadDocs();
+}
 
 const q = ref("");
 const docs = ref([]);
@@ -67,5 +106,11 @@ onMounted(loadDocs);
   margin: 0;
   font-size: 17px;
   color: #333;
+}
+.materials-bottom {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 </style>

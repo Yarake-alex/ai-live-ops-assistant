@@ -13,7 +13,8 @@
           <div v-if="d.preview" class="muted item-preview">{{ d.preview }}…</div>
         </div>
         <div class="item-actions">
-          <button class="light-btn" @click="$emit('view-chunks', d.filename)">查看片段</button>
+          <button class="light-btn" :disabled="busy" @click="$emit('view-chunks', d.filename)">查看片段</button>
+          <button class="danger-btn" :disabled="busy" @click="$emit('delete-doc', d.filename)">删除</button>
         </div>
       </div>
     </div>
@@ -21,15 +22,16 @@
 </template>
 
 <script setup>
-// 阶段 3.1 + 3.3：列表展示（文件名 / 片段数 / 整理进度 / 更新时间 / 内容预览）+ 查看片段入口。
-// 删除等操作按钮留待后续阶段迁移，不在此实现。
+// 阶段 3.1 + 3.3 + 3.4：列表展示（文件名 / 片段数 / 整理进度 / 更新时间 / 内容预览）
+// + 查看片段入口 + 删除入口（删除确认与调用由父组件处理）。
 defineProps({
   docs: { type: Array, default: () => [] },
   loading: Boolean,
   error: String,
   query: String,
+  busy: Boolean,
 });
-defineEmits(["view-chunks"]);
+defineEmits(["view-chunks", "delete-doc"]);
 
 function vecInfo(d) {
   return d.vector_indexed != null
@@ -79,6 +81,8 @@ function updatedInfo(d) {
 }
 .item-actions {
   flex-shrink: 0;
+  display: flex;
+  gap: 6px;
 }
 .light-btn {
   font-size: 12px;
@@ -91,6 +95,20 @@ function updatedInfo(d) {
 }
 .light-btn:hover {
   background: #f9fafb;
+}
+.danger-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+}
+.light-btn:disabled,
+.danger-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .muted {
   color: #777;
