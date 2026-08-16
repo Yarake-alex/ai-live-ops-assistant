@@ -1435,7 +1435,6 @@
                                 <select id="filterLiveStatus" onchange="searchProducts()" style="flex:1;font-size:11px;padding:6px 4px;margin:2px 0;">
                                     <option value="">直播状态（全部）</option>
                                     <option value="未上播">未上播</option>
-                                    <option value="待上播">待上播</option>
                                     <option value="直播中">直播中</option>
                                     <option value="已下播">已下播</option>
                                 </select>
@@ -1630,7 +1629,6 @@
                         <input id="productPromotion" placeholder="优惠信息，例如：买二送一">
                         <select id="productLiveStatus">
                             <option value="未上播">未上播</option>
-                            <option value="待上播">待上播</option>
                             <option value="直播中">直播中</option>
                             <option value="已下播">已下播</option>
                         </select>
@@ -2439,7 +2437,8 @@ function _fillProductModalFromData(p) {
     _setModalField("productTargetAudience", p.target_audience || "");
     _setModalField("productPainPoints", p.pain_points || "");
     _setModalField("productPromotion", p.promotion || "");
-    _setModalField("productLiveStatus", p.live_status || "未上播");
+    // 历史数据可能存在「待上播」，回填时映射为「未上播」（下拉中已无该选项）
+    _setModalField("productLiveStatus", (p.live_status && p.live_status !== "待上播") ? p.live_status : "未上播");
     _setModalField("productNotes", p.notes || "");
     _setModalField("editProductId", p.id != null ? String(p.id) : "");
 }

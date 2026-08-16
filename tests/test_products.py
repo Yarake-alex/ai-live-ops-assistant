@@ -11,7 +11,7 @@ PRODUCT_DATA = {
     "pain_points": "皮肤干燥起皮",
     "promotion": "买二送一",
     "stock": 100,
-    "live_status": "待上播",
+    "live_status": "未上播",
     "notes": "测试商品",
 }
 
@@ -92,7 +92,7 @@ class TestProducts:
         assert data["target_audience"] == "干性皮肤人群"
         assert data["pain_points"] == "皮肤干燥起皮"
         assert data["promotion"] == "买二送一"
-        assert data["live_status"] == "待上播"
+        assert data["live_status"] == "未上播"
         assert "id" in data
 
     def test_create_product_defaults(self, client):
@@ -226,7 +226,7 @@ class TestProductSearch:
         """为搜索测试准备独立关键词的商品，测试结束后清理。"""
         ids = []
         for payload in [
-            {"name": "搜索测试-保湿面霜", "selling_points": "锁水屏障修护", "live_status": "待上播"},
+            {"name": "搜索测试-保湿面霜", "selling_points": "锁水屏障修护", "live_status": "未上播"},
             {"name": "搜索测试-洁面泡沫", "pain_points": "敏感肌泛红刺痛", "live_status": "直播中"},
             {"name": "搜索测试-防晒乳", "target_audience": "户外运动爱好者", "live_status": "已下播"},
         ]:
@@ -349,7 +349,7 @@ class TestProductIsolation:
 
     def test_import_only_creates_for_current_user(self, client):
         login(client)
-        csv_content = "name,price,stock,live_status\n隔离导入商品,59.9,10,待上播\n"
+        csv_content = "name,price,stock,live_status\n隔离导入商品,59.9,10,未上播\n"
         resp = _csv_upload(client, "iso_import.csv", csv_content)
         assert resp.status_code == 200
         assert resp.json()["created"] == 1
@@ -403,7 +403,7 @@ class TestProductCsv:
     def test_import_chinese_headers(self, client):
         csv_content = (
             "商品名称,价格,核心卖点,适用人群,用户痛点,优惠信息,库存,直播状态,备注\n"
-            "导入中文表头商品,29.9,清爽不油腻,油皮人群,出油脱妆,满100减20,66,待上播,中文表头测试\n"
+            "导入中文表头商品,29.9,清爽不油腻,油皮人群,出油脱妆,满100减20,66,未上播,中文表头测试\n"
         )
         resp = _csv_upload(client, "products_zh.csv", csv_content)
         assert resp.status_code == 200
@@ -415,7 +415,7 @@ class TestProductCsv:
         product = resp.json()["items"][0]
         assert product["price"] == 29.9
         assert product["stock"] == 66
-        assert product["live_status"] == "待上播"
+        assert product["live_status"] == "未上播"
 
     def test_import_skips_duplicate_names_in_batch(self, client):
         csv_content = (
@@ -582,7 +582,7 @@ class TestProductCsv:
                 "pain_points": "痛点A",
                 "promotion": "优惠A",
                 "stock": 33,
-                "live_status": "待上播",
+                "live_status": "未上播",
                 "notes": "备注A",
             },
         )
@@ -611,5 +611,5 @@ class TestProductCsv:
         assert product["pain_points"] == "痛点A"
         assert product["promotion"] == "优惠A"
         assert product["stock"] == 33
-        assert product["live_status"] == "待上播"
+        assert product["live_status"] == "未上播"
         assert product["notes"] == "备注A"
