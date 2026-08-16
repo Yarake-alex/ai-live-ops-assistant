@@ -1442,7 +1442,6 @@
                                 <button class="light" onclick="resetProductSearch()" style="font-size:11px;padding:4px 8px;">重置</button>
                             </div>
                             <div id="productList" style="max-height:52vh;overflow-y:auto;"></div>
-                            <div id="productPagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>
                         </div>
                     </div>
 
@@ -1821,7 +1820,6 @@
 // ─── Product state ───
 let selectedProductId = null;
 let selectedProductData = null;
-let _productSearchPage = 1;
 let _productSearchTimer = null;
 
 // ─── Cache for dashboard stats ───
@@ -2512,8 +2510,8 @@ function _buildProductSearchParams() {
     if (q) params.set("q", q);
     const ls = document.getElementById("filterLiveStatus").value;
     if (ls) params.set("live_status", ls);
-    params.set("page", String(_productSearchPage));
-    params.set("page_size", "10");
+    params.set("page", "1");
+    params.set("page_size", "100");
     return params;
 }
 
@@ -2521,7 +2519,6 @@ async function searchProducts() {
     // Debounce
     if (_productSearchTimer) clearTimeout(_productSearchTimer);
     _productSearchTimer = setTimeout(async () => {
-        _productSearchPage = 1;
         await _doProductSearch();
     }, 200);
 }
@@ -2531,7 +2528,6 @@ async function _doProductSearch() {
     try {
         const data = await request("/products/search?" + params.toString());
         _renderProductList(data.items);
-        _renderProductPagination(data);
         document.getElementById("productCountBadge").textContent = data.total;
     } catch (e) {
         // Error already handled by request()
@@ -2566,29 +2562,9 @@ function _updateProductHighlight() {
     });
 }
 
-function _renderProductPagination(data) {
-    const box = document.getElementById("productPagination");
-    if (data.total === 0) {
-        box.innerHTML = "";
-        return;
-    }
-    box.innerHTML = `
-        <button class="light" onclick="goToProductPage(${data.page - 1})" ${data.page <= 1 ? "disabled" : ""} style="font-size:12px;padding:4px 10px;">上一页</button>
-        <span>第 ${data.page} / ${data.pages} 页（共 ${data.total} 条）</span>
-        <button class="light" onclick="goToProductPage(${data.page + 1})" ${data.page >= data.pages ? "disabled" : ""} style="font-size:12px;padding:4px 10px;">下一页</button>
-    `;
-}
-
-function goToProductPage(p) {
-    if (p < 1) return;
-    _productSearchPage = p;
-    _doProductSearch();
-}
-
 function resetProductSearch() {
     document.getElementById("productSearchQ").value = "";
     document.getElementById("filterLiveStatus").value = "";
-    _productSearchPage = 1;
     _doProductSearch();
 }
 
