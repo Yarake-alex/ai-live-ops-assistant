@@ -1,8 +1,14 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
-// V5 最小骨架：仅组件化基础设施，不迁移业务页面。
-// 后续逐页迁移时再补充后端代理等配置（当前不改后端，不配代理）。
+// V5 迁移骨架：组件化基础设施 + 逐页迁移。
+// dev 代理只做转发，前端仍以原路径（/rag、/auth 等）请求，后端接口不变。
 export default defineConfig({
   plugins: [vue()],
+  server: {
+    proxy: {
+      "/rag": "http://127.0.0.1:8000",
+      "/auth": "http://127.0.0.1:8000",
+    },
+  },
 });
