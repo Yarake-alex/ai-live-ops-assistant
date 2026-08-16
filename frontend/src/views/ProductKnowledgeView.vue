@@ -1,5 +1,9 @@
 <template>
   <section class="product-view">
+    <div class="view-head">
+      <h2>商品资料</h2>
+    </div>
+    <ProductCsvTools @imported="selectorRef?.reload()" />
     <div class="product-grid">
       <ProductSelector ref="selectorRef" :selected-id="selectedId" @select="onSelect" @create="openCreateForm" />
       <ProductSummary :product="product" @edit="openEditForm" />
@@ -46,6 +50,7 @@ import ProductOperationSuggestions from "../components/ProductOperationSuggestio
 import ProductLiveScript from "../components/ProductLiveScript.vue";
 import ProductLiveReview from "../components/ProductLiveReview.vue";
 import ProductForm from "../components/ProductForm.vue";
+import ProductCsvTools from "../components/ProductCsvTools.vue";
 
 const selectedId = ref(null);
 const product = ref(null);
@@ -89,6 +94,18 @@ function onProductSaved(saved) {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px 20px;
+}
+.view-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.view-head h2 {
+  margin: 0;
+  font-size: 18px;
 }
 .product-grid {
   display: grid;
