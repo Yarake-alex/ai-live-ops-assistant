@@ -7,7 +7,13 @@
       <button :class="{ active: view === 'products' }" @click="view = 'products'">商品资料</button>
       <button :class="{ active: view === 'materials' }" @click="view = 'materials'">直播素材库</button>
       <button :class="{ active: view === 'comments' }" @click="view = 'comments'">评论助手</button>
-      <button :class="{ active: view === 'users' }" @click="view = 'users'">用户管理</button>
+      <button
+        v-if="isAdmin"
+        :class="{ active: view === 'users' }"
+        @click="view = 'users'"
+      >
+        用户管理
+      </button>
       <button :class="{ active: view === 'home' }" @click="view = 'home'">骨架页</button>
     </nav>
     <OperationsDashboardView v-if="view === 'dashboard'" @navigate="view = $event" />
@@ -22,7 +28,7 @@
 <script setup>
 // 阶段 5.6：会话状态门控——加载中 / 登录页 / 主应用。
 // 登录成功或 401 后会话状态自动切换；轻量视图切换，不引入 vue-router。
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { session, loadSession } from "./state/session";
 import AppShell from "./components/AppShell.vue";
 import LoginView from "./views/LoginView.vue";
@@ -34,6 +40,9 @@ import OperationsDashboardView from "./views/OperationsDashboardView.vue";
 import UserManagementView from "./views/UserManagementView.vue";
 
 const view = ref("dashboard");
+
+// 仅管理员显示「用户管理」入口（与旧页面 adminNav 行为一致）
+const isAdmin = computed(() => session.user && session.user.role === "admin");
 
 onMounted(loadSession);
 </script>
