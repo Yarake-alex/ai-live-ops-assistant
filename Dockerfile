@@ -1,3 +1,11 @@
+# ── Frontend build (Vue3 + Vite) — 产物供运行镜像作为默认演示入口 ──
+FROM node:20-alpine AS frontend-build
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -17,6 +25,8 @@ RUN pip install --no-cache-dir -r requirements-vector.txt
 # ── App code ──
 COPY app ./app
 COPY static ./static
+# V5：Vue3 前端构建产物（默认演示入口）；旧 static/index.html 保留为 /legacy 回退入口
+COPY --from=frontend-build /build/dist ./frontend/dist
 
 # ── Defaults for Docker deployment ──
 # EMBEDDING_PROVIDER=openai_compatible is the recommended Docker default

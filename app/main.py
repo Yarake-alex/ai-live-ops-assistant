@@ -4,6 +4,7 @@ import hmac
 import json
 import base64
 import logging
+import os
 from collections import Counter
 from datetime import datetime
 from typing import List, Optional
@@ -138,6 +139,14 @@ async def add_security_headers(request: Request, call_next):
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ─── V5 Vue3 前端构建产物（默认演示入口） ───
+# frontend/dist 由 npm run build 生成（不提交 Git）。
+# dist 存在时 "/" 返回 Vue3 页面，dist 未构建时回退旧 static/index.html。
+_VUE_DIST_DIR = "frontend/dist"
+_VUE_DIST_ASSETS = os.path.join(_VUE_DIST_DIR, "assets")
+if os.path.isdir(_VUE_DIST_DIR) and os.path.isdir(_VUE_DIST_ASSETS):
+    app.mount("/assets", StaticFiles(directory=_VUE_DIST_ASSETS), name="vue-assets")
 
 
 # ─── Session token helpers (stdlib HMAC, no extra deps) ───
@@ -352,6 +361,15 @@ def change_password(
 
 @app.get("/")
 def index():
+    # V5：Vue3 前端为默认演示入口；dist 未构建时回退旧 static/index.html
+    if os.path.isdir(_VUE_DIST_DIR):
+        return FileResponse(os.path.join(_VUE_DIST_DIR, "index.html"))
+    return FileResponse("static/index.html")
+
+
+@app.get("/legacy")
+def legacy_index():
+    """旧 static/index.html 单页前端的回退访问入口。"""
     return FileResponse("static/index.html")
 
 

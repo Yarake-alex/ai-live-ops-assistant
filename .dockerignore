@@ -26,3 +26,7 @@ shangchuan
 Thumbs.db
 .mypy_cache
 .ruff_cache
+
+# Frontend — 依赖与构建产物在镜像内重新生成
+frontend/node_modules
+frontend/dist

@@ -6,9 +6,9 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 
 项目同时保留了通用「直播素材库」（独立于商品维度的资料问答）与安全加固、数据库工程化、pytest 自动化测试、Docker 部署等工程能力，适合作为 AI 应用工程师方向的综合展示项目。旧版 CRM（客户管理、跟进分析、待跟进、Agent 跟进助手）已在 `chore: remove legacy CRM features` 系列提交中下线，仅保留 Git 历史。
 
-## V5：前端 Vue3 组件化重构（迁移完成，入口切换待定）
+## V5：前端 Vue3 组件化重构（迁移完成，已切换为正式演示入口）
 
-> 说明：当前版本仍是直播运营 V4（V1 直播运营 MVP → V2 资料检索增强 + 开播准备 → V3 问题洞察 + 本地快答 → V4 问题驱动的资料补齐与话术优化）。V5 的**功能迁移已全部完成**：旧 `static/index.html` 的全部能力均已在 Vue3 前端（`frontend/`）覆盖；**正式演示入口是否切换为 Vue3 前端，留待真实数据走查后决定**。
+> 说明：当前版本仍是直播运营 V4（V1 直播运营 MVP → V2 资料检索增强 + 开播准备 → V3 问题洞察 + 本地快答 → V4 问题驱动的资料补齐与话术优化）。V5 的**功能迁移已全部完成**：旧 `static/index.html` 的全部能力均已在 Vue3 前端（`frontend/`）覆盖；**Vue3 前端已切换为正式演示入口**（`/`），旧 `static/index.html` 保留为回退入口（`/legacy` 与 `/static/index.html`）。
 
 ### 为什么要做
 
@@ -53,10 +53,11 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 - 本地烟测通过：后端 uvicorn + Vite dev 代理链路（页面服务、`/auth`、`/rag`、`/products`、`/live-scripts`、`/live-reviews`、`/comment-replies`、`/live-ops`、`/dashboard` 转发、未登录 401 处理路径、登录失败提示链路）。
 - 真实数据的端到端联调受本地登录配置限制（本机 `.env` 密码非演示默认值，按约束不读取 `.env`）。
 
-### 入口切换决策（待定）
+### 入口切换决策（已切换）
 
-- **旧 `static/index.html` 当前继续保留，暂不删除、不降级**，仍为正式演示入口，V4 演示流程不受影响。
-- 正式切换 Vue3 为演示入口前，建议在可登录环境完成一次真实数据完整走查（登录 → 各页面操作 → 退出），确认无回归后再切换；切换后旧单页可保留 Git 历史下线。
+- **默认演示入口为 Vue3 前端**（`/`，服务 `frontend/dist` 构建产物）。`frontend/dist` 不提交 Git，由 `npm run build` 生成；Docker 镜像在构建阶段（node 多阶段构建）自动生成。
+- **旧 `static/index.html` 继续保留，不删除、不降级**，回退入口为 `/legacy` 与 `/static/index.html`；`frontend/dist` 未构建时 `/` 自动回退旧页面。
+- 已完成本地入口与关键 API 链路烟测；真实数据的登录后端到端走查仍受本机登录配置限制（本机 `.env` 密码非演示默认值，按约束不读取 `.env`），建议在可登录环境补一次完整走查。
 
 ## 当前 MVP 功能（直播运营）
 
@@ -88,7 +89,7 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 - **文档解析**：pypdf
 - **文本检索**：scikit-learn TF-IDF（基础降级）+ Embedding + 本地 ChromaDB 语义索引
 - **LLM 接口**：OpenAI-compatible API（支持 DeepSeek / 通义 / 智谱等兼容接口）
-- **前端**：HTML、CSS、JavaScript
+- **前端**：Vue3 + Vite（V5 正式演示入口）；旧版 HTML/CSS/JavaScript 单页保留为回退入口
 - **测试**：pytest、FastAPI TestClient
 - **部署**：Docker、docker-compose
 
@@ -108,8 +109,13 @@ app/
 ├── vector_store.py     # 本地 Chroma 向量索引（商品资料与通用素材双 collection）
 └── question_insights.py # 问题分类、记录、本地快答、洞察统计、运营建议
 
+frontend/               # Vue3 + Vite 前端（V5 正式演示入口，npm run build 输出到 frontend/dist）
+├── src/                # 组件与视图源码
+├── index.html
+└── vite.config.js
+
 static/
-└── index.html          # 前端单页应用
+└── index.html          # 旧单页前端（回退入口 /legacy）
 
 tests/
 ├── conftest.py         # pytest 测试配置与临时数据库
@@ -166,13 +172,24 @@ Linux / macOS：
 cp .env.example .env
 ```
 
+构建 Vue3 前端（默认演示入口，需 Node.js 20+）：
+
+```bash
+cd frontend
+npm ci
+npm run build
+cd ..
+```
+
+未构建 `frontend/dist` 时，`/` 自动回退旧 `static/index.html`。
+
 启动项目：
 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-启动后访问：
+启动后访问（默认演示入口为 Vue3 前端；旧版单页前端回退入口为 `/legacy` 或 `/static/index.html`）：
 
 ```text
 http://127.0.0.1:8000
@@ -333,6 +350,8 @@ mkdir -p data
 docker compose up -d --build
 ```
 
+> 镜像构建包含 Vue3 前端多阶段构建（`node:20-alpine` 执行 `npm ci && npm run build`），运行镜像默认以 Vue3 前端为演示入口（`/`），旧页面回退入口为 `/legacy`。
+
 如需使用 PostgreSQL 版本：
 
 ```bash
@@ -477,7 +496,8 @@ docker compose down
 
 | 端点 | 方法 | 说明 | 需登录 |
 |---|---|---|---|
-| `/` | GET | 前端页面 | 否 |
+| `/` | GET | Vue3 前端页面（默认演示入口；`frontend/dist` 未构建时回退旧页面） | 否 |
+| `/legacy` | GET | 旧 `static/index.html` 单页前端（回退入口，`/static/index.html` 亦可直接访问） | 否 |
 | `/health` | GET | 健康检查 | 否 |
 | `/auth/login` | POST | 登录（获取 Cookie） | 否 |
 | `/auth/users` | POST | 管理员创建普通用户 | 是 |

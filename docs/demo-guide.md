@@ -21,6 +21,8 @@
 
    看到 `Application startup complete` 即启动成功。
 
+   > 演示入口说明：默认 `http://127.0.0.1:8000` 为 Vue3 前端（正式演示入口）；旧版单页前端保留为回退入口 `http://127.0.0.1:8000/legacy`（功能一致，备用）。若 Vue3 页面未正常显示，请让技术人员在 `frontend/` 目录执行一次 `npm ci && npm run build` 后重启。
+
 3. 如果这是第一次演示（数据库是空的），请先按下面「附录 A」准备演示数据，约 2 分钟。
 4. 若需演示「语义检索 + 资料完整度」环节，请让技术人员确认 `.env` 已配置 Embedding（OpenAI-compatible API，例如 `text-embedding-v4`；配置方法见 README「Embedding / 向量检索配置」，Key 使用占位符填写，勿写真实 Key）。未配置时，商品问答自动使用基础资料检索，其余环节不受影响。
 
