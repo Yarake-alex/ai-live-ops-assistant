@@ -140,6 +140,48 @@ class TestProductKnowledge:
         assert "补水保湿" in prompt                  # 知识片段内容
         assert "补水效果怎么样？" in prompt          # 用户问题
 
+    def test_ask_prompt_requires_natural_language_output(self, client, kb_product_id, monkeypatch):
+        """prompt 必须要求把资料整理成自然语言，不得原样输出 Markdown 表格。"""
+        from fastapi.routing import APIRoute
+
+        resp = client.post(
+            f"/products/{kb_product_id}/knowledge/upload",
+            files={
+                "file": (
+                    "faq.md",
+                    "| 用户问题 | 标准回答 |\n|---|---|\n| 赠品能换吗？ | 亲，赠品以页面展示为准 |".encode("utf-8"),
+                    "text/markdown",
+                )
+            },
+        )
+        assert resp.status_code == 200
+
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/products/{product_id}/knowledge/ask"
+        )
+        captured = {}
+
+        def fake_llm(prompt, *args, **kwargs):
+            captured["prompt"] = prompt
+            return "赠品以页面展示为准。"
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", fake_llm)
+
+        resp = client.post(
+            f"/products/{kb_product_id}/knowledge/ask",
+            json={"question": "赠品能换吗？"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # 返回结构不变：answer + sources
+        assert "answer" in data
+        assert "sources" in data
+        prompt = captured["prompt"]
+        assert "不要原样复制 Markdown 表格" in prompt
+        assert "分点说明" in prompt
+        assert "赠品能换吗？" in prompt           # 表格内容仍作为检索上下文传入
+
     def test_other_user_cannot_access(self, client, kb_product_id):
         other = _create_second_user(client, "kb-other-user")
         assert other.get(f"/products/{kb_product_id}/knowledge/documents").status_code == 404

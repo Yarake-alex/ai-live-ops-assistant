@@ -301,3 +301,58 @@ class TestRagFileReindexVector:
         user2_docs = user2.get("/rag/documents").json()
         u2_item = [d for d in user2_docs if d["filename"] == "user2_rix.txt"][0]
         assert u2_item["vector_indexed"] == u2_item["chunks"]
+
+
+# ═══════════════════════════════════════════════════════════════
+# 输出格式约束：资料中的 Markdown 表格应改写为自然语言
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestRagPromptOutputFormat:
+    """build_rag_prompt 必须包含输出格式约束（Markdown 表格转自然语言）。"""
+
+    def test_prompt_requires_natural_language_no_markdown_tables(self):
+        from app.models import DocumentChunk
+        from app.rag import build_rag_prompt
+
+        chunks = [
+            DocumentChunk(
+                filename="faq.md",
+                chunk_index=1,
+                content="| 用户问题 | 标准回答 |\n|---|---|\n| 赠品能换吗？ | 亲，赠品以页面展示为准 |",
+            )
+        ]
+        prompt = build_rag_prompt("赠品能换吗？", chunks)
+        assert "不要原样复制 Markdown 表格" in prompt
+        assert "分点说明" in prompt
+        assert "赠品能换吗？" in prompt  # 表格内容仍作为上下文传入
+
+    def test_ask_endpoint_prompt_includes_format_rules(self, client, monkeypatch):
+        """资料含 Markdown 表格时，/rag/ask 传给模型的 prompt 明确要求改写为自然语言。"""
+        from fastapi.routing import APIRoute
+
+        _upload(
+            client,
+            "faq.md",
+            "| 用户问题 | 标准回答 |\n|---|---|\n| 赠品能换吗？ | 亲，赠品以页面展示为准 |".encode("utf-8"),
+        )
+        route = next(
+            r for r in client.app.routes
+            if isinstance(r, APIRoute) and r.path == "/rag/ask"
+        )
+        captured = {}
+
+        def fake_llm(prompt, *args, **kwargs):
+            captured["prompt"] = prompt
+            return "赠品以页面展示为准。"
+
+        monkeypatch.setitem(route.endpoint.__globals__, "call_llm", fake_llm)
+
+        resp = client.post("/rag/ask", json={"question": "赠品能换吗？"})
+        assert resp.status_code == 200
+        data = resp.json()
+        # 返回结构不变：answer + sources
+        assert "answer" in data
+        assert "sources" in data
+        assert "不要原样复制 Markdown 表格" in captured["prompt"]
+        assert "分点说明" in captured["prompt"]
