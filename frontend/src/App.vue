@@ -5,13 +5,15 @@
       <button :class="{ active: view === 'products' }" @click="view = 'products'">商品资料</button>
       <button :class="{ active: view === 'materials' }" @click="view = 'materials'">直播素材库</button>
       <button :class="{ active: view === 'comments' }" @click="view = 'comments'">评论助手</button>
+      <button :class="{ active: view === 'users' }" @click="view = 'users'">用户管理</button>
       <button :class="{ active: view === 'home' }" @click="view = 'home'">骨架页</button>
     </nav>
     <OperationsDashboardView v-if="view === 'dashboard'" @navigate="view = $event" />
     <HomeView v-else-if="view === 'home'" />
     <MaterialsView v-else-if="view === 'materials'" />
     <ProductKnowledgeView v-else-if="view === 'products'" />
-    <CommentAssistantView v-else />
+    <CommentAssistantView v-else-if="view === 'comments'" />
+    <UserManagementView v-else />
   </AppShell>
 </template>
 
@@ -25,6 +27,7 @@ import MaterialsView from "./views/MaterialsView.vue";
 import ProductKnowledgeView from "./views/ProductKnowledgeView.vue";
 import CommentAssistantView from "./views/CommentAssistantView.vue";
 import OperationsDashboardView from "./views/OperationsDashboardView.vue";
+import UserManagementView from "./views/UserManagementView.vue";
 
 const view = ref("dashboard");
 </script>

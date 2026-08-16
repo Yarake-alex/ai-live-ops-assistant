@@ -70,6 +70,13 @@ export function apiPut(url, body) {
   });
 }
 
+export function apiPatch(url, body) {
+  return apiRequest(url, {
+    method: "PATCH",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
 export function apiDelete(url) {
   return apiRequest(url, { method: "DELETE" });
 }
