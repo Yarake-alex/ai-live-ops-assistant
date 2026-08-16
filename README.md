@@ -8,8 +8,8 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 
 ## 当前 MVP 功能（直播运营）
 
-- **商品资料**：商品新增、列表、详情、修改、删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持搜索、筛选、分页与 CSV 导入导出。
-- **商品资料文档（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持文档列表、查看片段、重建资料索引、删除；问答优先语义检索（真实 Embedding + 本地 Chroma，独立 collection `product_knowledge_chunks`），Embedding 或索引不可用时自动降级商品维度 TF-IDF；上传、删除、重传、重建会同步维护本地索引；回答附带参考片段来源。
+- **商品资料**：商品新增、列表、详情、修改、删除，覆盖价格、核心卖点、适用人群、用户痛点、优惠信息、库存、直播状态等字段，支持搜索、筛选、CSV 导入导出；前端商品选择列表使用内部滚动，避免长列表撑开页面。
+- **商品资料文档（RAG）**：按商品上传 PDF/TXT/MD/CSV 资料，支持多文件选择、上传前确认、同批重复文件拦截、已有同名文件覆盖提醒、文档列表、原地查看片段、重新整理资料与删除；问答优先语义检索（真实 Embedding + 本地 Chroma，独立 collection `product_knowledge_chunks`），Embedding 不可用时自动降级商品维度 TF-IDF；上传、删除、重传、重新整理会同步维护本地检索数据；回答附带参考片段来源。
 - **资料完整度评分**：`GET /products/{id}/readiness` 实时计算商品资料完整度（12 项固定权重规则，总分 100，不落库、不调用大模型），返回 `score`、`missing_items`、`suggestions`；风险边界（13）、售后规则（12）、FAQ（10）、资料文档（10）等维度权重高于基础字段（各 5-10 分），商品资料页展示百分比、缺失项与下一步建议，运营工作台提供「开播准备」轻量入口。
 - **问题记录与本地快答**：商品问答与评论助手输入沉淀 `product_question_logs`（只记问题不记回答内容，best-effort 写入不影响主流程）；价格/库存/优惠/适用人群/卖点等低风险问题按商品字段**本地规则直答**（不调 LLM、不走向量），字段为空不强答；售后/风险等问题一律走商品资料检索。
 - **问题洞察**：`GET /products/{id}/question-insights` 返回高频问题 Top5、9 类分类统计、最近问题、未覆盖问题；前端商品资料页「问题洞察」卡片轻量展示，帮助运营发现重复问题与资料缺口。
@@ -21,9 +21,9 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 
 ## 辅助能力与工程能力
 
-- **直播素材库**（通用资料问答，辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，基于资料检索生成回答（独立 collection `rag_chunks`）；与商品资料文档相互独立，商品问答只检索当前商品资料，不混检、不共用资料池。
+- **直播素材库**（通用资料问答，辅助能力）：支持上传 PDF、TXT、MD、CSV 资料，多文件上传前确认、同名覆盖提醒、文件名搜索、原地查看片段、重新整理素材与清空素材库；基于资料检索生成回答（独立 collection `rag_chunks`），参考资料片段默认折叠展示；与商品资料文档相互独立，商品问答只检索当前商品资料，不混检、不共用资料池。
 - **安全加固**：支持 CORS 白名单、访问密码登录页 + HttpOnly Cookie 登录态、上传文件大小限制。
-- **测试体系**：使用 pytest + FastAPI TestClient 覆盖核心接口、鉴权逻辑和上传限制。
+- **测试体系**：使用 pytest + FastAPI TestClient 覆盖核心接口、鉴权逻辑、上传限制、检索降级、问题洞察和运营建议；最近全量测试为 `389 passed, 1 warning`。
 - **Docker 部署**：支持通过 Dockerfile 和 docker-compose.yml 在云服务器上部署运行。
 
 ## 技术栈
@@ -44,7 +44,7 @@ AI 直播运营助手 MVP 是一个面向直播电商运营场景的 AI 演示�
 
 ```text
 app/
-├── main.py             # FastAPI 接口入口（含完整度评分、问题洞察）
+├── main.py             # FastAPI 接口入口（含完整度评分、问题洞察、运营建议）
 ├── config.py           # 环境变量配置
 ├── models.py           # SQLAlchemy 数据库模型
 ├── schemas.py          # Pydantic 请求/响应模型
@@ -54,7 +54,7 @@ app/
 ├── rag.py              # 文档解析、文本分块、检索与降级
 ├── embeddings.py       # Embedding 调用封装（OpenAI-compatible）
 ├── vector_store.py     # 本地 Chroma 向量索引（商品资料与通用素材双 collection）
-└── question_insights.py # 问题分类、记录、本地快答、洞察统计
+└── question_insights.py # 问题分类、记录、本地快答、洞察统计、运营建议
 
 static/
 └── index.html          # 前端单页应用
@@ -67,7 +67,8 @@ docs/
 ├── demo-guide.md       # 演示操作指南
 ├── mvp-scope.md        # MVP 范围说明
 ├── v2-design.md        # V2 设计说明（资料检索增强 + 开播准备）
-└── v3-design.md        # V3 设计说明（问题洞察 + 本地快答）
+├── v3-design.md        # V3 设计说明（问题洞察 + 本地快答）
+└── v4-design.md        # V4 设计说明（问题驱动的资料补齐与话术优化）
 
 Dockerfile           # Docker 镜像构建文件
 docker-compose.yml   # Docker Compose 启动配置
@@ -432,14 +433,14 @@ docker compose down
 | `/auth/logout` | POST | 退出登录 | 否 |
 | `/auth/me` | GET | 当前登录状态 | 否 |
 | `/products` | GET / POST | 商品列表 / 新增商品 | 是 |
-| `/products/search` | GET | 商品搜索、筛选、分页 | 是 |
+| `/products/search` | GET | 商品搜索、筛选、分页查询（前端选择列表默认拉取更多数据并内部滚动） | 是 |
 | `/products/import` | POST | 商品 CSV 导入（支持中英文表头） | 是 |
 | `/products/export` | GET | 商品 CSV 导出（仅当前用户） | 是 |
 | `/products/{id}` | GET / PUT / DELETE | 商品详情 / 修改 / 删除 | 是 |
 | `/products/{id}/knowledge/upload` | POST | 上传商品资料文档（PDF/TXT/MD/CSV） | 是 |
 | `/products/{id}/knowledge/documents` | GET | 商品资料文档列表 | 是 |
 | `/products/{id}/knowledge/documents/{filename}/chunks` | GET | 查看文档片段 | 是 |
-| `/products/{id}/knowledge/documents/{filename}/reindex` | POST | 重建该文件索引 | 是 |
+| `/products/{id}/knowledge/documents/{filename}/reindex` | POST | 重新整理该文件的检索数据 | 是 |
 | `/products/{id}/knowledge/documents/{filename}` | DELETE | 删除商品资料文档 | 是 |
 | `/products/{id}/knowledge/ask` | POST | 基于商品资料问答（RAG） | 是 |
 | `/products/{id}/readiness` | GET | 商品资料完整度与开播准备（实时计算） | 是 |
@@ -452,8 +453,10 @@ docker compose down
 | `/dashboard/stats` | GET | 旧版统计（前端回退兼容） | 是 |
 | `/rag/upload` | POST | 上传通用素材文档 | 是 |
 | `/rag/documents` | GET | 通用素材文档列表 | 是 |
+| `/rag/documents/{filename}/chunks` | GET | 查看通用素材文档片段 | 是 |
 | `/rag/documents/{filename}` | DELETE | 删除指定文档 | 是 |
 | `/rag/documents` | DELETE | 清空直播素材库 | 是 |
+| `/rag/reindex` | POST | 重新整理直播素材库检索数据 | 是 |
 | `/rag/ask` | POST | 基于直播素材库问答 | 是 |
 
 登录方式：打开页面后输入访问密码，登录成功后通过 HttpOnly Cookie 自动携带登录态。
@@ -515,8 +518,8 @@ python -m pytest
 测试覆盖内容：
 
 - 商品新增、列表查询、搜索、CSV 导入导出；
-- 商品资料文档上传、片段查看、重建索引、删除与 RAG 问答；
-- 商品资料向量检索、TF-IDF 降级、删除/重传索引清理、用户/商品隔离；
+- 商品资料文档上传、片段查看、重新整理、删除与 RAG 问答；
+- 商品资料向量检索、TF-IDF 降级、删除/重传检索数据清理、空片段过滤、Embedding 分批请求、用户/商品隔离；
 - 商品资料完整度评分（12 项固定权重规则、缺失项与建议）；
 - 问题分类规则（9 类关键词、risk 优先）与问题日志写入（best-effort）；
 - 本地快答（价格/库存/优惠/人群/卖点，零 LLM/向量调用证明）与高风险不快答；
@@ -535,6 +538,7 @@ python -m pytest
 - 上传超大文件返回 413；
 - 上传小 TXT 文件成功；
 - RAG 问答、直播运营接口等受登录保护。
+- 最近全量测试结果：`389 passed, 1 warning`（既有 pytest fixture 风格弃用提示）。
 
 测试说明：
 
