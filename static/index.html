@@ -1430,7 +1430,7 @@
                                 <span style="font-weight:700;font-size:15px;">商品列表</span>
                                 <span class="badge" id="productCountBadge">0</span>
                             </div>
-                            <input id="productSearchQ" placeholder="搜索商品名称、卖点、人群、痛点、备注…" oninput="searchProducts()">
+                            <input id="productSearchQ" placeholder="搜索商品名称、卖点、人群、痛点、备注…" oninput="searchProducts()" onkeydown="if(event.key==='Enter')searchProductsNow()">
                             <div style="display:flex;gap:6px;margin-bottom:8px;">
                                 <select id="filterLiveStatus" onchange="searchProducts()" style="flex:1;font-size:11px;padding:6px 4px;margin:2px 0;">
                                     <option value="">直播状态（全部）</option>
@@ -1726,13 +1726,12 @@
                         <div class="card">
                             <div class="card-header">
                                 <h2>已上传素材</h2>
-                                <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-                                    <input id="ragSearch" type="text" placeholder="按文件名搜索..." style="flex:1;min-width:140px;"
-                                           onkeydown="if(event.key==='Enter')searchRagDocuments()">
-                                    <button onclick="searchRagDocuments()" style="flex-shrink:0;">搜索</button>
-                                    <button onclick="document.getElementById('ragSearch').value='';loadRagDocuments();"
-                                            style="flex-shrink:0;">清除</button>
-                                    <button class="outline" onclick="reindexRag()" title="重新整理全部直播素材，一般在资料问答异常时使用" style="flex-shrink:0;">🔄 重新整理素材</button>
+                                <div style="margin-top:6px;position:relative;flex:1;min-width:200px;">
+                                    <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;">🔍</span>
+                                    <input id="ragSearch" type="text" placeholder="按文件名搜索..." style="width:100%;padding-left:32px;padding-right:28px;"
+                                           oninput="onRagSearchInput(event)" onkeydown="if(event.key==='Enter')searchRagDocumentsNow()">
+                                    <button id="ragSearchClearBtn" onclick="clearRagSearch()" title="清空搜索"
+                                            style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:15px;color:var(--text-secondary);display:none;">×</button>
                                 </div>
                             </div>
                             <div class="muted" style="margin-bottom:8px;">支持 PDF、TXT、MD、CSV，可一次选择多个文件。</div>
@@ -1750,8 +1749,11 @@
 
                             <!-- 上传/清理操作区（列表底部） -->
                             <input id="ragFile" type="file" accept=".pdf,.txt,.md,.csv" multiple onchange="handleRagFileSelection(event)" style="display:none;">
-                            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-                                <button class="success" onclick="uploadRagFile()">上传素材</button>
+                            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <button class="success" onclick="uploadRagFile()">上传素材</button>
+                                    <button class="outline" onclick="reindexRag()" title="重新整理全部直播素材，一般在资料问答异常时使用">🔄 重新整理素材</button>
+                                </div>
                                 <button class="danger" onclick="clearRagDocuments()">清空全部</button>
                             </div>
                             <div id="ragFileStatus" class="muted" style="font-size:12px;margin-top:6px;">尚未选择素材文件</div>
@@ -2279,9 +2281,30 @@ async function loadRagDocuments() {
     updateDashboardStats();
 }
 
-function searchRagDocuments() {
-    const q = document.getElementById("ragSearch").value.trim();
-    if (!q) { loadRagDocuments(); return; }
+// 搜索：输入 400ms 防抖、Enter 立即搜索、× 清空并显示全部
+let _ragSearchTimer = null;
+
+function onRagSearchInput(event) {
+    const q = event.target.value;
+    const clearBtn = document.getElementById("ragSearchClearBtn");
+    if (clearBtn) clearBtn.style.display = q ? "block" : "none";
+    if (_ragSearchTimer) clearTimeout(_ragSearchTimer);
+    _ragSearchTimer = setTimeout(() => {
+        loadRagDocuments();
+    }, 400);
+}
+
+function searchRagDocumentsNow() {
+    if (_ragSearchTimer) clearTimeout(_ragSearchTimer);
+    loadRagDocuments();
+}
+
+function clearRagSearch() {
+    const input = document.getElementById("ragSearch");
+    input.value = "";
+    const clearBtn = document.getElementById("ragSearchClearBtn");
+    if (clearBtn) clearBtn.style.display = "none";
+    if (_ragSearchTimer) clearTimeout(_ragSearchTimer);
     loadRagDocuments();
 }
 
@@ -2568,7 +2591,12 @@ async function searchProducts() {
     if (_productSearchTimer) clearTimeout(_productSearchTimer);
     _productSearchTimer = setTimeout(async () => {
         await _doProductSearch();
-    }, 200);
+    }, 400);
+}
+
+async function searchProductsNow() {
+    if (_productSearchTimer) clearTimeout(_productSearchTimer);
+    await _doProductSearch();
 }
 
 async function _doProductSearch() {
