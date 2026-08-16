@@ -1643,6 +1643,21 @@
                 </div>
             </div>
 
+                <!-- ── Upload Confirm Modal（商品资料 / 直播素材库共用） ── -->
+                <div id="uploadConfirmModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)cancelUploadConfirm()">
+                    <div class="modal-box" style="max-width:520px;max-height:85vh;overflow-y:auto;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <h3 id="uploadConfirmTitle" style="margin:0;">确认上传</h3>
+                            <button class="light" onclick="cancelUploadConfirm()" style="padding:4px 10px;">✕</button>
+                        </div>
+                        <div id="uploadConfirmBody"></div>
+                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+                            <button class="light" onclick="cancelUploadConfirm()">取消</button>
+                            <button id="uploadConfirmBtn" onclick="confirmUploadNow()">确认上传</button>
+                        </div>
+                    </div>
+                </div>
+
             <!-- ════════════════════════════════════
                  评论助手 Page（直播评论自动回复模拟器）
                  ════════════════════════════════════ -->
@@ -1715,7 +1730,7 @@
                                             style="flex-shrink:0;">清除</button>
                                 </div>
                             </div>
-                            <input id="ragFile" type="file" accept=".pdf,.txt,.md,.csv" multiple>
+                            <input id="ragFile" type="file" accept=".pdf,.txt,.md,.csv" multiple onchange="handleRagFileSelection(event)">
                             <div class="btn-group">
                                 <button class="success" onclick="uploadRagFile()">上传资料</button>
                                 <button class="danger" onclick="clearRagDocuments()">清空全部</button>
@@ -2100,30 +2115,44 @@ async function request(url, options = {}) {
 }
 
 
+function handleRagFileSelection(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    // 选择文件后弹出确认窗口，确认后才真正上传
+    openUploadConfirm("rag", files);
+}
+
 async function uploadRagFile() {
     const fileInput = document.getElementById("ragFile");
     const files = Array.from(fileInput.files);
+    if (!files.length) {
+        fileInput.click();
+        return;
+    }
+    // 已选择文件 → 弹出确认窗口
+    openUploadConfirm("rag", files);
+}
 
+async function uploadRagFiles(fileList) {
+    const files = Array.from(fileList || []);
     if (!files.length) {
         alert("请先选择资料文件");
         return;
     }
 
+    const failed = [];
     let successCount = 0;
-    let failedMessages = [];
 
+    // 逐个文件上传：单个失败不影响后续文件
     for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
-
-        const fetchOptions = {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-        };
-
         try {
-            const res = await fetch("/rag/upload", fetchOptions);
+            const res = await fetch("/rag/upload", {
+                method: "POST",
+                body: formData,
+                credentials: "include",
+            });
 
             if (res.status === 401) {
                 showLogin("登录已失效，请重新登录");
@@ -2132,27 +2161,33 @@ async function uploadRagFile() {
 
             if (!res.ok) {
                 const err = await res.json();
-                failedMessages.push(`${file.name}：${err.detail || "上传失败"}`);
+                failed.push(file.name);
+                console.warn("上传失败:", file.name, err.detail || res.status);
                 continue;
             }
 
             await res.json();
             successCount += 1;
         } catch (error) {
-            failedMessages.push(`${file.name}：网络或服务异常`);
+            failed.push(file.name);
+            console.warn("上传失败(网络):", file.name, error);
         }
     }
 
-    fileInput.value = "";
+    document.getElementById("ragFile").value = "";
+    // 覆盖了正在预览的文件时清空预览
+    if (files.some(f => f.name === ragPreviewFilename)) {
+        hideRagChunkPreview();
+    }
     await loadRagDocuments();
 
-    let message = `上传完成：成功 ${successCount} 个，失败 ${failedMessages.length} 个。`;
-
-    if (failedMessages.length) {
-        message += "\n\n失败文件：\n" + failedMessages.join("\n");
+    if (successCount === files.length) {
+        alert(`上传完成：${successCount} 个文件已加入素材库`);
+    } else if (successCount > 0) {
+        alert(`上传完成：${successCount} 个成功，${failed.length} 个失败。失败文件：${failed.join("、")}`);
+    } else {
+        alert(`上传失败：${failed.length} 个文件未能上传。失败文件：${failed.join("、")}`);
     }
-
-    alert(message);
 }
 
 async function loadRagDocuments() {
@@ -2191,11 +2226,13 @@ async function loadRagDocuments() {
             ? `<div class="muted" style="font-size:0.85em;margin:4px 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(d.preview)}…</div>`
             : "";
         return `
-            <div class="list-item">
-                <b>${escapeHtml(d.filename)}</b>
-                <div class="muted">片段：${d.chunks} 个 · ${vecInfo}${updatedInfo}</div>
-                ${previewHtml}
-                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+            <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <div style="min-width:0;flex:1;">
+                    <b>${escapeHtml(d.filename)}</b>
+                    <div class="muted">片段：${d.chunks} 个 · ${vecInfo}${updatedInfo}</div>
+                    ${previewHtml}
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
                     <button onclick="viewFileChunks('${encodeURIComponent(d.filename)}')">查看片段</button>
                     <button class="danger" onclick="deleteRagDocument('${encodeURIComponent(d.filename)}')">删除</button>
                 </div>
@@ -3027,6 +3064,101 @@ async function viewLiveReviewDetail(reviewId) {
     }
 }
 
+// ─── 上传确认弹窗（商品资料 / 直播素材库共用） ───
+
+let _pendingUpload = null; // { kind: "product" | "rag", files: File[] }
+
+function _findBatchDuplicateNames(files) {
+    const counts = {};
+    files.forEach(f => { counts[f.name] = (counts[f.name] || 0) + 1; });
+    return Object.keys(counts).filter(n => counts[n] > 1);
+}
+
+async function openUploadConfirm(kind, fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if (kind === "product" && !selectedProductId) {
+        alert("请先选择商品");
+        return;
+    }
+
+    // 拉取已有文档名用于同名提醒；失败不阻塞上传确认
+    let existingNames = [];
+    try {
+        const docs = kind === "product"
+            ? await request(`/products/${selectedProductId}/knowledge/documents`)
+            : await request("/rag/documents");
+        existingNames = (docs || []).map(d => d.filename);
+    } catch (e) {
+        console.warn("获取已有文档列表失败，跳过同名提醒:", e);
+    }
+
+    const dupNames = _findBatchDuplicateNames(files);
+    const overlapNames = files.map(f => f.name).filter(n => existingNames.includes(n));
+
+    document.getElementById("uploadConfirmTitle").textContent =
+        kind === "product" ? "确认上传商品资料" : "确认上传直播素材";
+
+    let html = `<div style="font-size:13px;margin-bottom:6px;">本次选择 ${files.length} 个文件</div>`;
+    html += `<div style="max-height:180px;overflow-y:auto;font-size:12px;color:var(--text-secondary);margin-bottom:8px;">`
+        + files.map(f => `<div style="word-break:break-all;">· ${escapeHtml(f.name)}</div>`).join("")
+        + `</div>`;
+    if (dupNames.length) {
+        html += `<div style="background:#fef2f2;color:#991b1b;padding:8px;border-radius:6px;font-size:12px;margin-bottom:8px;">`
+            + `本次选择中包含重复文件，请重新选择<br>${dupNames.map(escapeHtml).join("、")}</div>`;
+    }
+    if (overlapNames.length) {
+        html += `<div style="background:#fffbeb;color:#92400e;padding:8px;border-radius:6px;font-size:12px;margin-bottom:8px;">`
+            + `以下文件已存在，继续上传将覆盖旧资料<br>${overlapNames.map(escapeHtml).join("、")}</div>`;
+    }
+    document.getElementById("uploadConfirmBody").innerHTML = html;
+
+    const btn = document.getElementById("uploadConfirmBtn");
+    btn.disabled = dupNames.length > 0;
+    btn.textContent = "确认上传";
+
+    _pendingUpload = { kind, files };
+    document.getElementById("uploadConfirmModal").style.display = "flex";
+}
+
+function cancelUploadConfirm() {
+    const pending = _pendingUpload;
+    _pendingUpload = null;
+    const modal = document.getElementById("uploadConfirmModal");
+    if (modal) modal.style.display = "none";
+    const body = document.getElementById("uploadConfirmBody");
+    if (body) body.innerHTML = "";
+    const btn = document.getElementById("uploadConfirmBtn");
+    if (btn) { btn.disabled = false; btn.textContent = "确认上传"; }
+    if (pending && pending.kind === "product") {
+        _resetProductKnowledgeFileSelection();
+    } else {
+        const ragInput = document.getElementById("ragFile");
+        if (ragInput) ragInput.value = "";
+    }
+}
+
+async function confirmUploadNow() {
+    const pending = _pendingUpload;
+    if (!pending) return;
+    const btn = document.getElementById("uploadConfirmBtn");
+    if (btn) { btn.disabled = true; btn.textContent = "上传中…"; }
+    try {
+        if (pending.kind === "product") {
+            await uploadSelectedProductKnowledgeFiles(pending.files);
+        } else {
+            await uploadRagFiles(pending.files);
+        }
+    } finally {
+        _pendingUpload = null;
+        const modal = document.getElementById("uploadConfirmModal");
+        if (modal) modal.style.display = "none";
+        const body = document.getElementById("uploadConfirmBody");
+        if (body) body.innerHTML = "";
+        if (btn) { btn.disabled = false; btn.textContent = "确认上传"; }
+    }
+}
+
 // ─── Product Knowledge Base (商品资料文档) ───
 
 function triggerProductKnowledgeUpload() {
@@ -3036,8 +3168,8 @@ function triggerProductKnowledgeUpload() {
     }
     const input = document.getElementById("productKnowledgeFile");
     if (input && input.files && input.files.length) {
-        // 已选择文件 → 执行上传
-        uploadSelectedProductKnowledgeFiles(input.files);
+        // 已选择文件 → 弹出确认窗口
+        openUploadConfirm("product", input.files);
     } else {
         input.click();
     }
@@ -3046,13 +3178,18 @@ function triggerProductKnowledgeUpload() {
 function updateProductKnowledgeFileSelection(event) {
     const files = Array.from(event.target.files || []);
     const el = document.getElementById("productKnowledgeFileStatus");
-    if (!el) return;
-    if (!files.length) {
-        el.textContent = "尚未选择资料文件";
-    } else if (files.length === 1) {
-        el.textContent = `已选择 1 个文件：${files[0].name}`;
-    } else {
-        el.textContent = `已选择 ${files.length} 个文件`;
+    if (el) {
+        if (!files.length) {
+            el.textContent = "尚未选择资料文件";
+        } else if (files.length === 1) {
+            el.textContent = `已选择 1 个文件：${files[0].name}`;
+        } else {
+            el.textContent = `已选择 ${files.length} 个文件`;
+        }
+    }
+    // 选择文件后弹出确认窗口，确认后才真正上传
+    if (files.length) {
+        openUploadConfirm("product", files);
     }
 }
 
@@ -3114,6 +3251,10 @@ async function uploadSelectedProductKnowledgeFiles(fileList) {
     }
 
     // 全部处理完成后统一刷新，避免逐个刷新闪烁
+    // 覆盖了正在预览的文件时清空预览
+    if (files.some(f => f.name === productKnowledgePreviewFilename)) {
+        hideProductKnowledgeChunkPreview();
+    }
     await loadProductKnowledgeDocs();
     await loadProductReadiness();
     loadOpsSuggestions();
@@ -3412,12 +3553,14 @@ async function loadProductKnowledgeDocs() {
         box.innerHTML = docs.map(d => `
 
             <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-                <div style="min-width:0;">
+                <div style="min-width:0;flex:1;">
                     <b style="font-size:13px;">📄 ${escapeHtml(d.filename)}</b>
                     <div class="muted" style="font-size:11px;">${d.chunks} 个片段${d.preview ? " · " + escapeHtml(d.preview.slice(0, 40)) + "…" : ""}</div>
                 </div>
-                <button class="light" onclick="viewProductKnowledgeChunks('${encodeURIComponent(d.filename)}')" style="font-size:12px;padding:4px 10px;">查看片段</button>
-                <button class="light" onclick="deleteProductKnowledgeDoc('${escapeHtml(d.filename)}')" style="font-size:12px;padding:4px 10px;">删除</button>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button class="light" onclick="viewProductKnowledgeChunks('${encodeURIComponent(d.filename)}')" style="font-size:12px;padding:4px 10px;">查看片段</button>
+                    <button class="light" onclick="deleteProductKnowledgeDoc('${escapeHtml(d.filename)}')" style="font-size:12px;padding:4px 10px;">删除</button>
+                </div>
             </div>
         `).join("");
     } catch (e) {
