@@ -18,16 +18,17 @@
       <MaterialUpload @uploaded="loadDocs" />
       <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
     </div>
+    <MaterialQa />
   </section>
 </template>
 
 <script setup>
-// 阶段 3.1-3.4：迁移「直播素材库」列表、搜索、上传确认、片段预览与
-// 删除/清空/重新整理等轻量管理操作。
+// 阶段 3.1-3.4 + 5.1：迁移「直播素材库」列表、搜索、上传确认、片段预览、
+// 删除/清空/重新整理与资料问答。
 // 接口与旧页面完全一致：GET /rag/documents（可选 ?q= 参数）、POST /rag/upload、
 // GET /rag/documents/{filename}/chunks、DELETE /rag/documents/{filename}、
-// DELETE /rag/documents、POST /rag/reindex，返回结构不变。
-// 资料问答等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
+// DELETE /rag/documents、POST /rag/reindex、POST /rag/ask，返回结构不变。
+// 旧页面 static/index.html 继续可用。
 import { ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
 import SearchBox from "../components/SearchBox.vue";
@@ -35,6 +36,7 @@ import MaterialList from "../components/MaterialList.vue";
 import MaterialUpload from "../components/MaterialUpload.vue";
 import MaterialChunksPreview from "../components/MaterialChunksPreview.vue";
 import MaterialManage from "../components/MaterialManage.vue";
+import MaterialQa from "../components/MaterialQa.vue";
 
 const previewFilename = ref("");
 const busy = ref(false);
