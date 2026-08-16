@@ -966,6 +966,41 @@
         }
         .empty-state p { font-size: 13px; }
 
+        /* ═══════════════════════════════════════════
+           工作区面板：桌面端固定一屏高度，内容内部滚动
+           ═══════════════════════════════════════════ */
+        .workspace-panel {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 200px);
+            min-height: 520px;
+        }
+        .workspace-panel > * { flex-shrink: 0; }
+        .workspace-panel .panel-scroll-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        /* 滚动区内空态垂直居中，避免大片空白失衡 */
+        .workspace-panel .panel-scroll-body > .empty-state:only-child {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+        @media (max-width: 900px) {
+            .workspace-panel {
+                height: auto;
+                min-height: 0;
+            }
+            .workspace-panel .panel-scroll-body {
+                flex: none;
+                max-height: 56vh;
+            }
+        }
+
         /* ─── Step timeline ─── */
         .step-timeline {
             position: relative;
@@ -1674,7 +1709,7 @@
                 <div class="ai-grid">
                     <!-- Left: Comment input -->
                     <div>
-                        <div class="card">
+                        <div class="card workspace-panel">
                             <div class="card-header">
                                 <h2>模拟评论</h2>
                             </div>
@@ -1690,7 +1725,7 @@
                                 <button class="light" onclick="fillCommentExample('敏感肌能用吗？')" style="font-size:12px;padding:4px 10px;">敏感肌能用吗？</button>
                             </div>
                             <button id="commentReplyGenerateBtn" onclick="generateCommentReply()">🎤 生成回复</button>
-                            <div id="commentReplyResult" class="result" style="min-height:120px;margin-top:12px;">
+                            <div id="commentReplyResult" class="result panel-scroll-body" style="min-height:120px;margin-top:12px;">
                                 <div class="result-empty">生成的直播间回复会显示在这里。</div>
                             </div>
                         </div>
@@ -1698,12 +1733,12 @@
 
                     <!-- Right: History -->
                     <div>
-                        <div class="card">
+                        <div class="card workspace-panel">
                             <div class="card-header">
                                 <h2>历史评论与回复</h2>
                                 <button class="light" onclick="loadCommentReplyHistory()" style="font-size:12px;padding:4px 10px;">刷新</button>
                             </div>
-                            <div id="commentReplyHistory" style="max-height:56vh;overflow-y:auto;">
+                            <div id="commentReplyHistory" class="panel-scroll-body">
                                 <div class="empty-state"><p>选择商品后显示该商品的历史评论回复。</p></div>
                             </div>
                         </div>
@@ -1723,7 +1758,7 @@
 
                 <div class="ai-grid">
                     <div>
-                        <div class="card">
+                        <div class="card workspace-panel">
                             <div class="card-header">
                                 <h2>已上传素材</h2>
                                 <div style="margin-top:6px;position:relative;flex:1;min-width:200px;">
@@ -1736,7 +1771,7 @@
                             </div>
                             <div class="muted" style="margin-bottom:8px;">支持 PDF、TXT、MD、CSV，可一次选择多个文件。</div>
                             <div id="ragVectorStatus" class="muted" style="margin-bottom:8px;"></div>
-                            <div id="ragDocumentList" style="max-height:420px;overflow-y:auto;"></div>
+                            <div id="ragDocumentList" class="panel-scroll-body"></div>
 
                             <!-- 资料片段预览（点击文档列表中的「查看片段」后在此显示，不离开本页面） -->
                             <div id="ragChunkPreview" style="display:none;margin-top:8px;">
@@ -1761,13 +1796,13 @@
                     </div>
 
                     <div>
-                        <div class="card">
+                        <div class="card workspace-panel">
                             <div class="card-header">
                                 <h2>资料问答</h2>
                             </div>
                             <textarea id="ragQuestion" placeholder="例如：直播间退换货规则是什么？活动赠品怎么说？哪些话不能承诺？"></textarea>
                             <button class="success" onclick="askRag()">基于资料回答</button>
-                            <div id="ragResult" class="result">
+                            <div id="ragResult" class="result panel-scroll-body">
                                 <div class="result-empty">上传资料后，可以在这里提问。</div>
                             </div>
                         </div>
