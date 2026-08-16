@@ -4,20 +4,25 @@
       <h2>📁 直播素材库</h2>
       <SearchBox v-model="q" @search="loadDocs" />
     </div>
-    <MaterialList :docs="docs" :loading="loading" :error="error" :query="q" />
+    <MaterialList :docs="docs" :loading="loading" :error="error" :query="q" @view-chunks="previewFilename = $event" />
+    <MaterialChunksPreview :filename="previewFilename" @close="previewFilename = ''" />
     <MaterialUpload @uploaded="loadDocs" />
   </section>
 </template>
 
 <script setup>
-// 阶段 3.1 + 3.2：迁移「直播素材库」列表、搜索与上传确认。
-// 接口与旧页面完全一致：GET /rag/documents（可选 ?q= 参数）、POST /rag/upload，返回结构不变。
-// 片段预览、删除等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
+// 阶段 3.1 + 3.2 + 3.3：迁移「直播素材库」列表、搜索、上传确认与片段预览。
+// 接口与旧页面完全一致：GET /rag/documents（可选 ?q= 参数）、POST /rag/upload、
+// GET /rag/documents/{filename}/chunks，返回结构不变。
+// 删除等能力留待后续阶段迁移，旧页面 static/index.html 继续可用。
 import { ref, onMounted } from "vue";
 import { apiGet } from "../api/client";
 import SearchBox from "../components/SearchBox.vue";
 import MaterialList from "../components/MaterialList.vue";
 import MaterialUpload from "../components/MaterialUpload.vue";
+import MaterialChunksPreview from "../components/MaterialChunksPreview.vue";
+
+const previewFilename = ref("");
 
 const q = ref("");
 const docs = ref([]);
