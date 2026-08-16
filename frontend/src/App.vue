@@ -4,10 +4,12 @@
       <button :class="{ active: view === 'home' }" @click="view = 'home'">骨架页</button>
       <button :class="{ active: view === 'materials' }" @click="view = 'materials'">直播素材库</button>
       <button :class="{ active: view === 'products' }" @click="view = 'products'">商品资料</button>
+      <button :class="{ active: view === 'comments' }" @click="view = 'comments'">评论助手</button>
     </nav>
     <HomeView v-if="view === 'home'" />
     <MaterialsView v-else-if="view === 'materials'" />
-    <ProductKnowledgeView v-else />
+    <ProductKnowledgeView v-else-if="view === 'products'" />
+    <CommentAssistantView v-else />
   </AppShell>
 </template>
 
@@ -18,6 +20,7 @@ import AppShell from "./components/AppShell.vue";
 import HomeView from "./views/HomeView.vue";
 import MaterialsView from "./views/MaterialsView.vue";
 import ProductKnowledgeView from "./views/ProductKnowledgeView.vue";
+import CommentAssistantView from "./views/CommentAssistantView.vue";
 
 const view = ref("home");
 </script>

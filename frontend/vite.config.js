@@ -12,6 +12,7 @@ export default defineConfig({
       "/products": "http://127.0.0.1:8000",
       "/live-scripts": "http://127.0.0.1:8000",
       "/live-reviews": "http://127.0.0.1:8000",
+      "/comment-replies": "http://127.0.0.1:8000",
     },
   },
 });
