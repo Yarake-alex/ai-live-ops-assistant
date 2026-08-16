@@ -1523,6 +1523,15 @@
                                     <div class="muted" style="font-size:12px;margin-bottom:4px;">支持一次选择多个 PDF / TXT / MD / CSV 文件；上传后可用于商品资料问答。</div>
                                     <div id="productKnowledgeFileStatus" class="muted" style="font-size:12px;margin-bottom:8px;">尚未选择资料文件</div>
                                     <div id="productKnowledgeDocs" style="margin-bottom:10px;max-height:360px;overflow-y:auto;"></div>
+
+                                    <!-- 资料片段预览（点击文档列表中的「查看片段」后在此显示，不离开本 Tab） -->
+                                    <div id="productKnowledgeChunkPreview" style="display:none;margin-top:8px;">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                                            <b id="productKnowledgeChunkPreviewTitle" style="font-size:13px;">资料片段预览</b>
+                                            <button class="light" onclick="hideProductKnowledgeChunkPreview()" style="font-size:12px;padding:4px 10px;">收起片段</button>
+                                        </div>
+                                        <div id="productKnowledgeChunkPreviewBody" style="max-height:320px;overflow-y:auto;"></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2590,6 +2599,7 @@ async function selectProduct(id) {
     await loadLiveReviewHistory();
     document.getElementById("productKnowledgeDocs").innerHTML = "";
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
+    hideProductKnowledgeChunkPreview();
     await loadProductKnowledgeDocs();
     await loadProductReadiness();
     await loadProductQuestionInsights();
@@ -2708,6 +2718,7 @@ function clearSelectedProduct() {
     document.getElementById("liveReviewHistory").innerHTML = "";
     document.getElementById("productKnowledgeDocs").innerHTML = "";
     document.getElementById("productKnowledgeAnswer").innerHTML = '<div class="result-empty">基于商品资料的回答会显示在这里。</div>';
+    hideProductKnowledgeChunkPreview();
     document.getElementById("productReadinessBox").innerHTML = '<div class="result-empty">选择商品后可查看资料完整度。</div>';
     resetProductQuestionInsights();
     resetOpsSuggestions();
@@ -3421,8 +3432,10 @@ async function loadProductKnowledgeDocs() {
 async function deleteProductKnowledgeDoc(filename) {
     if (!selectedProductId) return;
     if (!confirm(`确定删除资料「${filename}」吗？`)) return;
+    const wasPreviewed = productKnowledgePreviewFilename === filename;
     try {
         await request(`/products/${selectedProductId}/knowledge/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+        if (wasPreviewed) hideProductKnowledgeChunkPreview();
         await loadProductKnowledgeDocs();
         await loadProductReadiness();
     } catch (e) {
@@ -3430,23 +3443,41 @@ async function deleteProductKnowledgeDoc(filename) {
     }
 }
 
+// 当前正在预览片段的资料文件名（用于删除该文件时清空预览）
+let productKnowledgePreviewFilename = null;
+
 async function viewProductKnowledgeChunks(encodedFilename) {
-    const box = document.getElementById("productKnowledgeAnswer");
-    box.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>加载片段...</span></div>';
+    const filename = decodeURIComponent(encodedFilename);
+    const previewBox = document.getElementById("productKnowledgeChunkPreview");
+    const bodyEl = document.getElementById("productKnowledgeChunkPreviewBody");
+    previewBox.style.display = "block";
+    document.getElementById("productKnowledgeChunkPreviewTitle").textContent = `当前文件：${filename}`;
+    bodyEl.innerHTML = '<div class="result-loading"><div class="spinner"></div><span>加载片段...</span></div>';
     try {
         const data = await request(`/products/${selectedProductId}/knowledge/documents/${encodedFilename}/chunks`);
-        let html = `<h3 style="margin:0 0 8px;">📄 ${escapeHtml(data.filename)} — ${data.chunks.length} 个片段</h3>`;
-        data.chunks.forEach(c => {
-            html += `<div style="background:#f8f9fa;padding:8px;margin:6px 0;border-radius:4px;font-size:0.9em;">
-                <div class="muted" style="font-size:0.8em;margin-bottom:4px;">片段 ${c.chunk_index} · ${c.created_at.slice(0,16).replace('T',' ')}</div>
-                <div style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(c.content)}</div>
-            </div>`;
-        });
-        box.innerHTML = html;
-        switchProductTab("ask");
+        const chunks = data.chunks.filter(c => c.content && c.content.trim());
+        if (!chunks.length) {
+            bodyEl.innerHTML = '<div class="result-empty">该资料暂无可预览片段</div>';
+        } else {
+            bodyEl.innerHTML = chunks.map(c => `
+                <div style="background:#f8f9fa;padding:8px;margin:6px 0;border-radius:4px;font-size:0.9em;">
+                    <div class="muted" style="font-size:0.8em;margin-bottom:4px;">片段 ${c.chunk_index}${c.created_at ? " · " + c.created_at.slice(0,16).replace('T',' ') : ""}</div>
+                    <div style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(c.content)}</div>
+                </div>`).join("");
+        }
+        productKnowledgePreviewFilename = data.filename;
     } catch (e) {
-        box.innerHTML = '<div class="result-empty">加载片段失败。</div>';
+        bodyEl.innerHTML = '<div class="result-empty">加载片段失败。</div>';
+        productKnowledgePreviewFilename = null;
     }
+}
+
+function hideProductKnowledgeChunkPreview() {
+    productKnowledgePreviewFilename = null;
+    const previewBox = document.getElementById("productKnowledgeChunkPreview");
+    if (previewBox) previewBox.style.display = "none";
+    const bodyEl = document.getElementById("productKnowledgeChunkPreviewBody");
+    if (bodyEl) bodyEl.innerHTML = "";
 }
 
 async function reindexProductKnowledgeDoc(encodedFilename) {
