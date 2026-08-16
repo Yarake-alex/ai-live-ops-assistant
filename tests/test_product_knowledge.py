@@ -319,7 +319,8 @@ class TestProductReadiness:
         data = client.get(f"/products/{pid}/readiness").json()
         comp = data["completeness"]
         assert 0 <= comp["score"] <= 100
-        assert comp["score"] <= 30, f"空商品分数应较低，got {comp['score']}"
+        # 固定权重：仅商品名称（5）+ 默认直播状态（5）命中
+        assert comp["score"] == 10, f"空商品应为 10 分，got {comp['score']}"
         assert "商品资料文档" in comp["missing_items"]
         assert "售后规则" in comp["missing_items"]
         assert "风险边界" in comp["missing_items"]
@@ -353,43 +354,67 @@ class TestProductReadiness:
         assert comp["missing_items"] == []
         assert comp["suggestions"] == []
 
-    def test_faq_filename_detection(self, client):
+    def test_faq_filename_detection_adds_10_points(self, client):
         resp = client.post("/products", json={"name": "完整度FAQ商品", "price": 10, "stock": 5})
         pid = resp.json()["id"]
+        # 先传普通文档作为基线，避免「商品资料文档」10 分与 FAQ 10 分混在一起
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("manual.txt", "基础资料内容".encode("utf-8"), "text/plain")},
+        )
+        before = client.get(f"/products/{pid}/readiness").json()["completeness"]["score"]
         client.post(
             f"/products/{pid}/knowledge/upload",
             files={"file": ("产品Q&A.txt", "问答内容".encode("utf-8"), "text/plain")},
         )
         comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert comp["score"] - before == 10, f"FAQ 识别应增加 10 分，got {before} -> {comp['score']}"
         assert "FAQ 或问答资料" not in comp["missing_items"]
 
-    def test_aftersale_filename_detection(self, client):
+    def test_aftersale_filename_detection_adds_12_points(self, client):
         resp = client.post("/products", json={"name": "完整度售后商品", "price": 10, "stock": 5})
         pid = resp.json()["id"]
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("manual.txt", "基础资料内容".encode("utf-8"), "text/plain")},
+        )
+        before = client.get(f"/products/{pid}/readiness").json()["completeness"]["score"]
         client.post(
             f"/products/{pid}/knowledge/upload",
             files={"file": ("AfterSales说明.txt", "售后说明".encode("utf-8"), "text/plain")},
         )
         comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert comp["score"] - before == 12, f"售后识别应增加 12 分，got {before} -> {comp['score']}"
         assert "售后规则" not in comp["missing_items"]
 
-    def test_risk_notes_detection(self, client):
+    def test_risk_notes_detection_adds_13_points(self, client):
         resp = client.post(
             "/products",
             json={"name": "完整度风险商品", "price": 10, "stock": 5, "notes": "不要承诺治疗功效"},
         )
         pid = resp.json()["id"]
+        base = client.post("/products", json={"name": "完整度风险对照商品", "price": 10, "stock": 5})
+        base_pid = base.json()["id"]
+        with_notes = client.get(f"/products/{pid}/readiness").json()["completeness"]["score"]
+        without = client.get(f"/products/{base_pid}/readiness").json()["completeness"]["score"]
+        assert with_notes - without == 13, f"风险备注应增加 13 分，got {without} -> {with_notes}"
         comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
         assert "风险边界" not in comp["missing_items"]
 
-    def test_risk_filename_detection(self, client):
+    def test_risk_filename_detection_adds_13_points(self, client):
         resp = client.post("/products", json={"name": "完整度风险文件商品", "price": 10, "stock": 5})
         pid = resp.json()["id"]
+        client.post(
+            f"/products/{pid}/knowledge/upload",
+            files={"file": ("manual.txt", "基础资料内容".encode("utf-8"), "text/plain")},
+        )
+        before = client.get(f"/products/{pid}/readiness").json()["completeness"]["score"]
         client.post(
             f"/products/{pid}/knowledge/upload",
             files={"file": ("禁用话术.txt", "不可承诺内容".encode("utf-8"), "text/plain")},
         )
         comp = client.get(f"/products/{pid}/readiness").json()["completeness"]
+        assert comp["score"] - before == 13, f"风险文件名应增加 13 分，got {before} -> {comp['score']}"
         assert "风险边界" not in comp["missing_items"]
 
     def test_readiness_scoped_by_user(self, client):

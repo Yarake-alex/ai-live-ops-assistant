@@ -1322,31 +1322,36 @@ def ask_product_knowledge(
 # ─── Product readiness (商品资料完整度评分，实时计算) ───
 
 
-# 评分维度：12 项，逐项命中计分。文件名关键词匹配大小写不敏感。
+# 评分维度：12 项固定权重（总分 100），逐项命中累计权重。
+# 文件名关键词匹配大小写不敏感。
+# 权重体现开播准备的实际价值：风险边界、售后规则、FAQ、资料文档等比基础字段更重要。
 _COMPLETENESS_DIMENSIONS = [
-    ("商品名称", lambda p, filenames, has_chunks: bool((p.name or "").strip())),
-    ("价格", lambda p, filenames, has_chunks: (p.price or 0) > 0),
-    ("库存", lambda p, filenames, has_chunks: (p.stock or 0) > 0),
-    ("直播状态", lambda p, filenames, has_chunks: bool((p.live_status or "").strip())),
-    ("核心卖点", lambda p, filenames, has_chunks: bool((p.selling_points or "").strip())),
-    ("适用人群", lambda p, filenames, has_chunks: bool((p.target_audience or "").strip())),
-    ("用户痛点", lambda p, filenames, has_chunks: bool((p.pain_points or "").strip())),
-    ("优惠信息", lambda p, filenames, has_chunks: bool((p.promotion or "").strip())),
-    ("商品资料文档", lambda p, filenames, has_chunks: has_chunks),
+    ("商品名称", 5, lambda p, filenames, has_chunks: bool((p.name or "").strip())),
+    ("价格", 5, lambda p, filenames, has_chunks: (p.price or 0) > 0),
+    ("库存", 5, lambda p, filenames, has_chunks: (p.stock or 0) > 0),
+    ("直播状态", 5, lambda p, filenames, has_chunks: bool((p.live_status or "").strip())),
+    ("核心卖点", 10, lambda p, filenames, has_chunks: bool((p.selling_points or "").strip())),
+    ("适用人群", 10, lambda p, filenames, has_chunks: bool((p.target_audience or "").strip())),
+    ("用户痛点", 8, lambda p, filenames, has_chunks: bool((p.pain_points or "").strip())),
+    ("优惠信息", 7, lambda p, filenames, has_chunks: bool((p.promotion or "").strip())),
+    ("商品资料文档", 10, lambda p, filenames, has_chunks: has_chunks),
     (
         "FAQ 或问答资料",
+        10,
         lambda p, filenames, has_chunks: any(
             any(k in fn.lower() for k in ("faq", "问答", "q&a")) for fn in filenames
         ),
     ),
     (
         "售后规则",
+        12,
         lambda p, filenames, has_chunks: any(
             any(k in fn.lower() for k in ("售后", "退换", "after")) for fn in filenames
         ),
     ),
     (
         "风险边界",
+        13,
         lambda p, filenames, has_chunks: bool((p.notes or "").strip())
         or any(
             any(k in fn.lower() for k in ("风险", "边界", "禁用", "不可承诺", "合规"))
@@ -1375,18 +1380,20 @@ _COMPLETENESS_SUGGESTIONS = {
 def _compute_product_completeness(
     product: Product, filenames: List[str], has_chunks: bool
 ) -> ProductCompleteness:
-    """按确定性规则实时计算商品资料完整度（不落库、不调用 LLM）。"""
+    """按确定性规则实时计算商品资料完整度（不落库、不调用 LLM）。
+
+    固定权重评分：命中维度的权重求和（总权重 100），score 为 0-100 整数。
+    """
     missing: List[str] = []
-    hit = 0
-    for label, check in _COMPLETENESS_DIMENSIONS:
+    score = 0
+    for label, weight, check in _COMPLETENESS_DIMENSIONS:
         if check(product, filenames, has_chunks):
-            hit += 1
+            score += weight
         else:
             missing.append(label)
 
-    total = len(_COMPLETENESS_DIMENSIONS)
     return ProductCompleteness(
-        score=int(hit * 100 / total),
+        score=score,
         missing_items=missing,
         suggestions=[_COMPLETENESS_SUGGESTIONS[label] for label in missing],
     )
