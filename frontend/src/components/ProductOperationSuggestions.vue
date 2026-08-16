@@ -1,0 +1,212 @@
+<template>
+  <div class="ops-card">
+    <div class="card-head">
+      <h3>💡 运营建议</h3>
+      <button class="light-btn" :disabled="loading" @click="load">刷新</button>
+    </div>
+    <div v-if="!productId" class="hint">选择商品后展示该商品的运营建议。</div>
+    <div v-else-if="loading" class="hint">加载中…</div>
+    <div v-else-if="error" class="hint">运营建议暂不可用，不影响其他功能</div>
+    <template v-else>
+      <!-- 汇总三格（与旧页面一致） -->
+      <div class="summary-row">
+        <div class="summary-item">
+          <div class="summary-value">{{ summary.total ?? 0 }}</div>
+          <div class="summary-label">建议总数</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" style="color: #ef4444">{{ summary.high_priority ?? 0 }}</div>
+          <div class="summary-label">高优先级</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" :style="{ color: summary.needs_material_update ? '#ef4444' : '#10b981' }">
+            {{ summary.needs_material_update ? "建议补资料" : "暂不需要补资料" }}
+          </div>
+          <div class="summary-label">资料状态</div>
+        </div>
+      </div>
+
+      <div v-if="!list.length" class="hint">
+        暂无运营建议。积累更多商品问题后，这里会提示该补充哪些资料和话术。
+      </div>
+      <div v-else class="suggestion-list">
+        <div v-for="(s, i) in list" :key="i" class="suggestion-item">
+          <div class="suggestion-top">
+            <span class="tag">{{ typeLabel(s.type) }}</span>
+            <span class="tag" :style="priorityStyle(s.priority)">{{ priorityLabel(s.priority) }}</span>
+            <b class="suggestion-title">{{ s.title || "" }}</b>
+          </div>
+          <div class="suggestion-detail">{{ s.detail || "" }}</div>
+          <div v-if="sourceQuestions(s).length" class="suggestion-questions">
+            来源问题：{{ sourceQuestions(s).join("、") }}
+          </div>
+          <div class="suggestion-action">
+            <span class="tag">{{ s.action_label || "" }}</span>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
+
+<script setup>
+// 阶段 4.5：商品运营建议（与旧页面文案一致）：
+// GET /products/{id}/ops-suggestions → {summary, suggestions}。
+import { ref, watch } from "vue";
+import { apiGet } from "../api/client";
+
+const props = defineProps({
+  productId: { type: Number, default: null },
+});
+
+const TYPE_LABELS = {
+  material_gap: "资料补齐",
+  faq_candidate: "FAQ 建议",
+  script_focus: "话术强化",
+  risk_reminder: "风险提醒",
+};
+const PRIORITY_LABELS = { high: "高", medium: "中", low: "低" };
+const PRIORITY_STYLES = {
+  high: "background:#fef2f2;color:#991b1b",
+  medium: "background:#fffbeb;color:#92400e",
+  low: "background:#f0f9ff;color:#075985",
+};
+
+const loading = ref(false);
+const error = ref(false);
+const summary = ref({});
+const list = ref([]);
+
+function typeLabel(type) {
+  return TYPE_LABELS[type] || "建议";
+}
+function priorityLabel(priority) {
+  return PRIORITY_LABELS[priority] || "低";
+}
+function priorityStyle(priority) {
+  return PRIORITY_STYLES[priority] || PRIORITY_STYLES.low;
+}
+function sourceQuestions(s) {
+  return (s.source_questions || []).slice(0, 3);
+}
+
+async function load() {
+  if (!props.productId) return;
+  loading.value = true;
+  error.value = false;
+  try {
+    const data = await apiGet(`/products/${props.productId}/ops-suggestions`);
+    summary.value = data.summary || {};
+    list.value = data.suggestions || [];
+  } catch (e) {
+    error.value = true;
+    summary.value = {};
+    list.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+watch(() => props.productId, load, { immediate: true });
+</script>
+
+<style scoped>
+.ops-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  margin-top: 12px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.card-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.light-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+.light-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.hint {
+  padding: 16px 4px;
+  color: #999;
+  font-size: 13px;
+  text-align: center;
+}
+.summary-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.summary-item {
+  border: 1px solid #f3f4f6;
+  border-radius: 6px;
+  padding: 8px 14px;
+  text-align: center;
+}
+.summary-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+.summary-label {
+  color: #777;
+  font-size: 11px;
+}
+.suggestion-item {
+  display: block;
+  border: 1px solid #f3f4f6;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.suggestion-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #555;
+}
+.suggestion-title {
+  font-size: 13px;
+  min-width: 0;
+  word-break: break-all;
+}
+.suggestion-detail {
+  color: #777;
+  font-size: 12px;
+  line-height: 1.7;
+  word-break: break-all;
+}
+.suggestion-questions {
+  color: #777;
+  font-size: 11px;
+  margin-top: 4px;
+  word-break: break-all;
+}
+.suggestion-action {
+  margin-top: 6px;
+}
+</style>
