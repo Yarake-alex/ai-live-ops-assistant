@@ -9,11 +9,12 @@
       <ProductSummary :product="product" :busy="removing" @edit="openEditForm" @remove="onRemoveProduct" />
     </div>
     <div class="product-modules">
-      <ProductCompleteness :product-id="selectedId" />
-      <ProductDocuments :product-id="selectedId" />
+      <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
+      <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" />
+      <ProductDocuments :product-id="selectedId" @changed="refreshTick++" />
       <ProductQa v-if="selectedId" :product-id="selectedId" />
-      <ProductQuestionInsights :product-id="selectedId" />
-      <ProductOperationSuggestions :product-id="selectedId" />
+      <ProductQuestionInsights :product-id="selectedId" :key="'ins' + refreshTick" />
+      <ProductOperationSuggestions :product-id="selectedId" :key="'ops' + refreshTick" />
       <ProductLiveScript :product-id="selectedId" />
       <ProductLiveReview :product-id="selectedId" />
     </div>
@@ -44,6 +45,7 @@ import ProductSelector from "../components/ProductSelector.vue";
 import ProductSummary from "../components/ProductSummary.vue";
 import ProductCompleteness from "../components/ProductCompleteness.vue";
 import ProductDocuments from "../components/ProductDocuments.vue";
+import PrepSummary from "../components/PrepSummary.vue";
 import ProductQa from "../components/ProductQa.vue";
 import ProductQuestionInsights from "../components/ProductQuestionInsights.vue";
 import ProductOperationSuggestions from "../components/ProductOperationSuggestions.vue";
@@ -90,6 +92,9 @@ function onProductSaved(saved) {
 
 // 删除商品：确认 → 删除 → 清空选中状态 → 刷新列表（与旧页面一致）
 const removing = ref(false);
+
+// 资料文档上传/删除/整理后，用 key 重挂载联动刷新完整度/概览/洞察/运营建议
+const refreshTick = ref(0);
 
 async function onRemoveProduct() {
   if (!selectedId.value || removing.value) return;
