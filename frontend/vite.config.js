@@ -13,6 +13,8 @@ export default defineConfig({
       "/live-scripts": "http://127.0.0.1:8000",
       "/live-reviews": "http://127.0.0.1:8000",
       "/comment-replies": "http://127.0.0.1:8000",
+      "/live-ops": "http://127.0.0.1:8000",
+      "/dashboard": "http://127.0.0.1:8000",
     },
   },
 });
