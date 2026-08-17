@@ -2,7 +2,7 @@
   <div class="card upload-card">
     <div class="card-head">
       <h3><Icon name="upload" size="15" class="head-icon" /> 上传素材</h3>
-      <span class="muted">支持 PDF / TXT / MD / CSV，可一次多选</span>
+      <span class="upload-format">PDF / TXT / MD / CSV</span>
     </div>
     <input
       ref="fileInput"
@@ -20,8 +20,9 @@
       @dragleave.prevent="dragging = false"
       @drop.prevent="onDrop"
     >
-      <Icon name="upload" size="22" class="drop-icon" />
+      <Icon name="upload" size="20" class="drop-icon" />
       <div class="drop-text">点击选择文件，或将文件拖拽到此处</div>
+      <div class="drop-hint">支持一次选择多个直播资料文件</div>
     </div>
     <div class="upload-status">{{ statusText }}</div>
 
@@ -184,10 +185,14 @@ async function confirmUpload() {
   display: flex;
   flex-direction: column;
 }
+.upload-format {
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}
 .drop-zone {
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
-  padding: 32px 16px;
+  padding: 22px 16px;
   text-align: center;
   cursor: pointer;
   background: var(--gray-50);
@@ -203,12 +208,18 @@ async function confirmUpload() {
 }
 .drop-text {
   font-size: 13px;
-  color: var(--gray-500);
+  color: var(--gray-600);
   margin-top: 6px;
 }
+.drop-hint {
+  margin-top: 2px;
+  color: var(--gray-400);
+  font-size: var(--text-xs);
+}
 .upload-status {
+  min-height: 20px;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-xs);
   color: var(--gray-500);
 }
 .confirm-box {

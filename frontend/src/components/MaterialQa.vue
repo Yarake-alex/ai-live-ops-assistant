@@ -1,7 +1,10 @@
 <template>
   <div class="qa-card">
-    <div class="card-head">
-      <h3><Icon name="chat" size="15" class="head-icon" /> 资料问答</h3>
+    <div class="card-head qa-card-head">
+      <div>
+        <h3><Icon name="chat" size="15" class="head-icon" /> 资料问答</h3>
+        <p>基于已上传直播素材快速检索回答</p>
+      </div>
     </div>
     <textarea
       v-model="question"
@@ -19,6 +22,7 @@
       <div v-else-if="!answer" class="empty">
         <span class="empty-icon"><Icon name="chat" size="24" /></span>
         <span>上传资料后，可以在这里提问。</span>
+        <span class="empty-next">下一步：上传直播素材，再输入需要确认的运营问题。</span>
       </div>
       <template v-else>
         <AiResultContent :content="answer" />
@@ -85,16 +89,32 @@ async function ask() {
 </script>
 
 <style scoped>
+.qa-card-head {
+  margin-bottom: 10px;
+}
+.qa-card-head p {
+  margin: 4px 0 0;
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}
 textarea {
-  min-height: 60px;
+  min-height: 72px;
 }
 .qa-actions {
   display: flex;
   justify-content: flex-end;
-  margin: 8px 0;
+  margin: 8px 0 10px;
+}
+.qa-card .result-box {
+  min-height: 148px;
 }
 .qa-card .empty {
+  min-height: 126px;
   padding: 16px;
+}
+.empty-next {
+  color: var(--gray-400);
+  font-size: var(--text-xs);
 }
 .source-box {
   margin-top: 10px;

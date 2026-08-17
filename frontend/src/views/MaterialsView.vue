@@ -14,10 +14,18 @@
 
     <!-- 素材列表：单一业务面板，搜索与整理操作随列表归位 -->
     <div class="card">
-      <div class="card-head">
-        <h3><Icon name="folder" size="15" class="head-icon" /> 素材列表</h3>
+      <div class="card-head materials-list-head">
+        <div>
+          <h3><Icon name="folder" size="15" class="head-icon" /> 素材列表</h3>
+          <div class="materials-summary" aria-label="素材库摘要">
+            <span class="summary-item"><b>{{ docs.length }}</b> 个文件</span>
+            <span class="summary-item"><b>{{ totalChunks }}</b> 个片段</span>
+            <span v-if="hasIndexStatus" class="summary-item">
+              <b>{{ indexedChunks }}</b>/{{ indexableChunks }} 已整理
+            </span>
+          </div>
+        </div>
         <div class="list-head-right">
-          <span class="count-badge">{{ docs.length }} 个文件</span>
           <SearchBox v-model="q" @search="loadDocs" />
         </div>
       </div>
@@ -53,7 +61,7 @@
 // 旧页面 static/index.html 继续可用。
 // V6 阶段 5：标题区（上传素材归位右上）、列表面板（搜索/预览/整理归位）、
 // 上传区（拖拽/选择容器边界）+ 资料问答并列，页面铺满内容区。
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
 import Icon from "../components/Icon.vue";
@@ -99,6 +107,12 @@ const docs = ref([]);
 const loading = ref(false);
 const error = ref("");
 
+const totalChunks = computed(() => docs.value.reduce((total, doc) => total + (Number(doc.chunks) || 0), 0));
+const indexableDocs = computed(() => docs.value.filter((doc) => doc.vector_indexed != null));
+const indexableChunks = computed(() => indexableDocs.value.reduce((total, doc) => total + (Number(doc.chunks) || 0), 0));
+const indexedChunks = computed(() => indexableDocs.value.reduce((total, doc) => total + (Number(doc.vector_indexed) || 0), 0));
+const hasIndexStatus = computed(() => indexableDocs.value.length > 0);
+
 async function loadDocs() {
   loading.value = true;
   error.value = "";
@@ -120,10 +134,39 @@ onMounted(loadDocs);
 </script>
 
 <style scoped>
+.materials-list-head {
+  align-items: flex-start;
+}
+.materials-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-top: 6px;
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}
+.summary-item {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+.summary-item:first-child {
+  padding-left: 0;
+}
+.summary-item + .summary-item {
+  border-left: 1px solid var(--gray-200);
+}
+.summary-item b {
+  color: var(--gray-700);
+  font-weight: 600;
+}
 .list-head-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+  flex: 1 1 360px;
   flex-wrap: wrap;
 }
 .list-toolbar {
@@ -135,7 +178,7 @@ onMounted(loadDocs);
 }
 .materials-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: 16px;
   margin-top: 16px;
   align-items: stretch;
@@ -143,6 +186,11 @@ onMounted(loadDocs);
 @media (max-width: 900px) {
   .materials-grid {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .list-head-right {
+    justify-content: flex-start;
   }
 }
 </style>

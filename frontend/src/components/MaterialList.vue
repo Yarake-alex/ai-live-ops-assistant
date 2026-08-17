@@ -2,9 +2,10 @@
   <div class="material-list">
     <div v-if="loading" class="hint">加载中…</div>
     <div v-else-if="error" class="hint hint-error">{{ error }}</div>
-    <div v-else-if="!docs.length" class="empty">
-      <span class="empty-icon"><Icon :name="query.trim() ? 'search' : 'folder'" size="32" /></span>
-      <span>{{ query.trim() ? `未找到匹配「${query.trim()}」的资料。` : "暂无资料，请先上传素材。" }}</span>
+    <div v-else-if="!docs.length" class="empty material-empty">
+      <span class="empty-icon"><Icon :name="query.trim() ? 'search' : 'folder'" size="28" /></span>
+      <span>{{ query.trim() ? `未找到匹配「${query.trim()}」的资料。` : "素材库暂未添加资料。" }}</span>
+      <span class="empty-next">{{ query.trim() ? "尝试调整搜索关键词，或清空搜索后查看全部素材。" : "下一步：上传素材后即可进行资料问答。" }}</span>
     </div>
     <div v-else class="list-items">
       <div v-for="d in docs" :key="d.filename" class="row-item">
@@ -50,11 +51,21 @@ function updatedInfo(d) {
 
 <style scoped>
 .material-list {
-  min-height: 160px;
+  min-height: 112px;
+}
+.material-empty {
+  min-height: 112px;
+  padding: 18px 16px;
+  gap: 5px;
+}
+.empty-next {
+  color: var(--gray-400);
+  font-size: var(--text-xs);
 }
 .list-items {
   max-height: 420px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 .item-info {
   min-width: 0;

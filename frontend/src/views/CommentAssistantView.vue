@@ -8,17 +8,28 @@
     </div>
 
     <div class="comment-grid">
-      <!-- Left: Comment input + result (main, 60%) -->
-      <div class="card">
+      <!-- 主工作区：选择商品、输入评论并生成回复 -->
+      <div class="card comment-workspace">
         <div class="card-head">
-          <h3><Icon name="chat" size="15" class="head-icon" /> 模拟评论</h3>
+          <h3><Icon name="chat" size="15" class="head-icon" /> 生成直播间回复</h3>
         </div>
-        <label for="cm-product">选择商品</label>
-        <select id="cm-product" v-model="productId" @change="onProductChange">
-          <option value="">请选择商品…</option>
-          <option v-for="p in products" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
-        </select>
-        <label for="cm-comment">观众评论</label>
+        <div class="current-product">
+          <div class="current-product-copy">
+            <span class="current-product-label"><Icon name="box" size="14" /> 当前商品</span>
+            <span class="current-product-hint">选择商品后即可生成更贴合商品资料的回复</span>
+          </div>
+          <select id="cm-product" v-model="productId" aria-label="当前商品" @change="onProductChange">
+            <option value="">请选择商品…</option>
+            <option v-for="p in products" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
+          </select>
+        </div>
+        <div v-if="!productId" class="product-prompt">
+          <Icon name="box" size="14" /> 请先选择当前商品，再输入观众评论。
+        </div>
+        <div class="comment-input-head">
+          <label for="cm-comment">观众评论</label>
+          <span class="muted">可直接输入，或使用下方常见评论</span>
+        </div>
         <textarea
           id="cm-comment"
           v-model="comment"
@@ -26,6 +37,7 @@
           rows="4"
           :disabled="generating"
         ></textarea>
+        <div class="quick-title">常见评论</div>
         <div class="quick-row">
           <button
             v-for="example in EXAMPLES"
@@ -42,17 +54,18 @@
             <Icon name="mic" size="14" /> 生成回复
           </button>
         </div>
-        <div class="result-box">
+        <div class="result-head">
+          <span>生成结果</span>
+          <span v-if="record" class="tag" :class="statusTagClass(record)">{{ statusText(record) }}</span>
+        </div>
+        <div class="result-box comment-result">
           <div v-if="generating" class="hint">AI 正在生成回复...</div>
           <div v-else-if="generateError" class="hint hint-error">生成失败，请稍后重试。</div>
           <div v-else-if="!record" class="empty">
             <span class="empty-icon"><Icon name="chat" size="24" /></span>
-            <span>生成的直播间回复会显示在这里。</span>
+            <span>选择商品并输入观众评论后，生成的直播间回复会显示在这里。</span>
           </div>
           <template v-else>
-            <div class="record-meta">
-              <span class="tag" :class="statusTagClass(record)">{{ statusText(record) }}</span>
-            </div>
             <div class="muted record-comment">观众评论：{{ record.comment }}</div>
             <div v-if="record.status !== 'success' && record.error_message" class="muted record-warning">
               {{ record.error_message }}
@@ -62,22 +75,28 @@
         </div>
       </div>
 
-      <!-- Right: History (side, 40%) -->
-      <div class="card">
+      <!-- 侧栏：保留当前商品的历史生成记录 -->
+      <div class="card comment-history-card">
         <div class="card-head">
-          <h3>历史评论与回复</h3>
-          <button class="light-btn" :disabled="historyLoading" @click="loadHistory">刷新</button>
+          <h3><Icon name="clock" size="15" class="head-icon" /> 历史评论与回复</h3>
+          <button class="light-btn" :disabled="historyLoading" @click="loadHistory">
+            <Icon name="refresh" size="13" /> 刷新
+          </button>
+        </div>
+        <div class="history-context">
+          {{ productId ? "当前商品的历史生成记录" : "选择商品后显示对应的历史生成记录" }}
         </div>
         <div class="history-box">
           <div v-if="historyLoading" class="hint">加载中…</div>
           <div v-else-if="historyError" class="hint hint-error">历史记录加载失败。</div>
-          <div v-else-if="!productId" class="empty">
+          <div v-else-if="!productId" class="empty history-empty">
             <span class="empty-icon"><Icon name="chat" size="24" /></span>
             <span>选择商品后显示该商品的历史评论回复。</span>
           </div>
-          <div v-else-if="!history.length" class="empty">
-            <span class="empty-icon"><Icon name="chat" size="24" /></span>
-            <span>暂无历史评论回复。</span>
+          <div v-else-if="!history.length" class="empty history-empty">
+            <span class="empty-icon"><Icon name="clock" size="24" /></span>
+            <span>当前商品还没有历史评论回复。</span>
+            <span class="empty-next">下一步：输入一条观众评论并生成回复。</span>
           </div>
           <div
             v-for="item in history"
@@ -234,12 +253,65 @@ onMounted(loadProducts);
     grid-template-columns: 1fr;
   }
 }
-select,
-textarea {
+.current-product {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 44%);
+  align-items: center;
+  gap: 14px;
   margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+}
+.current-product-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.current-product-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--gray-900);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.current-product-hint,
+.history-context {
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}
+.current-product select {
+  min-width: 0;
+}
+.product-prompt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 14px;
+  color: var(--primary);
+  font-size: var(--text-xs);
+}
+.comment-input-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.comment-input-head label {
+  margin: 0;
 }
 textarea {
-  min-height: 100px;
+  min-height: 104px;
+}
+.quick-title {
+  margin: 10px 0 6px;
+  color: var(--gray-600);
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 .quick-row {
   display: flex;
@@ -251,7 +323,7 @@ textarea {
 .preset-btn {
   min-height: 30px;
   padding: 4px 12px;
-  font-size: 13px;
+  font-size: var(--text-xs);
   background: var(--panel-bg);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-pill);
@@ -263,30 +335,54 @@ textarea {
   background: var(--primary-soft);
 }
 .actions-row {
-  margin-bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--gray-700);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.comment-result {
+  min-height: 174px;
 }
 .comment-view .empty {
+  min-height: 138px;
   padding: 16px;
 }
-.record-meta {
-  margin-bottom: 8px;
-}
 .record-comment {
-  font-size: 13px;
+  font-size: var(--text-xs);
   margin-bottom: 8px;
 }
 .record-warning {
   margin-bottom: 8px;
 }
 .record-reply {
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-all;
 }
+.history-context {
+  margin: -4px 0 8px;
+}
 .history-box {
   max-height: 60vh;
   overflow-y: auto;
+  padding-right: 4px;
+}
+.history-empty {
+  min-height: 126px;
+}
+.empty-next {
+  color: var(--gray-400);
+  font-size: var(--text-xs);
 }
 .history-item {
   flex-direction: column;
@@ -307,7 +403,7 @@ textarea {
   flex-wrap: wrap;
 }
 .history-top b {
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 .history-reply {
   margin-top: 4px;
@@ -317,5 +413,11 @@ textarea {
   align-items: center;
   justify-content: space-between;
   margin-top: 6px;
+}
+@media (max-width: 768px) {
+  .current-product {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 </style>
