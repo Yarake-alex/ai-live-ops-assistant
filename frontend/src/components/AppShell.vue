@@ -1,38 +1,47 @@
 <template>
   <div class="app-shell">
-    <!-- 单一顶栏（60px）：品牌 + 主导航 + 用户区，减少重复白色横条 -->
-    <header class="topbar shell-inner">
-      <div class="brand">
+    <!-- 桌面端：左侧悬浮岛式侧边栏 -->
+    <aside class="sidebar" aria-label="主导航">
+      <div class="sidebar-brand">
         <span class="brand-mark">播</span>
-        <h1 class="brand-title">AI 直播运营助手</h1>
-        <span class="brand-sub">直播运营工作台</span>
+        <div class="brand-copy">
+          <h1 class="brand-title">AI 直播运营助手</h1>
+          <span class="brand-sub">直播运营工作台</span>
+        </div>
       </div>
-      <nav class="main-nav" aria-label="主导航">
+
+      <nav class="sidebar-nav" aria-label="业务导航">
         <button
           v-for="item in navItems"
           :key="item.key"
           :class="{ active: view === item.key }"
+          :aria-current="view === item.key ? 'page' : undefined"
           @click="$emit('navigate', item.key)"
         >
-          {{ item.label }}
+          <Icon :name="item.icon" size="16" />
+          <span>{{ item.label }}</span>
         </button>
       </nav>
-      <div class="topbar-right">
-        <span v-if="session.user" class="user-chip">
+
+      <div class="sidebar-account">
+        <div v-if="session.user" class="user-chip">
           <span class="user-avatar">{{ (session.user.username || "?").slice(0, 1).toUpperCase() }}</span>
-          <span class="user-name">{{ session.user.username }}</span>
-          <span v-if="isAdmin" class="tag tag-primary">管理员</span>
-        </span>
-        <template v-if="session.user">
-          <button class="header-btn" aria-label="修改密码" @click="cpVisible = true">
-            <Icon name="lock" size="14" /><span>修改密码</span>
+          <span class="user-copy">
+            <span class="user-name">{{ session.user.username }}</span>
+            <span v-if="isAdmin" class="user-role">管理员</span>
+          </span>
+        </div>
+        <div class="account-actions">
+          <button class="sidebar-action" aria-label="修改密码" @click="cpVisible = true">
+            <Icon name="lock" size="14" /> 修改密码
           </button>
-          <button class="header-btn logout-btn" aria-label="退出登录" @click="onLogout">
-            <Icon name="logout" size="14" /><span>退出登录</span>
+          <button class="sidebar-action logout-action" aria-label="退出登录" @click="onLogout">
+            <Icon name="logout" size="14" /> 退出登录
           </button>
-        </template>
+        </div>
       </div>
-    </header>
+    </aside>
+
 
     <main class="app-shell-main">
       <slot />
@@ -43,9 +52,8 @@
 </template>
 
 <script setup>
-// V6 阶段 2：正式后台壳。V6 IA 收紧：品牌/主导航/用户区收敛为单一 60px 顶栏
-// （56-64 区间），主导航内嵌（窄屏可横向滚动），导航与登录态行为不变。
-// 导航项由 App.vue 传入当前 view 并监听 navigate（不引入 vue-router）。
+// V6：仅桌面端悬浮岛式侧边栏。
+// 保持现有 view/navigate 机制、管理员入口判断与登录态行为，不引入 router 或新依赖。
 import { computed, ref } from "vue";
 import { session, logout } from "../state/session";
 import ChangePasswordModal from "./ChangePasswordModal.vue";
@@ -55,19 +63,19 @@ const props = defineProps({
   view: { type: String, default: "dashboard" },
   isAdmin: { type: Boolean, default: false },
 });
-defineEmits(["navigate"]);
+const emit = defineEmits(["navigate"]);
 
 const cpVisible = ref(false);
 
 const navItems = computed(() => {
   const items = [
-    { key: "dashboard", label: "运营工作台" },
-    { key: "products", label: "商品资料" },
-    { key: "materials", label: "直播素材库" },
-    { key: "comments", label: "评论助手" },
+    { key: "dashboard", label: "运营工作台", icon: "chart" },
+    { key: "products", label: "商品资料", icon: "box" },
+    { key: "materials", label: "直播素材库", icon: "folder" },
+    { key: "comments", label: "评论助手", icon: "chat" },
   ];
-  if (props.isAdmin) items.push({ key: "users", label: "用户管理" });
-  items.push({ key: "about", label: "关于" });
+  if (props.isAdmin) items.push({ key: "users", label: "用户管理", icon: "users" });
+  items.push({ key: "about", label: "关于", icon: "help" });
   return items;
 });
 
@@ -79,161 +87,162 @@ async function onLogout() {
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
-/* ── 单一顶栏 ── */
-.topbar {
-  position: sticky;
-  top: 0;
+/* ── 桌面端悬浮岛 ── */
+.sidebar {
+  position: fixed;
   z-index: 30;
-  /* sticky 在列向 flex 中不受 cross-axis stretch 约束，显式占满可用宽度 */
-  width: 100%;
-  background: #fff;
-  border-bottom: 1px solid var(--panel-border);
-  height: 60px;
-  min-width: 0;
+  top: 22px;
+  bottom: 22px;
+  left: 22px;
+  width: 216px;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
-.brand {
-  flex-shrink: 0;
+.sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  gap: 10px;
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--gray-100);
 }
 .brand-mark {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 6px;
   background: var(--primary);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
-  border-radius: 6px;
+}
+.brand-copy,
+.user-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .brand-title {
   margin: 0;
+  color: var(--gray-900);
   font-size: 15px;
   font-weight: 700;
-  color: var(--gray-900);
+  line-height: 1.4;
   white-space: nowrap;
 }
 .brand-sub {
-  font-size: 13px;
+  margin-top: 1px;
   color: var(--gray-400);
-  border-left: 1px solid var(--gray-200);
-  padding-left: 8px;
-  white-space: nowrap;
+  font-size: 12px;
 }
-
-/* 主导航：单行内嵌，窄屏可横向滚动；选中态深色文字 + 2px 蓝色底边 */
-.main-nav {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
+.sidebar-nav {
   display: flex;
-  justify-content: center;
-  gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 10px;
 }
-.main-nav::-webkit-scrollbar {
-  display: none;
-}
-.main-nav button {
-  border: none;
-  border-radius: 0;
+.sidebar-nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--gray-600);
-  height: 100%;
-  padding: 0 14px;
   font-size: 14px;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  white-space: nowrap;
+  text-align: left;
 }
-.main-nav button:hover:not(:disabled) {
+.sidebar-nav button:hover:not(:disabled) {
   background: var(--gray-50);
   color: var(--gray-900);
 }
-.main-nav button.active {
-  color: var(--gray-900);
+.sidebar-nav button.active {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary);
   font-weight: 600;
-  border-bottom-color: var(--primary);
 }
-
-.topbar-right {
-  flex-shrink: 0;
+.sidebar-account {
+  padding: 14px 10px;
+  border-top: 1px solid var(--gray-100);
+}
+.user-chip {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--gray-700);
+  min-width: 0;
+  padding: 0 8px 12px;
 }
 .user-avatar {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
   background: var(--primary-soft);
   color: var(--primary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  border-radius: 50%;
 }
 .user-name {
+  overflow: hidden;
+  color: var(--gray-700);
+  font-size: 13px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.logout-btn:hover:not(:disabled) {
-  color: var(--danger);
-  border-color: #fecaca;
+.user-role {
+  color: var(--primary);
+  font-size: 12px;
+}
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sidebar-action {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--gray-600);
+  font-size: 13px;
+}
+.sidebar-action:hover:not(:disabled) {
+  background: var(--gray-50);
+  color: var(--gray-900);
+}
+.logout-action:hover:not(:disabled) {
   background: var(--danger-soft);
+  color: var(--danger);
 }
 
+/* 侧边栏预留 260px，业务页自己的 1180px .container 不变。 */
 .app-shell-main {
-  flex: 1;
   min-width: 0;
+  padding: 22px 22px 22px 262px;
+}
+.app-shell-main :deep(.container) {
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* ── 窄屏降级：先藏次要品牌信息，再图标化用户操作，导航保持可横向滚动 ── */
-@media (max-width: 1024px) {
-  .brand-sub {
-    display: none;
-  }
-  .main-nav {
-    justify-content: flex-start;
-  }
-}
-@media (max-width: 768px) {
-  .brand-title {
-    display: none;
-  }
-  .topbar {
-    gap: 10px;
-  }
-}
-@media (max-width: 480px) {
-  .user-chip .tag {
-    display: none;
-  }
-  .header-btn span {
-    display: none;
-  }
-  .header-btn {
-    padding: 8px 10px;
-  }
-}
 </style>
