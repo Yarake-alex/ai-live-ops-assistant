@@ -19,6 +19,8 @@
   --content-max: 1180px;
   --panel-bg: #ffffff;
   --panel-border: #e8edf5;
+  /* 表单控件默认边框 */
+  --border: #dce3ee;
   /* 主操作色 */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
@@ -91,7 +93,8 @@ button {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 6px 14px;
+  padding: 8px 14px;
+  min-height: 36px;
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
   background: #fff;
@@ -177,6 +180,7 @@ summary:focus-visible {
   background: transparent;
   color: var(--gray-500);
   padding: 4px 8px;
+  min-height: 0;
 }
 .close-btn:hover:not(:disabled) {
   background: var(--gray-100);
@@ -188,6 +192,7 @@ summary:focus-visible {
   background: transparent;
   color: var(--gray-500);
   padding: 2px 6px;
+  min-height: 0;
 }
 
 /* ── 表单 ── */
@@ -199,12 +204,12 @@ input[type="email"],
 select,
 textarea {
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 10px;
   font-size: var(--text-sm);
   font-family: inherit;
   color: var(--gray-900);
   background: #fff;
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -241,26 +246,27 @@ label {
   color: var(--gray-700);
 }
 
-/* ── 卡片 ── */
+/* ── 业务面板（白底 1px #E8EDF5、6-8px 圆角、默认无阴影；确需层级时由弹窗单独使用 --shadow-md） ── */
 
-.card,
-.qa-card,
-.prep-card,
-.completeness-card,
-.documents-card,
-.insights-card,
-.ops-card,
-.script-card,
-.review-card,
-.material-list,
-.product-selector,
-.product-summary,
-.chunks-preview {
+:is(
+  .card,
+  .qa-card,
+  .prep-card,
+  .completeness-card,
+  .documents-card,
+  .insights-card,
+  .ops-card,
+  .script-card,
+  .review-card,
+  .stat-card,
+  .quick-card,
+  .product-selector,
+  .product-summary
+) {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius);
-  /* 面板默认无阴影；确需层级时由弹窗/浮层单独使用 --shadow-md */
-  padding: 16px;
+  padding: 20px 24px;
 }
 
 /* ── 卡片标题行 ── */
@@ -277,6 +283,13 @@ label {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.head-icon {
+  color: var(--gray-500);
+  flex-shrink: 0;
 }
 
 /* ── badge / tag ── */
@@ -336,6 +349,11 @@ label {
   border-color: #fecaca;
   color: var(--danger-ink);
 }
+.alert-success {
+  background: var(--success-soft);
+  border-color: #a7f3d0;
+  color: var(--success-ink);
+}
 
 /* ── 提示 / 空态 / 弱化文本 ── */
 
@@ -351,4 +369,156 @@ label {
 .muted {
   color: var(--gray-500);
   font-size: var(--text-xs);
+}
+
+/* ── 页面容器 / 壳内对齐线 ── */
+
+/* 页面主体：统一 1180px 容器；顶栏、主导航与页面主体共享同一条左右对齐线 */
+.container {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* 顶栏与主导航内容区（与 .container 同宽同边距） */
+.shell-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── 页面标题区：左侧标题 + 说明，右侧最高优先级操作 ── */
+
+.view-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.view-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+.view-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+.view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ── 空态：低强调图标 + 一句说明 + 可选主操作 ── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+.empty-icon {
+  color: var(--gray-400);
+  opacity: 0.75;
+}
+.empty-actions {
+  margin-top: 6px;
+}
+
+/* ── 结果输出区（问答/话术/复盘/评论生成结果共用） ── */
+
+.result-box {
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
+  padding: 12px;
+  min-height: 60px;
+}
+
+/* ── 列表行（列表/历史/文档条目通用） ── */
+
+.row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.row-item:last-child {
+  border-bottom: none;
+}
+
+/* ── 弹窗 ── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal-box {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-md);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── 响应式 ── */
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+  .shell-inner {
+    padding: 0 16px;
+  }
+  :is(
+    .card,
+    .qa-card,
+    .prep-card,
+    .completeness-card,
+    .documents-card,
+    .insights-card,
+    .ops-card,
+    .script-card,
+    .review-card,
+    .stat-card,
+    .quick-card,
+    .product-selector,
+    .product-summary
+  ) {
+    padding: 16px;
+  }
 }

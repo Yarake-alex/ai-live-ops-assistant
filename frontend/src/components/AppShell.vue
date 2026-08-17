@@ -2,7 +2,7 @@
   <div class="app-shell">
     <!-- 顶栏：左产品名，右用户信息 + 修改密码 / 退出登录 -->
     <header class="topbar">
-      <div class="topbar-inner">
+      <div class="topbar-inner shell-inner">
         <div class="brand">
           <span class="brand-mark">播</span>
           <h1 class="brand-title">AI 直播运营助手</h1>
@@ -24,7 +24,7 @@
 
     <!-- 主导航：稳定导航条，当前模块蓝色高亮 + 底部指示条 -->
     <nav class="main-nav">
-      <div class="main-nav-inner">
+      <div class="main-nav-inner shell-inner">
         <button
           v-for="item in navItems"
           :key="item.key"
@@ -89,12 +89,9 @@ async function onLogout() {
   top: 0;
   z-index: 30;
   background: #fff;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--panel-border);
 }
 .topbar-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 20px;
   height: 52px;
   display: flex;
   align-items: center;
@@ -174,12 +171,9 @@ async function onLogout() {
   top: 52px;
   z-index: 29;
   background: #fff;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--panel-border);
 }
 .main-nav-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 20px;
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
@@ -199,7 +193,8 @@ async function onLogout() {
   color: var(--gray-900);
 }
 .main-nav button.active {
-  color: var(--primary);
+  /* 选中态：2px 蓝色底边 + 深色文字，不只依赖颜色 */
+  color: var(--gray-900);
   font-weight: 600;
   border-bottom-color: var(--primary);
 }

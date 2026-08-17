@@ -4,7 +4,9 @@
       <div class="login-brand">MVP</div>
       <h1>AI 直播运营助手 <span class="title-highlight">MVP</span></h1>
       <p class="login-sub">商品资料 · 直播话术 · 评论助手 · 直播复盘<br />请输入账号和密码以进入系统</p>
+      <label for="login-username">用户名</label>
       <input
+        id="login-username"
         v-model="username"
         type="text"
         placeholder="用户名"
@@ -12,7 +14,9 @@
         :disabled="submitting"
         @keydown.enter="submit"
       />
+      <label for="login-password">访问密码</label>
       <input
+        id="login-password"
         v-model="password"
         type="password"
         placeholder="访问密码"
@@ -20,8 +24,8 @@
         :disabled="submitting"
         @keydown.enter="submit"
       />
-      <div v-if="error" class="login-error">{{ error }}</div>
-      <button :disabled="submitting" @click="submit">
+      <div v-if="error" class="alert alert-danger login-error">{{ error }}</div>
+      <button class="primary-btn login-submit" :disabled="submitting" @click="submit">
         {{ submitting ? "登录中..." : "登 录" }}
       </button>
     </div>
@@ -79,11 +83,11 @@ async function submit() {
 }
 .login-card {
   width: min(400px, 100%);
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
   padding: 32px 28px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 .login-brand {
   display: inline-block;
@@ -99,14 +103,14 @@ async function submit() {
 h1 {
   margin: 0 0 8px;
   font-size: 20px;
-  color: #333;
+  color: var(--gray-900);
 }
 .title-highlight {
-  color: #2563eb;
+  color: var(--primary);
 }
 .login-sub {
   margin: 0 0 20px;
-  color: #777;
+  color: var(--gray-500);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -116,23 +120,9 @@ input {
   margin-bottom: 10px;
 }
 .login-error {
-  color: #e74c3c;
-  font-size: 12px;
   margin-bottom: 10px;
-  min-height: 16px;
 }
-button {
+.login-submit {
   width: 100%;
-  padding: 8px 16px;
-  font-size: 14px;
-  border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

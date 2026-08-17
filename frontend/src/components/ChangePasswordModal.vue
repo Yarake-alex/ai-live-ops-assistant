@@ -1,12 +1,14 @@
 <template>
-  <div class="cp-overlay" @click.self="close">
-    <div class="cp-box">
-      <div class="cp-head">
+  <div class="modal-overlay" @click.self="close">
+    <div class="modal-box cp-box">
+      <div class="modal-head">
         <h3>修改密码</h3>
-        <button class="close-btn" @click="close">✕</button>
+        <button class="close-btn" @click="close"><Icon name="x" size="14" /></button>
       </div>
-      <input v-model="oldPassword" type="password" placeholder="当前密码" :disabled="saving" />
-      <input v-model="newPassword" type="password" placeholder="新密码（至少 6 个字符）" :disabled="saving" />
+      <label for="cp-old">当前密码</label>
+      <input id="cp-old" v-model="oldPassword" type="password" placeholder="当前密码" :disabled="saving" />
+      <label for="cp-new">新密码（至少 6 个字符）</label>
+      <input id="cp-new" v-model="newPassword" type="password" placeholder="新密码（至少 6 个字符）" :disabled="saving" />
       <div v-if="msg" class="cp-msg" :style="{ color: msgColor }">{{ msg }}</div>
       <div class="cp-actions">
         <button class="primary-btn" :disabled="saving" @click="submit">
@@ -25,6 +27,7 @@
 import { ref } from "vue";
 import { apiPost, ApiError, SessionExpiredError } from "../api/client";
 import { session, logout } from "../state/session";
+import Icon from "./Icon.vue";
 
 const emit = defineEmits(["close"]);
 
@@ -85,31 +88,8 @@ async function submit() {
 </script>
 
 <style scoped>
-.cp-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
 .cp-box {
   width: min(400px, calc(100vw - 32px));
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-.cp-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.cp-head h3 {
-  margin: 0;
-  font-size: 15px;
 }
 .cp-box input {
   margin-bottom: 8px;
