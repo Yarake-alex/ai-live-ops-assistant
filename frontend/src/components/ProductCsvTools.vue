@@ -129,7 +129,7 @@ async function doExport() {
 }
 .muted-tip {
   color: var(--gray-500);
-  font-size: 12px;
+  font-size: 13px;
   min-width: 0;
 }
 .header-details {

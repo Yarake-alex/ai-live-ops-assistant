@@ -247,11 +247,11 @@ textarea {
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
-/* 预设问题：紧凑可点击 tag，不挤压文本域 */
+/* 预设问题：紧凑可点击 tag（热区 ≥30px），不挤压文本域 */
 .preset-btn {
-  min-height: 0;
-  padding: 3px 10px;
-  font-size: 12px;
+  min-height: 30px;
+  padding: 4px 12px;
+  font-size: 13px;
   background: var(--panel-bg);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-pill);

@@ -63,7 +63,6 @@ function clear() {
   width: 100%;
   padding-left: 32px;
   padding-right: 28px;
-  font-size: 13px;
 }
 .search-box-clear {
   position: absolute;

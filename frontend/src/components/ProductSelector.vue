@@ -162,13 +162,11 @@ onMounted(loadProducts);
 }
 .item-top .status-tag {
   flex-shrink: 0;
-  font-size: 11px;
 }
 .list-item .muted {
   margin-top: 2px;
 }
 .item-points {
-  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

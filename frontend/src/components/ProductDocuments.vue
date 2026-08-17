@@ -347,11 +347,11 @@ watch(() => props.productId, load, { immediate: true });
 }
 .muted-tip {
   color: var(--gray-500);
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 6px;
 }
 .documents-card .muted {
-  font-size: 11px;
+  font-size: 13px;
 }
 .doc-list {
   max-height: 360px;

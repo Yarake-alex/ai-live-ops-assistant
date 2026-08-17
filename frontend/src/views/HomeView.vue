@@ -1,9 +1,12 @@
 <template>
   <section class="about-view container">
-    <div class="card about-card">
-      <div class="card-head">
-        <h3>关于本系统</h3>
+    <div class="view-head">
+      <div>
+        <h2 class="view-title">关于本系统</h2>
+        <p class="view-desc">产品介绍、版本信息与技术说明</p>
       </div>
+    </div>
+    <div class="card about-card">
       <p class="about-desc">
         AI 直播运营助手 MVP —— 面向直播电商运营场景的 AI 演示系统：商品资料维护、资料文档问答（语义检索 +
         基础检索降级）、开播话术、评论助手、直播复盘、资料完整度、问题洞察与运营建议，
@@ -61,7 +64,7 @@
   flex-shrink: 0;
   width: 72px;
   color: var(--gray-400);
-  font-size: 12px;
+  font-size: 13px;
 }
 .meta-row dd {
   margin: 0;

@@ -89,11 +89,11 @@ function timeInfo(c) {
   padding: 8px;
   margin: 6px 0;
   border-radius: var(--radius-sm);
-  font-size: 0.9em;
+  font-size: 13px;
 }
 .chunk-meta {
   color: var(--gray-500);
-  font-size: 0.8em;
+  font-size: 13px;
   margin-bottom: 4px;
 }
 .chunk-content {

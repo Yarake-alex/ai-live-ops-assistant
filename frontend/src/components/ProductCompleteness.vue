@@ -103,7 +103,7 @@ watch(() => props.productId, load, { immediate: true });
 }
 .score-label {
   color: var(--gray-500);
-  font-size: 11px;
+  font-size: 13px;
   margin-top: 4px;
 }
 .missing-line {
@@ -113,7 +113,7 @@ watch(() => props.productId, load, { immediate: true });
 }
 .suggestions {
   color: var(--gray-500);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.8;
 }
 .done-line {

@@ -43,9 +43,9 @@
   --radius-pill: 999px;
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
-  /* 字号 */
-  --text-xs: 12px;
-  --text-sm: 13px;
+  /* 字号（收紧规范：正文 ≥14px，辅助文字 ≥13px） */
+  --text-xs: 13px;
+  --text-sm: 14px;
   --text-base: 14px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
@@ -119,11 +119,13 @@ summary:focus-visible {
   outline-offset: 2px;
 }
 
-/* 主操作（蓝） */
+/* 主操作（蓝）：重要主操作加大热区（40px） */
 .primary-btn {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+  padding: 9px 16px;
+  min-height: 40px;
 }
 .primary-btn:hover:not(:disabled) {
   background: var(--primary-hover);
@@ -435,7 +437,8 @@ label {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 36px 16px;
+  min-height: 150px;
+  padding: 28px 16px;
   text-align: center;
   color: var(--gray-500);
   font-size: 13px;

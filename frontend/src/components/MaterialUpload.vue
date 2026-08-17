@@ -208,7 +208,7 @@ async function confirmUpload() {
 }
 .upload-status {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--gray-500);
 }
 .confirm-box {
@@ -221,7 +221,7 @@ async function confirmUpload() {
 .file-list {
   max-height: 180px;
   overflow-y: auto;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--gray-500);
   margin-bottom: 8px;
 }

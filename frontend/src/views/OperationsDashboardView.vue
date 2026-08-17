@@ -161,7 +161,7 @@ onMounted(loadStats);
   margin-bottom: 16px;
 }
 .step {
-  min-height: 0;
+  min-height: 32px;
   padding: 6px 12px;
   display: inline-flex;
   align-items: center;
@@ -237,11 +237,11 @@ onMounted(loadStats);
 }
 .stat-label {
   color: var(--gray-500);
-  font-size: 12px;
+  font-size: 13px;
 }
 .stat-desc {
   color: var(--gray-400);
-  font-size: 11px;
+  font-size: 13px;
 }
 .quick-grid {
   display: grid;

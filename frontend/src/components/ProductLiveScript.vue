@@ -140,7 +140,7 @@ watch(
 <style scoped>
 .status-line {
   color: var(--gray-500);
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 6px;
 }
 .script-card .empty {

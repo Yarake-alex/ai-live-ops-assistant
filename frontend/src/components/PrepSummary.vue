@@ -99,6 +99,6 @@ watch(() => props.productId, load, { immediate: true });
 }
 .prep-label {
   color: var(--gray-500);
-  font-size: 11px;
+  font-size: 13px;
 }
 </style>

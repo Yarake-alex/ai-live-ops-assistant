@@ -20,6 +20,7 @@
       <ProductSummary :product="product" :busy="removing" @edit="openEditForm" @remove="onRemoveProduct" />
     </div>
 
+    <h3 class="section-title">商品详情工作区</h3>
     <div class="product-modules">
       <div class="module-wide">
         <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
@@ -142,12 +143,18 @@ async function onRemoveProduct() {
   gap: 16px;
   align-items: stretch;
 }
+/* 分区标题：将下方模块明确归入「商品详情工作区」，减少碎片感 */
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 20px 0 14px;
+}
 /* 下方模块统一网格：左右列对齐，宽模块占满整行 */
 .product-modules {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 16px;
-  margin-top: 16px;
   align-items: start;
 }
 .module-wide {
