@@ -5,11 +5,6 @@
         <h2 class="view-title">直播素材库</h2>
         <p class="view-desc">上传直播资料用于资料问答，整理后可辅助话术与评论回复</p>
       </div>
-      <div class="view-actions">
-        <button class="primary-btn" @click="uploadRef?.openPicker()">
-          <Icon name="upload" size="14" /> 上传素材
-        </button>
-      </div>
     </div>
 
     <!-- 素材列表：单一业务面板，搜索与整理操作随列表归位 -->
@@ -46,8 +41,8 @@
 
     <!-- 上传与问答：按工作流并列的两个业务面板 -->
     <div class="materials-grid">
-      <MaterialUpload ref="uploadRef" @uploaded="loadDocs" />
-      <MaterialQa />
+      <MaterialUpload @uploaded="loadDocs" />
+      <MaterialQa :key="qaResetKey" />
     </div>
   </section>
 </template>
@@ -59,8 +54,8 @@
 // GET /rag/documents/{filename}/chunks、DELETE /rag/documents/{filename}、
 // DELETE /rag/documents、POST /rag/reindex、POST /rag/ask，返回结构不变。
 // 旧页面 static/index.html 继续可用。
-// V6 阶段 5：标题区（上传素材归位右上）、列表面板（搜索/预览/整理归位）、
-// 上传区（拖拽/选择容器边界）+ 资料问答并列，页面铺满内容区。
+// V6 阶段 5：列表面板（搜索/预览/整理归位）、上传区（拖拽/选择容器边界）+
+// 资料问答并列，页面铺满内容区。上传入口仅保留上传面板一处（与旧页面一致）。
 import { computed, ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
@@ -74,7 +69,8 @@ import MaterialQa from "../components/MaterialQa.vue";
 
 const previewFilename = ref("");
 const busy = ref(false);
-const uploadRef = ref(null);
+// 清空素材库后重置资料问答组件状态（与旧页面清空问答结果区一致）
+const qaResetKey = ref(0);
 
 async function onDeleteDoc(filename) {
   if (busy.value) return;
@@ -97,8 +93,9 @@ async function onDeleteDoc(filename) {
 }
 
 function onCleared() {
-  // 清空素材库后预览一并清空（与旧页面一致）
+  // 清空素材库后预览与问答结果一并清空（与旧页面一致）
   previewFilename.value = "";
+  qaResetKey.value += 1;
   loadDocs();
 }
 

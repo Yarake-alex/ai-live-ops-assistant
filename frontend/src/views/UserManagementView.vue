@@ -5,11 +5,6 @@
         <h2 class="view-title">用户管理</h2>
         <p class="view-desc">管理可登录系统的账号与角色（仅管理员可见）</p>
       </div>
-      <div class="view-actions">
-        <button class="primary-btn" @click="focusCreate">
-          <Icon name="plus" size="14" /> 新增用户
-        </button>
-      </div>
     </div>
 
     <div class="user-grid">
@@ -19,7 +14,7 @@
           <h3><Icon name="users" size="15" class="head-icon" /> 新增用户</h3>
         </div>
         <label for="um-username">用户名（至少 3 个字符）</label>
-        <input id="um-username" ref="usernameInput" v-model="newUsername" placeholder="用户名（至少 3 个字符）" />
+        <input id="um-username" v-model="newUsername" type="text" placeholder="用户名（至少 3 个字符）" />
         <label for="um-password">密码（至少 8 个字符）</label>
         <input id="um-password" v-model="newPassword" type="password" placeholder="密码（至少 8 个字符）" />
         <label for="um-role">角色</label>
@@ -78,14 +73,13 @@
 // 阶段 5.4：用户管理（以旧页面已有能力为准，不新增权限模型）：
 // GET /auth/users 列表、POST /auth/users 创建、PATCH /auth/users/{id}/status 启用/禁用。
 // 修改密码属于页头登录态功能，不在本页迁移范围。
-// V6 阶段 6：标题区「新增用户」聚焦表单；稳定双栏（列表主宽 60%）；
-// 角色/状态用统一 tag，禁用用危险操作样式。
+// V6 阶段 6：创建入口仅保留页面内表单（左侧卡片），不再设标题区重复按钮；
+// 稳定双栏（列表主宽 60%）；角色/状态用统一 tag，禁用用危险操作样式。
 import { ref, onMounted } from "vue";
 import { apiGet, apiPost, apiPatch, ApiError, SessionExpiredError } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
 import Icon from "../components/Icon.vue";
 
-const usernameInput = ref(null);
 const newUsername = ref("");
 const newPassword = ref("");
 const newRole = ref("user");
@@ -97,11 +91,6 @@ const users = ref([]);
 const loading = ref(false);
 const listError = ref(false);
 const togglingId = ref(null);
-
-function focusCreate() {
-  usernameInput.value?.scrollIntoView({ block: "center", behavior: "smooth" });
-  usernameInput.value?.focus();
-}
 
 function createdText(u) {
   return u.created_at ? new Date(u.created_at).toLocaleDateString() : "";

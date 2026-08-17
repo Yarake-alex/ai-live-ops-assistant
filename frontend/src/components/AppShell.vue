@@ -75,7 +75,7 @@ const navItems = computed(() => {
     { key: "comments", label: "评论助手", icon: "chat" },
   ];
   if (props.isAdmin) items.push({ key: "users", label: "用户管理", icon: "users" });
-  items.push({ key: "about", label: "关于", icon: "help" });
+  // 「关于」非核心业务页面，不占主导航（页面组件 HomeView 保留，内部仍可访问）
   return items;
 });
 
