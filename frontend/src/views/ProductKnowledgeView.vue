@@ -22,7 +22,11 @@
 
     <!-- 商品运营工作区：仅在选中商品后渲染；Tab 切换，按访问加载 -->
     <template v-if="selectedId">
-      <h3 class="section-title">商品运营工作区</h3>
+      <div class="workspace-head">
+        <h3 class="section-title">商品运营工作区</h3>
+        <!-- 当前商品的四项轻量状态摘要：复用既有聚合加载逻辑，不新增接口 -->
+        <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" @docs="docsCount = $event" />
+      </div>
       <div class="ops-tabs" role="tablist" aria-label="商品运营工作区">
         <button
           v-for="t in TABS"
@@ -37,20 +41,18 @@
         </button>
       </div>
       <div class="ops-tab-panel" role="tabpanel">
-        <!-- 资料与完整度：开播准备概览 + 完整度/文档合并为单面板 -->
-        <div v-if="activeTab === 'materials'" class="card">
+        <!-- 资料与完整度：单一横向全宽主面板，文档为主内容 -->
+        <div v-if="activeTab === 'materials'" class="card materials-panel">
           <div class="card-head">
             <h3><Icon name="file" size="15" class="head-icon" /> 补充商品资料</h3>
           </div>
-          <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
-          <div class="tab-split">
-            <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" />
-            <ProductDocuments
-              :product-id="selectedId"
-              @changed="refreshTick++"
-              @docs="docsCount = $event"
-            />
-          </div>
+          <!-- 完整度详情只提供缺失项/下一步建议，避免重复头部百分比摘要。 -->
+          <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" compact />
+          <ProductDocuments
+            :product-id="selectedId"
+            @changed="refreshTick++"
+            @docs="docsCount = $event"
+          />
         </div>
 
         <!-- 智能问答：资料问答 + 问题洞察 -->
@@ -196,11 +198,16 @@ async function onRemoveProduct() {
   gap: 16px;
   align-items: stretch;
 }
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--gray-900);
+.workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin: 20px 0 14px;
+}
+.workspace-head .section-title {
+  margin: 0;
 }
 /* 运营工作区 Tab 条：选中态深色文字 + 2px 蓝色底边 */
 .ops-tabs {
@@ -230,25 +237,28 @@ async function onRemoveProduct() {
   font-weight: 600;
   border-bottom-color: var(--primary);
 }
-/* 面板内双栏（补充资料：完整度 | 文档；智能问答：问答 | 洞察） */
+/* 资料 Tab：一个全宽主面板；文档区占据全部有效宽度。 */
+.materials-panel :deep(.module-section) + :deep(.module-section) {
+  border-top: 1px solid var(--gray-100);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+/* 智能问答 Tab 仍保留双栏，仅在该 Tab 内生效。 */
 .tab-split {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 0 24px;
-  border-top: 1px solid var(--gray-100);
-  margin-top: 12px;
-  padding-top: 14px;
   align-items: start;
-}
-.card > .tab-split:first-child {
-  border-top: none;
-  margin-top: 0;
-  padding-top: 0;
 }
 @media (max-width: 900px) {
   .product-grid,
   .tab-split {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .workspace-head {
+    align-items: flex-start;
   }
 }
 </style>

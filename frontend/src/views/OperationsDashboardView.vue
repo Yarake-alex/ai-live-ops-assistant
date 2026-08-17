@@ -42,24 +42,30 @@
     </div>
 
     <h3 class="section-title">直播流程</h3>
-    <div class="quick-grid">
-      <div v-for="f in FLOWS" :key="f.title" class="quick-card">
-        <div class="qc-head">
+    <!-- 单一连续流程带：阶段顺序与全部既有任务跳转保持不变 -->
+    <div class="flow-band" aria-label="直播流程">
+      <div v-for="(f, stageIndex) in FLOWS" :key="f.title" class="flow-stage">
+        <div class="flow-stage-head">
+          <span class="flow-stage-index">{{ stageIndex + 1 }}</span>
           <Icon :name="f.icon" size="16" class="head-icon" />
-          <span class="qc-title">{{ f.title }}</span>
+          <span class="flow-stage-title">{{ f.title }}</span>
         </div>
-        <div class="qc-list">
+        <div class="flow-task-list">
           <button
-            v-for="(a, i) in f.actions"
+            v-for="(a, taskIndex) in f.actions"
             :key="a.label"
-            class="qc-action"
+            type="button"
+            class="flow-task"
             @click="$emit('navigate', a.to)"
           >
-            <span class="qc-num">{{ i + 1 }}</span>
-            <span class="qc-label">{{ a.label }}</span>
-            <Icon name="chevron" size="12" class="qc-chevron" />
+            <span class="flow-task-index">{{ taskIndex + 1 }}</span>
+            <span class="flow-task-label">{{ a.label }}</span>
+            <Icon name="chevron" size="12" class="flow-task-chevron" />
           </button>
         </div>
+        <span v-if="stageIndex < FLOWS.length - 1" class="flow-connector" aria-hidden="true">
+          <Icon name="chevron" size="15" />
+        </span>
       </div>
     </div>
   </section>
@@ -243,33 +249,60 @@ onMounted(loadStats);
   color: var(--gray-400);
   font-size: 13px;
 }
-.quick-grid {
+/* 三阶段连续流程带：一个统一表面，明确三等分，消除 auto-fill 的空白第四列。 */
+.flow-band {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
-.qc-head {
+.flow-stage {
+  position: relative;
+  min-width: 0;
+  padding: 20px 24px;
+}
+.flow-stage + .flow-stage {
+  border-left: 1px solid var(--panel-border);
+}
+.flow-stage-head {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
 }
-.qc-title {
-  font-size: 14px;
+.flow-stage-index {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
   font-weight: 700;
 }
-.qc-list {
+.flow-stage-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+.flow-task-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.qc-action {
+.flow-task {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 36px;
   padding: 7px 8px;
-  min-height: 34px;
   border: none;
   background: transparent;
   border-radius: var(--radius-sm);
@@ -277,29 +310,72 @@ onMounted(loadStats);
   justify-content: flex-start;
   text-align: left;
 }
-.qc-action:hover:not(:disabled) {
+.flow-task:hover:not(:disabled) {
   background: var(--gray-50);
   color: var(--primary);
 }
-.qc-num {
+.flow-task-index {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 700;
+  background: var(--gray-50);
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.qc-label {
+.flow-task-label {
   flex: 1;
   min-width: 0;
 }
-.qc-chevron {
+.flow-task-chevron {
   color: var(--gray-400);
   flex-shrink: 0;
+}
+/* 阶段连接：轻量箭头浮于内部边界，不引入状态或完成语义。 */
+.flow-connector {
+  position: absolute;
+  top: 27px;
+  right: -8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--gray-400);
+  background: var(--panel-bg);
+}
+@media (max-width: 768px) {
+  .flow-band {
+    grid-template-columns: 1fr;
+  }
+  .flow-stage {
+    padding: 16px;
+  }
+  .flow-stage + .flow-stage {
+    border-top: 1px solid var(--panel-border);
+    border-left: none;
+  }
+  .flow-connector {
+    top: -8px;
+    right: auto;
+    left: 18px;
+    transform: rotate(90deg);
+  }
+}
+@media (max-width: 390px) {
+  .flow-stage {
+    padding: 14px;
+  }
+  .flow-task {
+    align-items: flex-start;
+  }
+  .flow-task-chevron {
+    margin-top: 4px;
+  }
 }
 </style>
