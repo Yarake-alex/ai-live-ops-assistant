@@ -12,6 +12,7 @@
           id="pf-name"
           ref="nameInput"
           v-model="form.name"
+          type="text"
           placeholder="例如：玻尿酸补水面膜"
           required
           :aria-invalid="Boolean(fieldErrors.name)"
@@ -71,7 +72,7 @@
       </div>
       <div class="form-field">
         <label for="pf-audience">适用人群</label>
-        <input id="pf-audience" v-model="form.target_audience" placeholder="例如：干性皮肤人群" />
+        <input id="pf-audience" v-model="form.target_audience" type="text" placeholder="例如：干性皮肤人群" />
       </div>
       <div class="form-field">
         <label for="pf-pain">用户痛点</label>
@@ -79,7 +80,7 @@
       </div>
       <div class="form-field">
         <label for="pf-promo">优惠信息</label>
-        <input id="pf-promo" v-model="form.promotion" placeholder="例如：买二送一" />
+        <input id="pf-promo" v-model="form.promotion" type="text" placeholder="例如：买二送一" />
       </div>
       <div class="form-field">
         <label for="pf-status">直播状态</label>
