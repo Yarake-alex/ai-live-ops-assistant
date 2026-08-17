@@ -125,10 +125,11 @@ onMounted(loadProducts);
 </script>
 
 <style scoped>
+/* 搜索框与直播状态筛选保持两行，行间留出清晰间距 */
 .filter-row {
   display: flex;
   gap: 6px;
-  margin-bottom: 8px;
+  margin: 10px 0 8px;
 }
 .filter-row select {
   flex: 1;
@@ -137,18 +138,22 @@ onMounted(loadProducts);
   max-height: 52vh;
   overflow-y: auto;
 }
+/* 商品条目：轻分隔线区分，不做厚重卡片 */
 .list-item {
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
   cursor: pointer;
-  border: 1px solid transparent;
+  border-bottom: 1px solid #eef1f5;
+}
+.list-item:last-child {
+  border-bottom: none;
 }
 .list-item:hover {
   background: var(--gray-50);
 }
+/* 选中态：浅蓝背景 + 左侧 3px 主色竖线（inset 阴影，不产生布局位移） */
 .list-item.selected {
   background: var(--primary-soft);
-  border-color: var(--primary-border);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 .item-top {
   display: flex;

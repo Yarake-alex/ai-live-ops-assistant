@@ -30,10 +30,8 @@
         :error="error"
         :query="q"
         :busy="busy"
-        @view-chunks="previewFilename = $event"
         @delete-doc="onDeleteDoc"
       />
-      <MaterialChunksPreview :filename="previewFilename" @close="previewFilename = ''" />
       <div class="list-toolbar">
         <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
       </div>
@@ -56,6 +54,7 @@
 // 旧页面 static/index.html 继续可用。
 // V6 阶段 5：列表面板（搜索/预览/整理归位）、上传区（拖拽/选择容器边界）+
 // 资料问答并列，页面铺满内容区。上传入口仅保留上传面板一处（与旧页面一致）。
+// V6 收口：片段预览改为文件 item 下方内联展开（状态由 MaterialList 内部管理）。
 import { computed, ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
@@ -63,11 +62,9 @@ import Icon from "../components/Icon.vue";
 import SearchBox from "../components/SearchBox.vue";
 import MaterialList from "../components/MaterialList.vue";
 import MaterialUpload from "../components/MaterialUpload.vue";
-import MaterialChunksPreview from "../components/MaterialChunksPreview.vue";
 import MaterialManage from "../components/MaterialManage.vue";
 import MaterialQa from "../components/MaterialQa.vue";
 
-const previewFilename = ref("");
 const busy = ref(false);
 // 清空素材库后重置资料问答组件状态（与旧页面清空问答结果区一致）
 const qaResetKey = ref(0);
@@ -81,8 +78,6 @@ async function onDeleteDoc(filename) {
   busy.value = true;
   try {
     await apiRequest(`/rag/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
-    // 删除正在预览的文件时清空预览（与旧页面一致）
-    if (previewFilename.value === filename) previewFilename.value = "";
     toast("资料已删除", "success");
     await loadDocs();
   } catch (e) {
@@ -93,8 +88,8 @@ async function onDeleteDoc(filename) {
 }
 
 function onCleared() {
-  // 清空素材库后预览与问答结果一并清空（与旧页面一致）
-  previewFilename.value = "";
+  // 清空素材库后问答结果清空（与旧页面一致）；
+  // 列表重载后 MaterialList 会自动收起失效的片段预览。
   qaResetKey.value += 1;
   loadDocs();
 }

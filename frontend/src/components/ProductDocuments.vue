@@ -19,34 +19,37 @@
       <span>暂无资料，可上传 PDF / TXT / MD / CSV。</span>
     </div>
     <div v-else class="doc-list">
-      <div v-for="d in docs" :key="d.filename" class="row-item">
-        <div class="doc-info">
-          <b><Icon name="file" size="13" class="doc-file-icon" /> {{ d.filename }}</b>
-          <div class="muted">{{ d.chunks }} 个片段<span v-if="d.preview"> · {{ d.preview.slice(0, 40) }}…</span></div>
-        </div>
-        <div class="doc-actions">
-          <button class="light-btn" :disabled="busy" @click="previewFilename = d.filename">查看片段</button>
-          <button class="danger-btn" :disabled="busy" @click="onDeleteDoc(d.filename)">删除</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 片段预览（与旧页面一致：原地展示、可收起） -->
-    <div v-if="previewFilename" class="chunks-preview">
-      <div class="preview-head">
-        <b>当前文件：{{ previewFilename }}</b>
-        <button class="light-btn" @click="previewFilename = ''">收起片段</button>
-      </div>
-      <div class="preview-body">
-        <div v-if="previewLoading" class="hint">加载片段...</div>
-        <div v-else-if="previewError" class="hint hint-error">加载片段失败。</div>
-        <div v-else-if="!chunks.length" class="hint">该资料暂无可预览片段</div>
-        <template v-else>
-          <div v-for="c in chunks" :key="c.chunk_index" class="chunk">
-            <div class="chunk-meta">片段 {{ c.chunk_index }}{{ timeInfo(c) }}</div>
-            <div class="chunk-content">{{ c.content }}</div>
+      <div v-for="d in docs" :key="d.filename" class="doc-entry">
+        <div class="row-item">
+          <div class="doc-info">
+            <b><Icon name="file" size="13" class="doc-file-icon" /> {{ d.filename }}</b>
+            <div class="muted">{{ d.chunks }} 个片段<span v-if="d.preview"> · {{ d.preview.slice(0, 40) }}…</span></div>
           </div>
-        </template>
+          <div class="doc-actions">
+            <button class="light-btn" :disabled="busy" @click="togglePreview(d.filename)">
+              {{ previewFilename === d.filename ? "收起片段" : "查看片段" }}
+            </button>
+            <button class="danger-btn" :disabled="busy" @click="onDeleteDoc(d.filename)">删除</button>
+          </div>
+        </div>
+
+        <!-- 片段预览：在当前文档 item 下方内联展开（与素材库一致，同列表只展开一个） -->
+        <div v-if="previewFilename === d.filename" class="chunks-preview">
+          <div class="preview-head">
+            <b>当前文件：{{ previewFilename }}</b>
+          </div>
+          <div class="preview-body">
+            <div v-if="previewLoading" class="hint">加载片段...</div>
+            <div v-else-if="previewError" class="hint hint-error">加载片段失败。</div>
+            <div v-else-if="!chunks.length" class="hint">该资料暂无可预览片段</div>
+            <template v-else>
+              <div v-for="c in chunks" :key="c.chunk_index" class="chunk">
+                <div class="chunk-meta">片段 {{ c.chunk_index }}{{ timeInfo(c) }}</div>
+                <div class="chunk-content">{{ c.content }}</div>
+              </div>
+            </template>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -103,6 +106,8 @@
 // GET /products/{id}/knowledge/documents/{filename}/chunks 片段预览；
 // DELETE /products/{id}/knowledge/documents/{filename} 删除；
 // POST /products/{id}/knowledge/documents/{filename}/reindex 逐个重新整理。
+// V6 收口：片段预览改为当前文档 item 下方内联展开，只展开一个；
+// 切换商品/刷新/上传/删除/重新整理后自动清理失效预览状态。
 import { ref, watch } from "vue";
 import { apiGet, apiRequest, SessionExpiredError } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
@@ -144,12 +149,20 @@ async function load() {
   try {
     docs.value = await apiGet(`/products/${props.productId}/knowledge/documents`);
     emit("docs", docs.value.length);
+    // 刷新/删除/上传/重新整理后，预览的文件已不存在时清理展开状态
+    if (previewFilename.value && !docs.value.some((d) => d.filename === previewFilename.value)) {
+      previewFilename.value = "";
+    }
   } catch (e) {
     error.value = true;
     docs.value = [];
   } finally {
     loading.value = false;
   }
+}
+
+function togglePreview(filename) {
+  previewFilename.value = previewFilename.value === filename ? "" : filename;
 }
 
 // ─── 片段预览 ───
@@ -336,7 +349,15 @@ async function reorganize() {
   toast(message, failed.length ? "error" : "success", 5000);
 }
 
-watch(() => props.productId, load, { immediate: true });
+watch(
+  () => props.productId,
+  () => {
+    // 切换商品后清理片段预览状态
+    previewFilename.value = "";
+    load();
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -365,6 +386,13 @@ watch(() => props.productId, load, { immediate: true });
   max-height: 360px;
   overflow-y: auto;
 }
+/* 文档条目之间用轻分隔线区分，行内不再使用 row-item 自带底边框 */
+.doc-entry + .doc-entry {
+  border-top: 1px solid #eef1f5;
+}
+.doc-entry .row-item {
+  border-bottom: none;
+}
 .doc-info {
   min-width: 0;
   flex: 1;
@@ -378,38 +406,38 @@ watch(() => props.productId, load, { immediate: true });
   display: flex;
   gap: 6px;
 }
+/* 内联展开区：与素材库一致（浅主色背景 + 左侧 3px 主色竖线），
+   总高度控制在 260-320px 内，片段区内部滚动。 */
 .chunks-preview {
-  margin-top: 12px;
-  border: 1px solid var(--gray-100);
+  margin: 4px 0 10px;
+  border: 1px solid var(--primary-border);
+  border-left: 3px solid var(--primary);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
-  background: #fbfcfd;
+  background: var(--primary-soft);
 }
 .preview-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
   margin-bottom: 8px;
 }
 .preview-head b {
   font-size: 13px;
+  color: var(--gray-700);
 }
 .preview-body {
-  max-height: 320px;
+  max-height: 230px;
   overflow-y: auto;
 }
 .chunk {
-  background: var(--gray-50);
+  background: #fff;
+  border: 1px solid var(--gray-100);
   padding: 8px;
   margin: 6px 0;
   border-radius: var(--radius-sm);
-  font-size: 0.9em;
+  font-size: 13px;
 }
 .chunk-meta {
   color: var(--gray-500);
-  font-size: 0.8em;
+  font-size: 13px;
   margin-bottom: 4px;
 }
 .chunk-content {

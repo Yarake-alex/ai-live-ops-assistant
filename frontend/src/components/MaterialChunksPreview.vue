@@ -2,7 +2,6 @@
   <div v-if="filename" class="chunks-preview">
     <div class="preview-head">
       <b>当前文件：{{ filename }}</b>
-      <button class="light-btn" @click="$emit('close')">收起片段</button>
     </div>
     <div class="preview-body">
       <div v-if="loading" class="hint">加载片段...</div>
@@ -21,14 +20,15 @@
 <script setup>
 // 阶段 3.3：素材片段预览（与旧页面交互一致）：
 // GET /rag/documents/{filename}/chunks → 按顺序展示片段，空片段过滤，
-// 无有效片段显示「该资料暂无可预览片段」，内容区内部滚动，可收起。
+// 无有效片段显示「该资料暂无可预览片段」，内容区内部滚动。
+// V6：改为在文件 item 下方内联展开（浅主色背景 + 左侧主色竖线），
+// 收起由列表行的「查看片段/收起片段」按钮控制，本组件不再自带收起按钮。
 import { ref, watch } from "vue";
 import { apiGet } from "../api/client";
 
 const props = defineProps({
   filename: { type: String, default: "" },
 });
-defineEmits(["close"]);
 
 const loading = ref(false);
 const error = ref(false);
@@ -62,30 +62,30 @@ function timeInfo(c) {
 </script>
 
 <style scoped>
+/* 内联展开区：与普通文件 item 明显区分（浅主色背景 + 左侧 3px 主色竖线），
+   总高度控制在 260-320px 内，片段区内部滚动。 */
 .chunks-preview {
-  margin-top: 12px;
-  border: 1px solid var(--gray-100);
+  margin: 4px 0 10px;
+  border: 1px solid var(--primary-border);
+  border-left: 3px solid var(--primary);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
-  background: #fbfcfd;
+  background: var(--primary-soft);
 }
 .preview-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
   margin-bottom: 8px;
 }
 .preview-head b {
   font-size: 13px;
+  color: var(--gray-700);
 }
 .preview-body {
-  max-height: 320px;
+  max-height: 230px;
   overflow-y: auto;
 }
 .chunk {
-  background: var(--gray-50);
+  background: #fff;
+  border: 1px solid var(--gray-100);
   padding: 8px;
   margin: 6px 0;
   border-radius: var(--radius-sm);
