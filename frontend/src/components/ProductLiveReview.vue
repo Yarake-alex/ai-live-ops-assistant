@@ -21,7 +21,7 @@
           <div v-if="record.status !== 'success' && record.error_message" class="muted review-warning">
             {{ record.error_message }}
           </div>
-          <div class="review-content">{{ record.content }}</div>
+          <AiResultContent :content="record.content" />
         </template>
       </div>
 
@@ -50,6 +50,7 @@ import { ref, watch } from "vue";
 import { apiGet, apiPost } from "../api/client";
 import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
+import AiResultContent from "./AiResultContent.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -145,12 +146,6 @@ watch(
 }
 .review-warning {
   margin-bottom: 8px;
-}
-.review-content {
-  font-size: 14px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 .history-head {
   font-weight: 700;

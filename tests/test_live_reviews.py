@@ -3,7 +3,7 @@ import pytest
 from tests.test_products import PRODUCT_DATA, _create_second_user, login
 
 
-REVIEW_SECTIONS = ["用户关注点", "常见异议", "高频问题", "下场直播优化建议"]
+REVIEW_SECTIONS = ["核心结论", "数据与现象", "做得好的部分", "主要问题", "下次行动清单"]
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ class TestLiveReviews:
         assert data["product_id"] == review_product_id
         assert data["status"] == "success"
         for section in REVIEW_SECTIONS:
-            assert section in data["content"]
+            assert f"# {section}" in data["content"]
 
     def test_review_record_saved_and_detail(self, client, review_product_id):
         created = client.post(f"/products/{review_product_id}/live-reviews").json()
@@ -70,7 +70,7 @@ class TestLiveReviews:
         assert data["status"] == "fallback"
         assert data["error_message"]
         for section in REVIEW_SECTIONS:
-            assert section in data["content"]
+            assert f"# {section}" in data["content"]
 
     def test_ai_and_fallback_failure_saves_failed_record(
         self, client, review_product_id, monkeypatch
@@ -107,8 +107,8 @@ class TestLiveReviews:
         from app.llm import call_llm
 
         content = call_llm("任意提示词", feature="live_review")
-        assert "用户关注点" in content
-        assert "下场直播优化建议" in content
+        assert "# 核心结论" in content
+        assert "# 下次行动清单" in content
 
     def test_review_prompt_contains_comment_and_reply(self, client, review_product_id):
         """复盘数据源必须包含评论内容和 AI 回复内容。"""

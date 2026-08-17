@@ -4,13 +4,11 @@ from tests.test_products import PRODUCT_DATA, _create_second_user, login
 
 
 LIVE_SCRIPT_SECTIONS = [
-    "开场引入",
-    "商品卖点讲解",
-    "用户痛点刺激",
-    "互动提问",
-    "优惠逼单",
-    "异议回应",
-    "结尾转化",
+    "开场",
+    "商品介绍",
+    "核心卖点",
+    "互动与异议处理",
+    "促单收口",
 ]
 
 
@@ -39,7 +37,7 @@ class TestLiveScriptGeneration:
         assert data["status"] == "success"
         assert data["content"]
         for section in LIVE_SCRIPT_SECTIONS:
-            assert section in data["content"]
+            assert f"# {section}" in data["content"]
 
     def test_generation_record_is_saved(self, client, live_script_product_id):
         create_resp = client.post(f"/products/{live_script_product_id}/live-scripts")
@@ -62,7 +60,7 @@ class TestLiveScriptGeneration:
         data = detail_resp.json()
         assert data["id"] == script_id
         assert data["product_id"] == live_script_product_id
-        assert "开场引入" in data["content"]
+        assert "# 开场" in data["content"]
 
     def test_other_user_cannot_generate_for_my_product(self, client, live_script_product_id):
         other = _create_second_user(client, "live-script-other-user-a")
@@ -97,7 +95,7 @@ class TestLiveScriptGeneration:
         assert data["status"] == "fallback"
         assert data["error_message"]
         for section in LIVE_SCRIPT_SECTIONS:
-            assert section in data["content"]
+            assert f"# {section}" in data["content"]
 
     def test_ai_exception_returns_fallback_status(self, client, live_script_product_id, monkeypatch):
         """AI 调用直接抛异常时：不 500，返回本地兜底话术，status=fallback。"""
@@ -119,7 +117,7 @@ class TestLiveScriptGeneration:
         assert data["status"] == "fallback"
         assert data["error_message"] == "AI 服务暂时不可用，已返回本地兜底话术"
         for section in LIVE_SCRIPT_SECTIONS:
-            assert section in data["content"]
+            assert f"# {section}" in data["content"]
         # 内部异常细节不得出现在响应中
         assert "ai-internal-secret" not in resp.text
 
@@ -220,7 +218,8 @@ class TestScriptQuestionContext:
         resp = client.post(f"/products/{pid}/live-scripts")
         assert resp.status_code == 200
         prompt = captured["prompt"]
-        assert "直播间常问应答" in prompt
+        # 高频问题不再新增第六个模块，统一归入固定的「互动与异议处理」标题。
+        assert "# 互动与异议处理" in prompt
         assert "多少钱" in prompt
         assert "直播间问题洞察" in prompt
 
@@ -232,7 +231,7 @@ class TestScriptQuestionContext:
         assert resp.status_code == 200
         prompt = captured["prompt"]
         assert "孕妇能不能用" in prompt
-        assert "不做医疗" in prompt
+        assert "风险问题只做谨慎引导" in prompt
         assert "资料暂未明确" in prompt
 
     def test_fallback_script_contains_qna_module_with_questions(self, client, monkeypatch):
@@ -256,10 +255,10 @@ class TestScriptQuestionContext:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "fallback"
-        assert "直播间常问应答" in data["content"]
+        assert "# 互动与异议处理" in data["content"]
         assert "多少钱" in data["content"]
         assert "孕妇能不能用" in data["content"]
-        assert "不做医疗" in data["content"]
+        assert "医疗" in data["content"]
 
     def test_helper_failure_does_not_break_script(self, client, monkeypatch):
         from fastapi.routing import APIRoute

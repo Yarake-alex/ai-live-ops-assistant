@@ -304,12 +304,12 @@ class TestRagFileReindexVector:
 
 
 # ═══════════════════════════════════════════════════════════════
-# 输出格式约束：资料中的 Markdown 表格应改写为自然语言
+# 输出格式约束：资料问答采用稳定的受控 Markdown 标题结构
 # ═══════════════════════════════════════════════════════════════
 
 
 class TestRagPromptOutputFormat:
-    """build_rag_prompt 必须包含输出格式约束（Markdown 表格转自然语言）。"""
+    """build_rag_prompt 必须包含稳定的资料问答 Markdown 输出契约。"""
 
     def test_prompt_requires_natural_language_no_markdown_tables(self):
         from app.models import DocumentChunk
@@ -323,8 +323,9 @@ class TestRagPromptOutputFormat:
             )
         ]
         prompt = build_rag_prompt("赠品能换吗？", chunks)
-        assert "不要原样复制 Markdown 表格" in prompt
-        assert "分点说明" in prompt
+        assert "# 直接回答" in prompt
+        assert "## 依据资料" in prompt
+        assert "## 建议话术" in prompt
         assert "赠品能换吗？" in prompt  # 表格内容仍作为上下文传入
 
     def test_ask_endpoint_prompt_includes_format_rules(self, client, monkeypatch):
@@ -354,5 +355,6 @@ class TestRagPromptOutputFormat:
         # 返回结构不变：answer + sources
         assert "answer" in data
         assert "sources" in data
-        assert "不要原样复制 Markdown 表格" in captured["prompt"]
-        assert "分点说明" in captured["prompt"]
+        assert "# 直接回答" in captured["prompt"]
+        assert "## 依据资料" in captured["prompt"]
+        assert "## 注意事项" in captured["prompt"]

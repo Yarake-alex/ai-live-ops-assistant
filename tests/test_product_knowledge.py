@@ -178,8 +178,9 @@ class TestProductKnowledge:
         assert "answer" in data
         assert "sources" in data
         prompt = captured["prompt"]
-        assert "不要原样复制 Markdown 表格" in prompt
-        assert "分点说明" in prompt
+        assert "# 直接回答" in prompt
+        assert "## 依据资料" in prompt
+        assert "## 建议话术" in prompt
         assert "赠品能换吗？" in prompt           # 表格内容仍作为检索上下文传入
 
     def test_other_user_cannot_access(self, client, kb_product_id):

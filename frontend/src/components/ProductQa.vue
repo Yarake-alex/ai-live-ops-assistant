@@ -21,7 +21,7 @@
         <span>基于商品资料的回答会显示在这里。</span>
       </div>
       <template v-else>
-        <div class="answer-text">{{ answer }}</div>
+        <AiResultContent :content="answer" />
         <div v-if="sources.length" class="answer-sources">
           参考片段：{{ sources.map((s) => `${s.filename}#${s.chunk_index}`).join("、") }}
         </div>
@@ -38,6 +38,7 @@ import { ref, watch } from "vue";
 import { apiPost } from "../api/client";
 import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
+import AiResultContent from "./AiResultContent.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -103,12 +104,6 @@ watch(
 }
 .qa-card .empty {
   padding: 16px;
-}
-.answer-text {
-  font-size: 14px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 .answer-sources {
   color: var(--gray-500);

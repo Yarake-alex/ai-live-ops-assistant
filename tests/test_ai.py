@@ -168,7 +168,7 @@ class TestCallLlmFallback:
         )
         data = resp.json()
         assert data["status"] == "fallback"
-        assert "开场引入" in data["content"], (
+        assert "# 开场" in data["content"], (
             f"Expected local fallback script, got: {data['content'][:200]}"
         )
 

@@ -21,7 +21,7 @@
         <span>上传资料后，可以在这里提问。</span>
       </div>
       <template v-else>
-        <div class="answer-text">{{ answer }}</div>
+        <AiResultContent :content="answer" />
 
         <!-- 参考资料片段：默认折叠（与旧页面一致） -->
         <div v-if="sources.length" class="source-box">
@@ -50,6 +50,7 @@ import { ref } from "vue";
 import { apiPost } from "../api/client";
 import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
+import AiResultContent from "./AiResultContent.vue";
 
 const question = ref("");
 const asking = ref(false);
@@ -94,12 +95,6 @@ textarea {
 }
 .qa-card .empty {
   padding: 16px;
-}
-.answer-text {
-  font-size: 14px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 .source-box {
   margin-top: 10px;

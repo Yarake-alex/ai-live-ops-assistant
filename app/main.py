@@ -1254,7 +1254,10 @@ def ask_product_knowledge(
             answer_mode="local_rule",
             was_answered=True,
         )
-        return ProductKnowledgeAnswer(answer=local_answer["answer"], sources=[])
+        return ProductKnowledgeAnswer(
+            answer=f"# 直接回答\n{local_answer['answer']}\n\n## 依据资料\n- 商品基础资料中的已填写字段。",
+            sources=[],
+        )
 
     chunks = (
         db.query(ProductKnowledgeChunk)
@@ -1278,7 +1281,7 @@ def ask_product_knowledge(
             was_answered=False,
         )
         return ProductKnowledgeAnswer(
-            answer="该商品还没有知识库资料，请先在商品详情页上传资料。",
+            answer="# 直接回答\n该商品还没有知识库资料，请先在商品详情页上传资料。\n\n## 注意事项\n当前没有可引用的资料依据。",
             sources=[],
         )
 
@@ -1301,7 +1304,7 @@ def ask_product_knowledge(
             was_answered=False,
         )
         return ProductKnowledgeAnswer(
-            answer="没有检索到与问题相关的商品资料，建议补充相关资料或换个问法。",
+            answer="# 直接回答\n没有检索到与问题相关的商品资料。\n\n## 注意事项\n资料中未明确提到，建议补充相关资料或换个问法。",
             sources=[],
         )
 
@@ -1314,7 +1317,7 @@ def ask_product_knowledge(
     )
     is_fallback = not answer or FALLBACK_MESSAGE in answer
     if is_fallback:
-        answer = "AI 服务暂时不可用，请稍后重试；可先查看资料列表确认已上传内容。"
+        answer = "# 直接回答\nAI 服务暂时不可用，请稍后重试。\n\n## 注意事项\n可先查看资料列表确认已上传内容。"
 
     sources = [
         ProductKnowledgeSource(
@@ -2182,6 +2185,8 @@ def rag_ask(
 
     prompt = build_rag_prompt(question, retrieved)
     answer = call_llm(prompt, feature="rag_ask", user_id=current_user.id, db=db)
+    if not answer or FALLBACK_MESSAGE in answer:
+        answer = "# 直接回答\nAI 服务暂时不可用，请稍后重试。\n\n## 注意事项\n可先查看已上传资料后再次提问。"
 
     return RagAnswer(
         answer=answer,
