@@ -1,7 +1,7 @@
 <template>
   <div class="insights-card">
     <div class="card-head">
-      <h3>❓ 问题洞察</h3>
+      <h3><Icon name="help" size="15" class="head-icon" /> 问题洞察</h3>
       <button class="light-btn" :disabled="loading" @click="load">刷新</button>
     </div>
     <div v-if="!productId" class="hint">选择商品后展示该商品的问题洞察。</div>
@@ -11,7 +11,7 @@
     <template v-else>
       <!-- 高频问题 Top 5 -->
       <div v-if="top.length" class="section">
-        <div class="section-title">🔥 高频问题</div>
+        <div class="section-title">高频问题</div>
         <div v-for="t in top" :key="t.question" class="row">
           <span class="row-text">{{ t.question }}</span>
           <span class="row-tags">
@@ -23,7 +23,7 @@
 
       <!-- 分类统计（只显示 count > 0） -->
       <div v-if="activeCounts.length" class="section">
-        <div class="section-title">📊 分类统计</div>
+        <div class="section-title">分类统计</div>
         <div class="count-tags">
           <span v-for="c in activeCounts" :key="c.category" class="tag">
             {{ c.label }} <b>{{ c.count }}</b>
@@ -33,7 +33,7 @@
 
       <!-- 未覆盖问题 -->
       <div v-if="unanswered.length" class="section">
-        <div class="section-title">⚠️ 未覆盖问题</div>
+        <div class="section-title">未覆盖问题</div>
         <div v-for="u in unanswered" :key="u.question" class="row">
           <span class="row-text">{{ u.question }}</span>
           <span class="row-tags">
@@ -45,7 +45,7 @@
 
       <!-- 最近问题（最多 5 条） -->
       <div v-if="recent.length" class="section">
-        <div class="section-title">🕒 最近问题</div>
+        <div class="section-title">最近问题</div>
         <div v-for="r in recent" :key="r.question" class="row">
           <span class="row-text">{{ r.question }}</span>
           <span class="row-tags">
@@ -66,6 +66,7 @@
 // top_questions / category_counts / recent_questions / unanswered_questions。
 import { ref, computed, watch } from "vue";
 import { apiGet } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -124,8 +125,8 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
-.insights-card {
-  margin-top: 12px;
+.insights-card .empty {
+  padding: 24px 16px;
 }
 .section {
   margin-bottom: 10px;

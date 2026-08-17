@@ -1,10 +1,13 @@
 <template>
   <div class="completeness-card">
     <div class="card-head">
-      <h3>✅ 资料完整度</h3>
+      <h3><Icon name="check" size="15" class="head-icon" /> 资料完整度</h3>
       <button class="light-btn" :disabled="loading" @click="load">刷新</button>
     </div>
-    <div v-if="!productId" class="hint">选择商品后可查看资料完整度。</div>
+    <div v-if="!productId" class="empty">
+      <span class="empty-icon"><Icon name="check" size="28" /></span>
+      <span>选择商品后可查看资料完整度。</span>
+    </div>
     <div v-else-if="loading" class="hint">加载中…</div>
     <div v-else-if="error" class="hint">完整度暂不可用，不影响其他功能。</div>
     <template v-else>
@@ -32,6 +35,7 @@
 // GET /products/{id}/readiness → score / missing_items / suggestions。
 import { ref, computed, watch } from "vue";
 import { apiGet } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -69,8 +73,8 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
-.completeness-card {
-  margin-top: 12px;
+.completeness-card .empty {
+  padding: 24px 16px;
 }
 .score-row {
   display: flex;

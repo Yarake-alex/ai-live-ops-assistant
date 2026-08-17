@@ -1,11 +1,8 @@
 <template>
   <div class="product-selector">
-    <div class="selector-head">
-      <span class="selector-title">商品列表</span>
-      <span class="selector-head-right">
-        <button class="create-btn" @click="$emit('create')">新增商品</button>
-        <span class="selector-count">{{ total }}</span>
-      </span>
+    <div class="card-head">
+      <h3>商品列表</h3>
+      <span class="count-badge">{{ total }} 个商品</span>
     </div>
     <input
       v-model="q"
@@ -25,9 +22,17 @@
     </div>
 
     <div class="product-list">
-      <div v-if="loading" class="list-hint">加载中…</div>
-      <div v-else-if="error" class="list-hint list-error">商品列表加载失败。</div>
-      <div v-else-if="!products.length" class="list-hint">暂无商品，请先新增或导入商品。</div>
+      <div v-if="loading" class="hint">加载中…</div>
+      <div v-else-if="error" class="hint hint-error">商品列表加载失败。</div>
+      <div v-else-if="!products.length" class="empty">
+        <span class="empty-icon"><Icon name="box" size="32" /></span>
+        <span>暂无商品，请先新增或导入商品。</span>
+        <span class="empty-actions">
+          <button class="primary-btn" @click="$emit('create')">
+            <Icon name="plus" size="14" /> 新增商品
+          </button>
+        </span>
+      </div>
       <div
         v-for="p in products"
         :key="p.id"
@@ -39,7 +44,7 @@
           <b>{{ p.name }}</b>
           <span class="status-tag">{{ p.live_status || "未上播" }}</span>
         </div>
-        <div class="muted">💰 ¥{{ p.price }} · 库存 {{ p.stock }}</div>
+        <div class="muted">¥{{ p.price }} · 库存 {{ p.stock }}</div>
         <div class="muted item-points">{{ points(p) }}</div>
       </div>
     </div>
@@ -52,6 +57,7 @@
 // Enter 立即搜索、状态筛选、重置、选中高亮、列表内滚。
 import { ref, onMounted } from "vue";
 import { apiGet } from "../api/client";
+import Icon from "./Icon.vue";
 
 defineProps({
   selectedId: { type: Number, default: null },
@@ -119,21 +125,6 @@ onMounted(loadProducts);
 </script>
 
 <style scoped>
-.selector-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.selector-title {
-  font-weight: 700;
-  font-size: 15px;
-}
-.selector-head-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 .filter-row {
   display: flex;
   gap: 6px;
@@ -146,23 +137,14 @@ onMounted(loadProducts);
   max-height: 52vh;
   overflow-y: auto;
 }
-.list-hint {
-  padding: 32px 12px;
-  text-align: center;
-  color: var(--gray-400);
-  font-size: 13px;
-}
-.list-error {
-  color: var(--danger-ink);
-}
 .list-item {
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
 }
 .list-item:hover {
-  background: #f9fafb;
+  background: var(--gray-50);
 }
 .list-item.selected {
   background: var(--primary-soft);

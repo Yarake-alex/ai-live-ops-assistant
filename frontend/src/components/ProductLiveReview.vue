@@ -1,7 +1,7 @@
 <template>
   <div class="review-card">
     <div class="card-head">
-      <h3>📊 直播复盘</h3>
+      <h3><Icon name="chart" size="15" class="head-icon" /> 直播复盘</h3>
       <button class="primary-btn" :disabled="generating" @click="generate">
         {{ generating ? "生成中..." : "生成直播复盘" }}
       </button>
@@ -9,7 +9,7 @@
 
     <div v-if="!productId" class="hint">选择商品后可生成直播复盘。</div>
     <template v-else>
-      <div class="review-result">
+      <div class="result-box">
         <div v-if="generating" class="hint">AI 正在生成复盘...</div>
         <div v-else-if="generateError" class="hint hint-error">生成失败，请稍后重试。</div>
         <div v-else-if="!record" class="hint">选择商品后可生成直播复盘。</div>
@@ -30,7 +30,7 @@
         <div v-if="historyLoading" class="hint">加载中…</div>
         <div v-else-if="historyError" class="hint hint-error">历史复盘加载失败。</div>
         <div v-else-if="!history.length" class="hint">暂无复盘记录。</div>
-        <div v-for="item in history" :key="item.id" class="history-item">
+        <div v-for="item in history" :key="item.id" class="row-item">
           <div class="history-info">
             <b>{{ statusText(item) }}</b>
             <div class="muted">{{ createdText(item) }}</div>
@@ -48,6 +48,7 @@
 // GET /live-reviews/{id} 查看历史复盘。
 import { ref, watch } from "vue";
 import { apiGet, apiPost } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -127,15 +128,8 @@ watch(
 </script>
 
 <style scoped>
-.review-card {
-  margin-top: 12px;
-}
-.review-result {
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: var(--gray-50);
-  padding: 10px 12px;
-  min-height: 60px;
+.review-card .empty {
+  padding: 16px;
 }
 .review-meta {
   display: flex;
@@ -161,18 +155,6 @@ watch(
   font-weight: 700;
   font-size: 13px;
   margin: 12px 0 6px;
-}
-.history-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 4px;
-  border-bottom: 1px solid #f3f4f6;
-}
-.history-item:last-child {
-  border-bottom: none;
 }
 .history-info b {
   font-size: 13px;

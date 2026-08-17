@@ -1,7 +1,7 @@
 <template>
   <div class="qa-card">
     <div class="card-head">
-      <h3>💬 资料问答</h3>
+      <h3><Icon name="chat" size="15" class="head-icon" /> 资料问答</h3>
     </div>
     <div class="qa-input-row">
       <input
@@ -13,10 +13,13 @@
       />
       <button class="primary-btn" :disabled="asking || !question.trim()" @click="ask">提问</button>
     </div>
-    <div class="qa-result">
+    <div class="result-box">
       <div v-if="asking" class="hint">检索资料中...</div>
       <div v-else-if="error" class="hint hint-error">提问失败，请稍后重试。</div>
-      <div v-else-if="!answer" class="hint">基于商品资料的回答会显示在这里。</div>
+      <div v-else-if="!answer" class="empty">
+        <span class="empty-icon"><Icon name="chat" size="24" /></span>
+        <span>基于商品资料的回答会显示在这里。</span>
+      </div>
       <template v-else>
         <div class="answer-text">{{ answer }}</div>
         <div v-if="sources.length" class="answer-sources">
@@ -33,6 +36,7 @@
 // 问题洞察与运营建议的联动刷新留待后续阶段迁移。
 import { ref, watch } from "vue";
 import { apiPost } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -84,9 +88,6 @@ watch(
 </script>
 
 <style scoped>
-.qa-card {
-  margin-top: 12px;
-}
 .qa-input-row {
   display: flex;
   gap: 6px;
@@ -99,12 +100,8 @@ watch(
 .qa-input-row .primary-btn {
   flex-shrink: 0;
 }
-.qa-result {
-  min-height: 60px;
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: var(--gray-50);
-  padding: 10px 12px;
+.qa-card .empty {
+  padding: 16px;
 }
 .answer-text {
   font-size: 14px;

@@ -3,10 +3,10 @@
     <input ref="fileInput" type="file" accept=".csv" style="display: none" @change="onFileSelected" />
     <div class="csv-buttons">
       <button class="light-btn" :disabled="importing || exporting" @click="openPicker">
-        {{ importing ? "导入中..." : "📥 导入商品 CSV" }}
+        <Icon name="download" size="13" /> {{ importing ? "导入中..." : "导入商品 CSV" }}
       </button>
       <button class="light-btn" :disabled="importing || exporting" @click="doExport">
-        {{ exporting ? "导出中..." : "📤 导出商品 CSV" }}
+        <Icon name="upload" size="13" /> {{ exporting ? "导出中..." : "导出商品 CSV" }}
       </button>
     </div>
     <div class="muted-tip">
@@ -26,6 +26,7 @@
 // 导入 POST /products/import（FormData，逐个汇总提示）；导出 GET /products/export（blob 下载）。
 import { ref } from "vue";
 import { apiRequest, ApiError, SessionExpiredError } from "../api/client";
+import Icon from "./Icon.vue";
 
 const emit = defineEmits(["imported"]);
 
@@ -114,10 +115,10 @@ async function doExport() {
 <style scoped>
 .csv-tools {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .csv-buttons {
   display: flex;

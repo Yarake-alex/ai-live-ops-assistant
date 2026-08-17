@@ -1,7 +1,7 @@
 <template>
   <div class="ops-card">
     <div class="card-head">
-      <h3>💡 运营建议</h3>
+      <h3><Icon name="bulb" size="15" class="head-icon" /> 运营建议</h3>
       <button class="light-btn" :disabled="loading" @click="load">刷新</button>
     </div>
     <div v-if="!productId" class="hint">选择商品后展示该商品的运营建议。</div>
@@ -54,6 +54,7 @@
 // GET /products/{id}/ops-suggestions → {summary, suggestions}。
 import { ref, watch } from "vue";
 import { apiGet } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -111,8 +112,8 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
-.ops-card {
-  margin-top: 12px;
+.ops-card .empty {
+  padding: 24px 16px;
 }
 .summary-row {
   display: flex;

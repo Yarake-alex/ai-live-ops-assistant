@@ -1,7 +1,7 @@
 <template>
   <div class="script-card">
     <div class="card-head">
-      <h3>🎙 直播话术</h3>
+      <h3><Icon name="mic" size="15" class="head-icon" /> 直播话术</h3>
       <button class="primary-btn" :disabled="generating" @click="generate">
         {{ generating ? "生成中..." : "生成直播话术" }}
       </button>
@@ -11,7 +11,7 @@
     <template v-else>
       <div v-if="statusText" class="status-line">{{ statusText }}</div>
 
-      <div class="script-result">
+      <div class="result-box">
         <div v-if="generating" class="hint">AI 正在生成直播话术...</div>
         <div v-else-if="generateError" class="hint hint-error">生成失败，请稍后重试。</div>
         <div v-else-if="!script" class="hint">点击“生成直播话术”后，结果会显示在这里。</div>
@@ -32,7 +32,7 @@
         <div v-if="historyLoading" class="hint">加载中…</div>
         <div v-else-if="historyError" class="hint hint-error">历史话术加载失败。</div>
         <div v-else-if="!history.length" class="hint">暂无历史话术。</div>
-        <div v-for="item in history" :key="item.id" class="history-item">
+        <div v-for="item in history" :key="item.id" class="row-item">
           <div class="history-info">
             <b>{{ scriptStatusLabel(item) }}</b>
             <span class="tag">{{ item.provider || "mock" }}</span>
@@ -51,6 +51,7 @@
 // GET /live-scripts/{id} 查看历史话术。
 import { ref, watch } from "vue";
 import { apiGet, apiPost } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -136,20 +137,13 @@ watch(
 </script>
 
 <style scoped>
-.script-card {
-  margin-top: 12px;
-}
 .status-line {
   color: var(--gray-500);
   font-size: 12px;
   margin-bottom: 6px;
 }
-.script-result {
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: var(--gray-50);
-  padding: 10px 12px;
-  min-height: 60px;
+.script-card .empty {
+  padding: 16px;
 }
 .script-meta {
   display: flex;
@@ -175,18 +169,6 @@ watch(
   font-weight: 700;
   font-size: 13px;
   margin: 12px 0 6px;
-}
-.history-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 4px;
-  border-bottom: 1px solid #f3f4f6;
-}
-.history-item:last-child {
-  border-bottom: none;
 }
 .history-info {
   min-width: 0;

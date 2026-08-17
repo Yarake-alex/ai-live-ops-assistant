@@ -1,20 +1,36 @@
 <template>
-  <section class="product-view">
+  <section class="product-view container">
     <div class="view-head">
-      <h2>商品资料</h2>
+      <div>
+        <h2 class="view-title">商品资料</h2>
+        <p class="view-desc">维护商品基础信息与资料文档，支撑话术生成、评论回复与直播复盘</p>
+      </div>
+      <div class="view-actions">
+        <button class="primary-btn" @click="openCreateForm">
+          <Icon name="plus" size="14" /> 新增商品
+        </button>
+      </div>
     </div>
+
+    <!-- CSV 导入导出：标题区下方的紧凑工具栏，不零散漂浮 -->
     <ProductCsvTools @imported="selectorRef?.reload()" />
+
     <div class="product-grid">
       <ProductSelector ref="selectorRef" :selected-id="selectedId" @select="onSelect" @create="openCreateForm" />
       <ProductSummary :product="product" :busy="removing" @edit="openEditForm" @remove="onRemoveProduct" />
     </div>
+
     <div class="product-modules">
-      <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
+      <div class="module-wide">
+        <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
+      </div>
       <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" />
       <ProductDocuments :product-id="selectedId" @changed="refreshTick++" />
       <ProductQa v-if="selectedId" :product-id="selectedId" />
       <ProductQuestionInsights :product-id="selectedId" :key="'ins' + refreshTick" />
-      <ProductOperationSuggestions :product-id="selectedId" :key="'ops' + refreshTick" />
+      <div class="module-wide">
+        <ProductOperationSuggestions :product-id="selectedId" :key="'ops' + refreshTick" />
+      </div>
       <ProductLiveScript :product-id="selectedId" />
       <ProductLiveReview :product-id="selectedId" />
     </div>
@@ -39,8 +55,11 @@
 // GET /products/{id}/live-scripts、GET /live-scripts/{id}、
 // POST /products/{id}/live-reviews、GET /products/{id}/live-reviews、
 // GET /live-reviews/{id}，返回结构不变。
+// V6 阶段 4：标题区（新增商品归位到右上）、列表/详情双栏（2:3 等高）、
+// CSV 工具栏、下方模块统一网格（左右列对齐、无卡片套卡片）。
 import { ref } from "vue";
 import { apiGet, apiDelete } from "../api/client";
+import Icon from "../components/Icon.vue";
 import ProductSelector from "../components/ProductSelector.vue";
 import ProductSummary from "../components/ProductSummary.vue";
 import ProductCompleteness from "../components/ProductCompleteness.vue";
@@ -115,31 +134,27 @@ async function onRemoveProduct() {
 </script>
 
 <style scoped>
-.product-view {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 24px 20px;
-}
-.view-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.view-head h2 {
-  margin: 0;
-  font-size: 18px;
-}
+/* 商品列表/详情双栏：列表侧 40%、详情主栏 60%，等高（stretch） */
 .product-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: minmax(260px, 2fr) minmax(0, 3fr);
+  gap: 16px;
+  align-items: stretch;
+}
+/* 下方模块统一网格：左右列对齐，宽模块占满整行 */
+.product-modules {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 16px;
+  margin-top: 16px;
   align-items: start;
 }
+.module-wide {
+  grid-column: 1 / -1;
+}
 @media (max-width: 900px) {
-  .product-grid {
+  .product-grid,
+  .product-modules {
     grid-template-columns: 1fr;
   }
 }

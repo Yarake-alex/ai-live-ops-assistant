@@ -1,7 +1,7 @@
 <template>
   <div class="documents-card">
     <div class="card-head">
-      <h3>📚 商品资料文档</h3>
+      <h3><Icon name="book" size="15" class="head-icon" /> 商品资料文档</h3>
       <div class="head-actions">
         <button class="light-btn" :disabled="busy" @click="reorganize">
           {{ busy === "reorganize" ? "整理中…" : "重新整理资料" }}
@@ -15,11 +15,14 @@
     <div v-if="!productId" class="hint">选择商品后展示该商品的资料文档。</div>
     <div v-else-if="loading" class="hint">加载中…</div>
     <div v-else-if="error" class="hint hint-error">资料列表加载失败。</div>
-    <div v-else-if="!docs.length" class="hint">暂无资料，可上传 PDF / TXT / MD / CSV。</div>
+    <div v-else-if="!docs.length" class="empty">
+      <span class="empty-icon"><Icon name="file" size="28" /></span>
+      <span>暂无资料，可上传 PDF / TXT / MD / CSV。</span>
+    </div>
     <div v-else class="doc-list">
-      <div v-for="d in docs" :key="d.filename" class="doc-item">
+      <div v-for="d in docs" :key="d.filename" class="row-item">
         <div class="doc-info">
-          <b>📄 {{ d.filename }}</b>
+          <b><Icon name="file" size="13" class="doc-file-icon" /> {{ d.filename }}</b>
           <div class="muted">{{ d.chunks }} 个片段<span v-if="d.preview"> · {{ d.preview.slice(0, 40) }}…</span></div>
         </div>
         <div class="doc-actions">
@@ -58,18 +61,18 @@
       @change="onFileSelected"
     />
     <div class="upload-area">
-      <button class="success-btn" :disabled="busy" @click="openPicker">
-        {{ uploading ? "上传中…" : "上传资料" }}
+      <button class="primary-btn" :disabled="busy" @click="openPicker">
+        <Icon name="upload" size="13" /> {{ uploading ? "上传中…" : "上传资料" }}
       </button>
+      <span class="muted upload-status">{{ uploadStatusText }}</span>
     </div>
-    <div class="muted upload-status">{{ uploadStatusText }}</div>
 
     <!-- 上传确认弹窗（与素材库一致：同批重复拦截 / 同名覆盖提醒） -->
-    <div v-if="confirmVisible" class="confirm-overlay" @click.self="cancelUpload">
-      <div class="confirm-box">
-        <div class="confirm-head">
+    <div v-if="confirmVisible" class="modal-overlay" @click.self="cancelUpload">
+      <div class="modal-box confirm-box">
+        <div class="modal-head">
           <h3>确认上传商品资料</h3>
-          <button class="close-btn" @click="cancelUpload">✕</button>
+          <button class="close-btn" @click="cancelUpload"><Icon name="x" size="14" /></button>
         </div>
         <div class="confirm-body">
           <div class="count-line">本次选择 {{ pendingFiles.length }} 个文件</div>
@@ -103,6 +106,7 @@
 // POST /products/{id}/knowledge/documents/{filename}/reindex 逐个重新整理。
 import { ref, watch } from "vue";
 import { apiGet, apiRequest, SessionExpiredError } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -335,9 +339,6 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
-.documents-card {
-  margin-top: 12px;
-}
 .head-actions {
   display: flex;
   gap: 6px;
@@ -355,21 +356,13 @@ watch(() => props.productId, load, { immediate: true });
   max-height: 360px;
   overflow-y: auto;
 }
-.doc-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px 4px;
-  border-bottom: 1px solid #f3f4f6;
-}
-.doc-item:last-child {
-  border-bottom: none;
-}
 .doc-info {
   min-width: 0;
   flex: 1;
+}
+.doc-file-icon {
+  color: var(--gray-400);
+  vertical-align: -2px;
 }
 .doc-actions {
   flex-shrink: 0;
@@ -377,7 +370,11 @@ watch(() => props.productId, load, { immediate: true });
   gap: 6px;
 }
 .chunks-preview {
-  margin-top: 10px;
+  margin-top: 12px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: #fbfcfd;
 }
 .preview-head {
   display: flex;
@@ -395,14 +392,14 @@ watch(() => props.productId, load, { immediate: true });
   overflow-y: auto;
 }
 .chunk {
-  background: #f8f9fa;
+  background: var(--gray-50);
   padding: 8px;
   margin: 6px 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.9em;
 }
 .chunk-meta {
-  color: #777;
+  color: var(--gray-500);
   font-size: 0.8em;
   margin-bottom: 4px;
 }
@@ -411,38 +408,19 @@ watch(() => props.productId, load, { immediate: true });
   word-break: break-all;
 }
 .upload-area {
-  margin-top: 10px;
-}
-.upload-status {
-  margin-top: 6px;
-}
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-100);
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 100;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.upload-status {
+  margin-top: 0;
 }
 .confirm-box {
   width: min(520px, calc(100vw - 32px));
-  max-height: 85vh;
-  overflow-y: auto;
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-.confirm-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.confirm-head h3 {
-  margin: 0;
-  font-size: 15px;
 }
 .count-line {
   font-size: 13px;

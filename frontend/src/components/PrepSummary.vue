@@ -1,7 +1,7 @@
 <template>
   <div class="prep-card">
-    <div class="prep-head">
-      <h3>🎯 开播准备概览</h3>
+    <div class="card-head">
+      <h3><Icon name="target" size="15" class="head-icon" /> 开播准备概览</h3>
       <button class="light-btn" :disabled="loading" @click="load">刷新</button>
     </div>
     <div class="prep-items">
@@ -31,6 +31,7 @@
 // 高频问题（top_questions 计数和）、未覆盖问题（unanswered_questions 计数和）。
 import { ref, watch } from "vue";
 import { apiGet } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
@@ -79,9 +80,6 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
-.prep-card {
-  margin-top: 12px;
-}
 .prep-items {
   display: flex;
   gap: 10px;
