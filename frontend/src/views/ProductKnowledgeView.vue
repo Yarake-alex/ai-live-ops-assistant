@@ -43,8 +43,11 @@
       <div class="ops-tab-panel" role="tabpanel">
         <!-- 资料与完整度：单一横向全宽主面板，文档为主内容 -->
         <div v-if="activeTab === 'materials'" class="card materials-panel">
-          <div class="card-head">
-            <h3><Icon name="file" size="15" class="head-icon" /> 补充商品资料</h3>
+          <div class="card-head materials-panel-head">
+            <div>
+              <h3><Icon name="file" size="15" class="head-icon" /> 商品资料库</h3>
+              <p class="panel-desc">管理当前商品的资料文档与完整度状态；文档用于商品资料问答、话术与复盘。</p>
+            </div>
           </div>
           <!-- 完整度详情只提供缺失项/下一步建议，避免重复头部百分比摘要。 -->
           <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" compact />
@@ -242,6 +245,11 @@ async function onRemoveProduct() {
   border-top: 1px solid var(--gray-100);
   margin-top: 14px;
   padding-top: 14px;
+}
+.materials-panel-head p {
+  margin: 4px 0 0;
+  color: var(--gray-500);
+  font-size: var(--text-xs);
 }
 /* 智能问答 Tab 仍保留双栏，仅在该 Tab 内生效。 */
 .tab-split {

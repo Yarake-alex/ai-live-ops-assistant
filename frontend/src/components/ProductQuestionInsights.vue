@@ -8,51 +8,55 @@
     <div v-else-if="error" class="hint">问题洞察暂不可用，不影响其他功能。</div>
     <div v-else-if="isEmpty" class="hint">暂无问题记录，开始提问后会在这里沉淀高频问题。</div>
     <template v-else>
-      <!-- 高频问题 Top 5 -->
-      <div v-if="top.length" class="section">
-        <div class="section-title">高频问题</div>
-        <div v-for="t in top" :key="t.question" class="row">
-          <span class="row-text">{{ t.question }}</span>
-          <span class="row-tags">
-            <span class="tag">{{ categoryLabel(t.category) }}</span>
-            <span class="muted">{{ t.count }} 次</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- 分类统计（只显示 count > 0） -->
-      <div v-if="activeCounts.length" class="section">
-        <div class="section-title">分类统计</div>
-        <div class="count-tags">
-          <span v-for="c in activeCounts" :key="c.category" class="tag">
-            {{ c.label }} <b>{{ c.count }}</b>
-          </span>
-        </div>
-      </div>
-
-      <!-- 未覆盖问题 -->
-      <div v-if="unanswered.length" class="section">
-        <div class="section-title">未覆盖问题</div>
-        <div v-for="u in unanswered" :key="u.question" class="row">
-          <span class="row-text">{{ u.question }}</span>
-          <span class="row-tags">
-            <span class="tag">{{ categoryLabel(u.category) }}</span>
-            <span class="muted">{{ u.count }} 次 · 建议补充资料</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- 最近问题（最多 5 条） -->
-      <div v-if="recent.length" class="section">
-        <div class="section-title">最近问题</div>
-        <div v-for="r in recent" :key="r.question" class="row">
-          <span class="row-text">{{ r.question }}</span>
-          <span class="row-tags">
-            <span class="tag">{{ categoryLabel(r.category) }}</span>
-            <span :class="r.was_answered ? 'status-ok' : 'tag'">
-              {{ r.was_answered ? "已回答" : "未覆盖" }}
+      <!-- 顺序按运营工作流：最近问题 → 高频问题 → 分类统计 → 未覆盖问题；
+           内容区限高内部滚动，各列表最多直接展示 5 条。 -->
+      <div class="insights-body">
+        <!-- 最近问题（最多 5 条）：运营最先关心最近观众在问什么 -->
+        <div v-if="recent.length" class="section">
+          <div class="section-title">最近问题</div>
+          <div v-for="r in recent" :key="r.question" class="row">
+            <span class="row-text">{{ r.question }}</span>
+            <span class="row-tags">
+              <span class="tag">{{ categoryLabel(r.category) }}</span>
+              <span :class="r.was_answered ? 'status-ok' : 'tag'">
+                {{ r.was_answered ? "已回答" : "未覆盖" }}
+              </span>
             </span>
-          </span>
+          </div>
+        </div>
+
+        <!-- 高频问题（最多 5 条）：看重复出现的问题 -->
+        <div v-if="top.length" class="section">
+          <div class="section-title">高频问题</div>
+          <div v-for="t in top.slice(0, 5)" :key="t.question" class="row">
+            <span class="row-text">{{ t.question }}</span>
+            <span class="row-tags">
+              <span class="tag">{{ categoryLabel(t.category) }}</span>
+              <span class="muted">{{ t.count }} 次</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 分类统计（只显示 count > 0）：紧凑概览 -->
+        <div v-if="activeCounts.length" class="section">
+          <div class="section-title">分类统计</div>
+          <div class="count-tags">
+            <span v-for="c in activeCounts" :key="c.category" class="tag">
+              {{ c.label }} <b>{{ c.count }}</b>
+            </span>
+          </div>
+        </div>
+
+        <!-- 未覆盖问题（最多 5 条） -->
+        <div v-if="unanswered.length" class="section">
+          <div class="section-title">未覆盖问题</div>
+          <div v-for="u in unanswered.slice(0, 5)" :key="u.question" class="row">
+            <span class="row-text">{{ u.question }}</span>
+            <span class="row-tags">
+              <span class="tag">{{ categoryLabel(u.category) }}</span>
+              <span class="muted">{{ u.count }} 次 · 建议补充资料</span>
+            </span>
+          </div>
         </div>
       </div>
     </template>
@@ -63,6 +67,8 @@
 // 阶段 4.4：商品问题洞察（与旧页面文案一致）：
 // GET /products/{id}/question-insights →
 // top_questions / category_counts / recent_questions / unanswered_questions。
+// V6：展示顺序调整为运营工作流（最近问题 → 高频问题 → 分类统计 → 未覆盖问题），
+// 内容区限高内部滚动，各列表最多直接展示 5 条；接口与返回结构不变。
 import { ref, computed, watch } from "vue";
 import { apiGet } from "../api/client";
 import Icon from "./Icon.vue";
@@ -126,6 +132,15 @@ watch(() => props.productId, load, { immediate: true });
 <style scoped>
 .insights-card .empty {
   padding: 24px 16px;
+}
+/* 洞察内容区：限高内部滚动，浅背景 + 轻边框给出清楚边界 */
+.insights-body {
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
 }
 .section {
   margin-bottom: 10px;

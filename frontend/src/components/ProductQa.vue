@@ -105,10 +105,18 @@ watch(
 .qa-card .empty {
   padding: 16px;
 }
+/* 回答结果区限高内部滚动（420-520px 区间），长回答不再拉长页面 */
+.qa-card .result-box {
+  max-height: 480px;
+  overflow-y: auto;
+}
 .answer-sources {
   color: var(--gray-500);
   font-size: 12px;
   margin-top: 8px;
   word-break: break-all;
+  /* 参考片段行限高，超出内部滚动 */
+  max-height: 64px;
+  overflow-y: auto;
 }
 </style>

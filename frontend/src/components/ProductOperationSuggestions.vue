@@ -3,6 +3,7 @@
     <div class="card-head">
       <h3><Icon name="bulb" size="15" class="head-icon" /> 运营建议</h3>
     </div>
+    <p class="ops-desc">运营建议会根据未覆盖问题、高频重复问题和资料缺口汇总生成；如果资料已能回答相关问题，建议可能不会变化。</p>
     <div v-if="!productId" class="hint">选择商品后展示该商品的运营建议。</div>
     <div v-else-if="loading" class="hint">加载中…</div>
     <div v-else-if="error" class="hint">运营建议暂不可用，不影响其他功能</div>
@@ -26,7 +27,7 @@
       </div>
 
       <div v-if="!list.length" class="hint">
-        暂无运营建议。积累更多商品问题后，这里会提示该补充哪些资料和话术。
+        暂无运营建议，表示暂未发现明显资料缺口或话术优化点。积累更多商品问题后，这里会提示该补充哪些资料和话术。
       </div>
       <div v-else class="suggestion-list">
         <div v-for="(s, i) in list" :key="i" class="suggestion-item">
@@ -51,6 +52,8 @@
 <script setup>
 // 阶段 4.5：商品运营建议（与旧页面文案一致）：
 // GET /products/{id}/ops-suggestions → {summary, suggestions}。
+// V6：增加聚合生成说明（解释建议不随每次提问实时变化）；
+// 建议列表限高内部滚动；生成逻辑与接口不变。
 import { ref, watch } from "vue";
 import { apiGet } from "../api/client";
 import Icon from "./Icon.vue";
@@ -114,6 +117,13 @@ watch(() => props.productId, load, { immediate: true });
 .ops-card .empty {
   padding: 24px 16px;
 }
+/* 聚合生成说明：弱文本，不喧宾夺主 */
+.ops-desc {
+  margin: -2px 0 10px;
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+}
 .summary-row {
   display: flex;
   gap: 10px;
@@ -135,12 +145,25 @@ watch(() => props.productId, load, { immediate: true });
   color: var(--gray-500);
   font-size: 11px;
 }
+/* 建议列表：限高内部滚动，浅背景 + 轻边框给出清楚边界 */
+.suggestion-list {
+  max-height: 480px;
+  overflow-y: auto;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
 .suggestion-item {
   display: block;
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   margin-bottom: 8px;
+  background: #fff;
+}
+.suggestion-item:last-child {
+  margin-bottom: 0;
 }
 .suggestion-top {
   display: flex;

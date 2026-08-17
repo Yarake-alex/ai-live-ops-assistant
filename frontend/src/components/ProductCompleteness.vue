@@ -11,10 +11,13 @@
     <template v-else-if="compact">
       <!-- 百分比已在工作区头部摘要展示；这里仅保留缺失项和下一步建议。 -->
       <div v-if="missing.length || suggestions.length" class="alert alert-info completeness-hint">
-        <span v-if="missing.length"><b>待补充：</b>{{ missing.join("、") }}。</span>
-        <span v-if="suggestions.length">建议下一步：{{ suggestions.slice(0, 2).join("、") }}。</span>
+        <div v-if="missing.length" class="hint-line"><b>待补充：</b>{{ missing.join("、") }}。</div>
+        <div v-if="suggestions.length" class="hint-line">建议下一步：{{ suggestions.slice(0, 2).join("、") }}。</div>
       </div>
-      <div v-else class="alert alert-success completeness-hint">资料已完善，可以开始准备开播。</div>
+      <div v-else class="alert alert-success completeness-hint">
+        资料已完善，可以开始准备开播。
+        <div class="hint-line done-note">当前商品的基础资料和文档已满足问答与话术生成要求。</div>
+      </div>
     </template>
     <template v-else>
       <h4 class="embedded-title"><Icon name="check" size="14" class="head-icon" /> 资料完整度</h4>
@@ -32,7 +35,10 @@
         <b>下一步建议：</b><br />
         <div v-for="s in suggestions" :key="s">· {{ s }}</div>
       </div>
-      <div v-else-if="!missing.length" class="done-line">资料已完善，可以开始准备开播。</div>
+      <div v-else-if="!missing.length" class="done-line">
+        资料已完善，可以开始准备开播。
+        <div class="done-note">当前商品的基础资料和文档已满足问答与话术生成要求。</div>
+      </div>
     </template>
   </div>
 </template>
@@ -40,6 +46,8 @@
 <script setup>
 // 阶段 4.2：商品资料完整度（与旧页面文案/配色一致）：
 // GET /products/{id}/readiness → score / missing_items / suggestions。
+// V6：完整/缺失文案更清楚（完善时说明可支撑问答与话术；
+// 缺失项与下一步建议分行展示）；计算逻辑与接口不变。
 import { ref, computed, watch } from "vue";
 import { apiGet } from "../api/client";
 import Icon from "./Icon.vue";
@@ -89,8 +97,12 @@ watch(() => props.productId, load, { immediate: true });
 .completeness-hint {
   margin: 0;
 }
-.completeness-hint span + span::before {
-  content: " ";
+/* 缺失项与下一步建议分行展示，阅读更清楚 */
+.hint-line + .hint-line {
+  margin-top: 4px;
+}
+.done-note {
+  color: var(--gray-500);
 }
 .score-row {
   display: flex;
