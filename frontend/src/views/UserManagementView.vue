@@ -156,7 +156,7 @@ onMounted(loadUsers);
 
 <style scoped>
 .user-view {
-  max-width: 1200px;
+  max-width: var(--content-max);
   margin: 0 auto;
   padding: 24px 20px;
 }

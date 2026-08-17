@@ -92,7 +92,7 @@ async function onLogout() {
   border-bottom: 1px solid var(--gray-200);
 }
 .topbar-inner {
-  max-width: 1200px;
+  max-width: var(--content-max);
   margin: 0 auto;
   padding: 0 20px;
   height: 52px;
@@ -177,7 +177,7 @@ async function onLogout() {
   border-bottom: 1px solid var(--gray-200);
 }
 .main-nav-inner {
-  max-width: 1200px;
+  max-width: var(--content-max);
   margin: 0 auto;
   padding: 0 20px;
   display: flex;

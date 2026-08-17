@@ -13,8 +13,12 @@
   --gray-600: #4b5563;
   --gray-700: #374151;
   --gray-900: #111827;
-  /* 工作台背景 */
-  --bg: #f6f8fb;
+  /* 工作台背景（2026-08-17 全局视觉规范补充：统一浅冷灰蓝底色） */
+  --bg: #f5f7fb;
+  /* 内容区与业务面板 */
+  --content-max: 1180px;
+  --panel-bg: #ffffff;
+  --panel-border: #e8edf5;
   /* 主操作色 */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
@@ -252,10 +256,10 @@ label {
 .product-selector,
 .product-summary,
 .chunks-preview {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
+  /* 面板默认无阴影；确需层级时由弹窗/浮层单独使用 --shadow-md */
   padding: 16px;
 }
 
