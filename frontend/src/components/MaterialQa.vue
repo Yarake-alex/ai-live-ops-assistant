@@ -48,6 +48,7 @@
 // POST /rag/ask {question} → {answer, sources}，参考资料片段默认折叠展示。
 import { ref } from "vue";
 import { apiPost } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const question = ref("");
@@ -60,7 +61,7 @@ const showSources = ref(false);
 async function ask() {
   const q = question.value.trim();
   if (!q) {
-    alert("请输入问题");
+    toast("请输入问题", "error");
     return;
   }
   if (asking.value) return;

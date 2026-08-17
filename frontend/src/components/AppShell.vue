@@ -15,10 +15,10 @@
             <span v-if="isAdmin" class="tag tag-primary">管理员</span>
           </span>
           <template v-if="session.user">
-            <button class="header-btn" @click="cpVisible = true">
+            <button class="header-btn" aria-label="修改密码" @click="cpVisible = true">
               <Icon name="lock" size="14" /><span>修改密码</span>
             </button>
-            <button class="header-btn logout-btn" @click="onLogout">
+            <button class="header-btn logout-btn" aria-label="退出登录" @click="onLogout">
               <Icon name="logout" size="14" /><span>退出登录</span>
             </button>
           </template>

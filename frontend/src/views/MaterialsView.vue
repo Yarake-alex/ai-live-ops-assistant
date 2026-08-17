@@ -55,6 +55,7 @@
 // 上传区（拖拽/选择容器边界）+ 资料问答并列，页面铺满内容区。
 import { ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
+import { toast, confirmDialog } from "../state/feedback";
 import Icon from "../components/Icon.vue";
 import SearchBox from "../components/SearchBox.vue";
 import MaterialList from "../components/MaterialList.vue";
@@ -69,17 +70,19 @@ const uploadRef = ref(null);
 
 async function onDeleteDoc(filename) {
   if (busy.value) return;
-  const ok = confirm(`确定要删除资料「${filename}」吗？删除后，该资料不会再参与资料检索。`);
+  const ok = await confirmDialog(`确定要删除资料「${filename}」吗？删除后，该资料不会再参与资料检索。`, {
+    danger: true,
+  });
   if (!ok) return;
   busy.value = true;
   try {
     await apiRequest(`/rag/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
     // 删除正在预览的文件时清空预览（与旧页面一致）
     if (previewFilename.value === filename) previewFilename.value = "";
-    alert("资料已删除");
+    toast("资料已删除", "success");
     await loadDocs();
   } catch (e) {
-    alert("删除失败，请稍后重试。");
+    toast("删除失败，请稍后重试。", "error");
   } finally {
     busy.value = false;
   }

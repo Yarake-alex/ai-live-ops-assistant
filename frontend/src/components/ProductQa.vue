@@ -36,6 +36,7 @@
 // 问题洞察与运营建议的联动刷新留待后续阶段迁移。
 import { ref, watch } from "vue";
 import { apiPost } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const props = defineProps({
@@ -51,11 +52,11 @@ const sources = ref([]);
 async function ask() {
   const q = question.value.trim();
   if (!props.productId) {
-    alert("请先选择商品");
+    toast("请先选择商品", "error");
     return;
   }
   if (!q) {
-    alert("请输入问题");
+    toast("请输入问题", "error");
     return;
   }
   if (asking.value) return;

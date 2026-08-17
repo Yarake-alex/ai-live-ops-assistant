@@ -26,6 +26,7 @@
 // 导入 POST /products/import（FormData，逐个汇总提示）；导出 GET /products/export（blob 下载）。
 import { ref } from "vue";
 import { apiRequest, ApiError, SessionExpiredError } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const emit = defineEmits(["imported"]);
@@ -59,15 +60,15 @@ async function onFileSelected(event) {
         msg += `\n  ...还有 ${data.errors.length - 5} 条错误`;
       }
     }
-    alert(msg);
+    toast(msg, "success", 6000);
     emit("imported");
   } catch (e) {
     if (e instanceof SessionExpiredError) {
-      alert(e.message);
+      toast(e.message, "error");
     } else if (e instanceof ApiError) {
-      alert(e.detail || "导入失败");
+      toast(e.detail || "导入失败", "error");
     } else {
-      alert("网络错误，导入失败");
+      toast("网络错误，导入失败", "error");
     }
   } finally {
     importing.value = false;
@@ -81,7 +82,7 @@ async function doExport() {
   try {
     const res = await fetch("/products/export", { credentials: "include" });
     if (res.status === 401) {
-      alert("登录已失效，请重新登录");
+      toast("登录已失效，请重新登录", "error");
       return;
     }
     if (!res.ok) {
@@ -92,7 +93,7 @@ async function doExport() {
       } catch {
         // 非 JSON 响应，保持默认文案
       }
-      alert(detail);
+      toast(detail, "error");
       return;
     }
     const blob = await res.blob();
@@ -105,7 +106,7 @@ async function doExport() {
     a.remove();
     window.URL.revokeObjectURL(url);
   } catch (err) {
-    alert("网络错误，导出失败");
+    toast("网络错误，导出失败", "error");
   } finally {
     exporting.value = false;
   }

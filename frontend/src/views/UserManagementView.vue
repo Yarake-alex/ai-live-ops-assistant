@@ -82,6 +82,7 @@
 // 角色/状态用统一 tag，禁用用危险操作样式。
 import { ref, onMounted } from "vue";
 import { apiGet, apiPost, apiPatch, ApiError, SessionExpiredError } from "../api/client";
+import { toast, confirmDialog } from "../state/feedback";
 import Icon from "../components/Icon.vue";
 
 const usernameInput = ref(null);
@@ -163,18 +164,18 @@ async function createUser() {
 
 async function toggleStatus(u) {
   const action = u.is_active ? "禁用" : "启用";
-  if (!confirm(`确定要${action}该用户吗？`)) return;
+  if (!(await confirmDialog(`确定要${action}该用户吗？`, { danger: u.is_active }))) return;
   togglingId.value = u.id;
   try {
     await apiPatch(`/auth/users/${u.id}/status`, { is_active: !u.is_active });
     await loadUsers();
   } catch (e) {
     if (e instanceof SessionExpiredError) {
-      alert(e.message);
+      toast(e.message, "error");
     } else if (e instanceof ApiError) {
-      alert(e.detail || "操作失败");
+      toast(e.detail || "操作失败", "error");
     } else {
-      alert("网络错误");
+      toast("网络错误", "error");
     }
   } finally {
     togglingId.value = null;

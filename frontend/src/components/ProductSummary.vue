@@ -20,7 +20,7 @@
       <div class="summary-name">{{ product.name }}</div>
       <div class="summary-sub">¥{{ product.price }} · 库存 {{ product.stock }}</div>
       <div class="summary-tags">
-        <span class="status-tag">{{ product.live_status || "未上播" }}</span>
+        <span class="status-tag" :class="product.live_status === '直播中' ? 'tag-primary' : ''">{{ product.live_status || "未上播" }}</span>
         <span v-if="product.promotion" class="promo-tag">{{ product.promotion }}</span>
       </div>
       <div class="summary-fields">

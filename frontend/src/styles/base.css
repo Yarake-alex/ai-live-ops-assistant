@@ -230,6 +230,17 @@ textarea::placeholder {
   color: var(--gray-400);
 }
 
+/* 隐藏数字输入框原生步进器（后台表单观感统一） */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 input:disabled,
 select:disabled,
 textarea:disabled {
@@ -496,6 +507,13 @@ label {
 }
 
 /* ── 响应式 ── */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
 
 @media (max-width: 768px) {
   .container {

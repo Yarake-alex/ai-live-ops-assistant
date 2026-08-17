@@ -51,6 +51,7 @@
 // GET /live-scripts/{id} 查看历史话术。
 import { ref, watch } from "vue";
 import { apiGet, apiPost } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const props = defineProps({
@@ -78,7 +79,7 @@ function createdText(s) {
 
 async function generate() {
   if (!props.productId) {
-    alert("请先选择商品");
+    toast("请先选择商品", "error");
     return;
   }
   generating.value = true;

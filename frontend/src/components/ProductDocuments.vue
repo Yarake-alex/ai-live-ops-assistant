@@ -106,6 +106,7 @@
 // POST /products/{id}/knowledge/documents/{filename}/reindex 逐个重新整理。
 import { ref, watch } from "vue";
 import { apiGet, apiRequest, SessionExpiredError } from "../api/client";
+import { toast, confirmDialog } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const props = defineProps({
@@ -277,7 +278,7 @@ async function confirmUpload() {
 // ─── 删除 ───
 async function onDeleteDoc(filename) {
   if (busy.value) return;
-  if (!confirm(`确定删除资料「${filename}」吗？`)) return;
+  if (!(await confirmDialog(`确定删除资料「${filename}」吗？`, { danger: true }))) return;
   busy.value = true;
   try {
     await apiRequest(`/products/${props.productId}/knowledge/documents/${encodeURIComponent(filename)}`, {
@@ -287,7 +288,7 @@ async function onDeleteDoc(filename) {
     await load();
     emit("changed");
   } catch (e) {
-    alert(e.message || "删除失败，请稍后重试。");
+    toast(e.message || "删除失败，请稍后重试。", "error");
   } finally {
     busy.value = false;
   }
@@ -298,7 +299,7 @@ async function reorganize() {
   if (busy.value) return;
   if (!props.productId) return;
   if (!docs.value.length) {
-    alert("当前商品暂无资料文档");
+    toast("当前商品暂无资料文档", "error");
     return;
   }
 
@@ -332,7 +333,7 @@ async function reorganize() {
   busy.value = false;
   await load();
   emit("changed");
-  alert(message);
+  toast(message, failed.length ? "error" : "success", 5000);
 }
 
 watch(() => props.productId, load, { immediate: true });

@@ -9,6 +9,7 @@
     <CommentAssistantView v-else-if="view === 'comments'" />
     <UserManagementView v-else />
   </AppShell>
+  <Feedback />
 </template>
 
 <script setup>
@@ -17,6 +18,7 @@
 import { ref, computed, onMounted } from "vue";
 import { session, loadSession } from "./state/session";
 import AppShell from "./components/AppShell.vue";
+import Feedback from "./components/Feedback.vue";
 import LoginView from "./views/LoginView.vue";
 import HomeView from "./views/HomeView.vue";
 import MaterialsView from "./views/MaterialsView.vue";

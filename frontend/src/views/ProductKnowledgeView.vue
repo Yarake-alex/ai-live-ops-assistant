@@ -59,6 +59,7 @@
 // CSV 工具栏、下方模块统一网格（左右列对齐、无卡片套卡片）。
 import { ref } from "vue";
 import { apiGet, apiDelete } from "../api/client";
+import { toast, confirmDialog } from "../state/feedback";
 import Icon from "../components/Icon.vue";
 import ProductSelector from "../components/ProductSelector.vue";
 import ProductSummary from "../components/ProductSummary.vue";
@@ -117,16 +118,16 @@ const refreshTick = ref(0);
 
 async function onRemoveProduct() {
   if (!selectedId.value || removing.value) return;
-  if (!confirm("确定要删除这个商品吗？")) return;
+  if (!(await confirmDialog("确定要删除这个商品吗？", { danger: true }))) return;
   removing.value = true;
   try {
     await apiDelete(`/products/${selectedId.value}`);
     selectedId.value = null;
     product.value = null;
     selectorRef.value?.reload();
-    alert("商品已删除");
+    toast("商品已删除", "success");
   } catch (e) {
-    alert(e.message || "删除失败，请稍后重试。");
+    toast(e.message || "删除失败，请稍后重试。", "error");
   } finally {
     removing.value = false;
   }

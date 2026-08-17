@@ -42,7 +42,7 @@
       >
         <div class="item-top">
           <b>{{ p.name }}</b>
-          <span class="status-tag">{{ p.live_status || "未上播" }}</span>
+          <span class="status-tag" :class="p.live_status === '直播中' ? 'tag-primary' : ''">{{ p.live_status || "未上播" }}</span>
         </div>
         <div class="muted">¥{{ p.price }} · 库存 {{ p.stock }}</div>
         <div class="muted item-points">{{ points(p) }}</div>

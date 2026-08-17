@@ -109,6 +109,7 @@
 // 预设问题改紧凑 tag；结果与历史加状态 badge；历史「查看」当前项高亮。
 import { ref, onMounted } from "vue";
 import { apiGet, apiPost } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "../components/Icon.vue";
 
 const EXAMPLES = ["多少钱？", "适合学生吗？", "有没有优惠？", "质量怎么样？", "敏感肌能用吗？"];
@@ -170,12 +171,12 @@ function onProductChange() {
 
 async function generate() {
   if (!productId.value) {
-    alert("请先选择商品");
+    toast("请先选择商品", "error");
     return;
   }
   const text = comment.value.trim();
   if (!text) {
-    alert("请输入评论内容");
+    toast("请输入评论内容", "error");
     return;
   }
   generating.value = true;

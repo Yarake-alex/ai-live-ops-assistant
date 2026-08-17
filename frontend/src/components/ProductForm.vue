@@ -52,6 +52,7 @@
 // V6：统一弹窗样式 + 表单 label 分组。
 import { ref, watch } from "vue";
 import { apiPost, apiPut } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const props = defineProps({
@@ -122,15 +123,15 @@ async function save() {
   };
 
   if (!data.name) {
-    alert("商品名称必填");
+    toast("商品名称必填", "error");
     return;
   }
   if (Number.isNaN(data.price) || data.price < 0) {
-    alert("价格不能为负数");
+    toast("价格不能为负数", "error");
     return;
   }
   if (Number.isNaN(data.stock) || data.stock < 0 || !Number.isInteger(data.stock)) {
-    alert("库存必须是非负整数");
+    toast("库存必须是非负整数", "error");
     return;
   }
 
@@ -141,7 +142,7 @@ async function save() {
       : await apiPost("/products", data);
     emit("saved", saved);
   } catch (e) {
-    alert(e.message || "保存失败，请稍后重试。");
+    toast(e.message || "保存失败，请稍后重试。", "error");
   } finally {
     saving.value = false;
   }

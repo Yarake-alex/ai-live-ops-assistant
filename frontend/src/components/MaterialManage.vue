@@ -12,6 +12,7 @@
 // 文案与旧页面一致：确认提示、整理中禁用、成功/暂不可用提示；操作后通知父组件刷新。
 import { ref } from "vue";
 import { apiRequest } from "../api/client";
+import { toast, confirmDialog } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const props = defineProps({
@@ -24,10 +25,10 @@ const busy = ref(""); // "" | "reindex" | "clear"
 async function reorganize() {
   if (busy.value) return;
   if (!props.docCount) {
-    alert("当前暂无直播素材");
+    toast("当前暂无直播素材", "error");
     return;
   }
-  const ok = confirm(
+  const ok = await confirmDialog(
     "将重新整理全部直播素材。\n\n此操作可能需要一些时间，期间素材问答仍可使用。\n\n确定要重新整理吗？"
   );
   if (!ok) return;
@@ -36,13 +37,13 @@ async function reorganize() {
   try {
     const data = await apiRequest("/rag/reindex", { method: "POST" });
     if (data && data.reindexed) {
-      alert("素材整理完成");
+      toast("素材整理完成", "success");
     } else {
-      alert("素材整理暂不可用，可继续使用基础资料检索");
+      toast("素材整理暂不可用，可继续使用基础资料检索", "error");
     }
     emit("reorganized");
   } catch (e) {
-    alert("素材整理暂不可用，可继续使用基础资料检索");
+    toast("素材整理暂不可用，可继续使用基础资料检索", "error");
   } finally {
     busy.value = "";
   }
@@ -50,18 +51,19 @@ async function reorganize() {
 
 async function clearAll() {
   if (busy.value) return;
-  const ok = confirm(
-    "确定要清空全部素材库资料吗？清空后，所有已上传资料都不会再参与资料检索。"
+  const ok = await confirmDialog(
+    "确定要清空全部素材库资料吗？清空后，所有已上传资料都不会再参与资料检索。",
+    { danger: true }
   );
   if (!ok) return;
 
   busy.value = "clear";
   try {
     await apiRequest("/rag/documents", { method: "DELETE" });
-    alert("素材库已清空");
+    toast("素材库已清空", "success");
     emit("cleared");
   } catch (e) {
-    alert("清空素材库失败，请稍后重试。");
+    toast("清空素材库失败，请稍后重试。", "error");
   } finally {
     busy.value = "";
   }
