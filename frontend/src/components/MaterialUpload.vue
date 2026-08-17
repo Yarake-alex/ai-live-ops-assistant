@@ -1,9 +1,5 @@
 <template>
-  <div class="card upload-card">
-    <div class="card-head">
-      <h3><Icon name="upload" size="15" class="head-icon" /> 上传素材</h3>
-      <span class="upload-format">PDF / TXT / MD / CSV</span>
-    </div>
+  <div class="upload-controller">
     <input
       ref="fileInput"
       type="file"
@@ -12,21 +8,8 @@
       style="display: none"
       @change="onFileSelected"
     />
-    <div
-      class="drop-zone"
-      :class="{ dragging }"
-      @click="openPicker"
-      @dragover.prevent="dragging = true"
-      @dragleave.prevent="dragging = false"
-      @drop.prevent="onDrop"
-    >
-      <Icon name="upload" size="20" class="drop-icon" />
-      <div class="drop-text">点击选择文件，或将文件拖拽到此处</div>
-      <div class="drop-hint">支持一次选择多个直播资料文件</div>
-    </div>
-    <div class="upload-status">{{ statusText }}</div>
 
-    <!-- 上传确认弹窗：与旧页面流程一致 -->
+    <!-- 上传确认弹窗：与旧页面流程一致（同批重复拦截 / 同名覆盖提醒） -->
     <div v-if="confirmVisible" class="modal-overlay" @click.self="cancel">
       <div class="modal-box confirm-box">
         <div class="modal-head">
@@ -60,32 +43,23 @@
 // 阶段 3.2：迁移直播素材上传确认（与旧页面流程一致）：
 // 选文件 → 确认弹窗（同批重复拦截 / 同名覆盖提醒）→ 逐个 FormData 上传 POST /rag/upload。
 // 单个文件失败不影响后续文件；上传成功后通知父组件刷新列表。
-// V6：上传区面板化（拖拽/选择容器边界）；对外暴露 openPicker 供页面标题区「上传素材」调用。
+// V6 布局：上传入口移至页面顶部「上传素材」按钮（调用 openPicker），
+// 本组件仅保留隐藏 file input 与确认弹窗，不再渲染占位上传卡片；
+// 上传结果通过全局 toast 反馈。
 import { ref } from "vue";
 import { apiRequest, SessionExpiredError } from "../api/client";
+import { toast } from "../state/feedback";
 import Icon from "./Icon.vue";
 
 const emit = defineEmits(["uploaded"]);
 
 const fileInput = ref(null);
 const uploading = ref(false);
-const dragging = ref(false);
-const statusText = ref("尚未选择素材文件");
 
 const confirmVisible = ref(false);
 const pendingFiles = ref([]);
 const dupNames = ref([]);
 const overlapNames = ref([]);
-
-function updateStatusText(files) {
-  if (!files.length) {
-    statusText.value = "尚未选择素材文件";
-  } else if (files.length === 1) {
-    statusText.value = `已选择 1 个文件：${files[0].name}`;
-  } else {
-    statusText.value = `已选择 ${files.length} 个文件`;
-  }
-}
 
 function openPicker() {
   if (uploading.value) return;
@@ -98,13 +72,7 @@ function onFileSelected(event) {
   handleFiles(Array.from(event.target.files || []));
 }
 
-function onDrop(event) {
-  dragging.value = false;
-  handleFiles(Array.from(event.dataTransfer.files || []));
-}
-
 async function handleFiles(files) {
-  updateStatusText(files);
   if (!files.length) return;
 
   // 拉取已有文档名用于同名提醒；失败不阻塞上传确认
@@ -134,7 +102,6 @@ function cancel() {
   dupNames.value = [];
   overlapNames.value = [];
   if (fileInput.value) fileInput.value.value = "";
-  updateStatusText([]);
 }
 
 async function confirmUpload() {
@@ -153,8 +120,7 @@ async function confirmUpload() {
       successCount += 1;
     } catch (e) {
       if (e instanceof SessionExpiredError) {
-        statusText.value = e.message;
-        break;
+        break; // 会话失效由全局处理跳转登录
       }
       failed.push(file.name);
       console.warn("上传失败:", file.name, e);
@@ -169,11 +135,11 @@ async function confirmUpload() {
   uploading.value = false;
 
   if (successCount === files.length) {
-    statusText.value = `上传完成：${successCount} 个文件已加入素材库`;
+    toast(`上传完成：${successCount} 个文件已加入素材库`, "success");
   } else if (successCount > 0) {
-    statusText.value = `上传完成：${successCount} 个成功，${failed.length} 个失败。失败文件：${failed.join("、")}`;
+    toast(`上传完成：${successCount} 个成功，${failed.length} 个失败。失败文件：${failed.join("、")}`, "error");
   } else {
-    statusText.value = `上传失败：${failed.length} 个文件未能上传。失败文件：${failed.join("、")}`;
+    toast(`上传失败：${failed.length} 个文件未能上传。失败文件：${failed.join("、")}`, "error");
   }
 
   emit("uploaded");
@@ -181,46 +147,9 @@ async function confirmUpload() {
 </script>
 
 <style scoped>
-.upload-card {
-  display: flex;
-  flex-direction: column;
-}
-.upload-format {
-  color: var(--gray-500);
-  font-size: var(--text-xs);
-}
-.drop-zone {
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  padding: 22px 16px;
-  text-align: center;
-  cursor: pointer;
-  background: var(--gray-50);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-.drop-zone:hover,
-.drop-zone.dragging {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-.drop-icon {
-  color: var(--gray-400);
-}
-.drop-text {
-  font-size: 13px;
-  color: var(--gray-600);
-  margin-top: 6px;
-}
-.drop-hint {
-  margin-top: 2px;
-  color: var(--gray-400);
-  font-size: var(--text-xs);
-}
-.upload-status {
-  min-height: 20px;
-  margin-top: 8px;
-  font-size: var(--text-xs);
-  color: var(--gray-500);
+/* 上传控制器：页面不可见（仅隐藏 input + 弹窗），不占布局空间 */
+.upload-controller {
+  display: contents;
 }
 .confirm-box {
   width: min(520px, calc(100vw - 32px));

@@ -107,6 +107,9 @@ textarea {
 }
 .qa-card .result-box {
   min-height: 148px;
+  /* 回答长内容限高内部滚动，不无限拉长页面 */
+  max-height: 480px;
+  overflow-y: auto;
 }
 .qa-card .empty {
   min-height: 126px;

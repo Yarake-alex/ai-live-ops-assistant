@@ -10,6 +10,8 @@
 <script setup>
 // 阶段 3.4：重新整理素材（POST /rag/reindex）与清空素材库（DELETE /rag/documents）。
 // 文案与旧页面一致：确认提示、整理中禁用、成功/暂不可用提示；操作后通知父组件刷新。
+// V6：无素材时两个按钮均给出明确提示（重新整理：当前暂无直播素材；
+// 清空：当前暂无可清空素材），不表现为按钮失效。
 import { ref } from "vue";
 import { apiRequest } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
@@ -51,6 +53,10 @@ async function reorganize() {
 
 async function clearAll() {
   if (busy.value) return;
+  if (!props.docCount) {
+    toast("当前暂无可清空素材", "error");
+    return;
+  }
   const ok = await confirmDialog(
     "确定要清空全部素材库资料吗？清空后，所有已上传资料都不会再参与资料检索。",
     { danger: true }

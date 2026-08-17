@@ -5,9 +5,14 @@
         <h2 class="view-title">直播素材库</h2>
         <p class="view-desc">上传直播资料用于资料问答，整理后可辅助话术与评论回复</p>
       </div>
+      <div class="view-actions">
+        <button class="primary-btn" @click="uploadRef?.openPicker()">
+          <Icon name="upload" size="14" /> 上传素材
+        </button>
+      </div>
     </div>
 
-    <!-- 素材列表：单一业务面板，搜索与整理操作随列表归位 -->
+    <!-- 素材列表：全宽面板；搜索/重新整理/清空全部在标题区，摘要随列表归位 -->
     <div class="card">
       <div class="card-head materials-list-head">
         <div>
@@ -22,6 +27,7 @@
         </div>
         <div class="list-head-right">
           <SearchBox v-model="q" @search="loadDocs" />
+          <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
         </div>
       </div>
       <MaterialList
@@ -32,16 +38,15 @@
         :busy="busy"
         @delete-doc="onDeleteDoc"
       />
-      <div class="list-toolbar">
-        <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
-      </div>
     </div>
 
-    <!-- 上传与问答：按工作流并列的两个业务面板 -->
-    <div class="materials-grid">
-      <MaterialUpload @uploaded="loadDocs" />
+    <!-- 资料问答：全宽面板（素材列表下方） -->
+    <div class="qa-panel">
       <MaterialQa :key="qaResetKey" />
     </div>
+
+    <!-- 上传控制器：仅保留隐藏 file input 与上传确认弹窗，不占页面空间 -->
+    <MaterialUpload ref="uploadRef" @uploaded="loadDocs" />
   </section>
 </template>
 
@@ -52,9 +57,9 @@
 // GET /rag/documents/{filename}/chunks、DELETE /rag/documents/{filename}、
 // DELETE /rag/documents、POST /rag/reindex、POST /rag/ask，返回结构不变。
 // 旧页面 static/index.html 继续可用。
-// V6 阶段 5：列表面板（搜索/预览/整理归位）、上传区（拖拽/选择容器边界）+
-// 资料问答并列，页面铺满内容区。上传入口仅保留上传面板一处（与旧页面一致）。
-// V6 收口：片段预览改为文件 item 下方内联展开（状态由 MaterialList 内部管理）。
+// V6 收口：上下结构——顶部标题区（上传素材主按钮）→ 全宽素材列表面板
+// （搜索/重新整理/清空全部在标题区，片段预览在文件下方内联展开）→
+// 全宽资料问答面板。上传入口仅顶部一处（上传控制器不渲染占位卡片）。
 import { computed, ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
@@ -66,6 +71,7 @@ import MaterialManage from "../components/MaterialManage.vue";
 import MaterialQa from "../components/MaterialQa.vue";
 
 const busy = ref(false);
+const uploadRef = ref(null);
 // 清空素材库后重置资料问答组件状态（与旧页面清空问答结果区一致）
 const qaResetKey = ref(0);
 
@@ -161,24 +167,9 @@ onMounted(loadDocs);
   flex: 1 1 360px;
   flex-wrap: wrap;
 }
-.list-toolbar {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--gray-100);
-  display: flex;
-  justify-content: flex-end;
-}
-.materials-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: 16px;
+/* 资料问答全宽面板：素材列表下方 */
+.qa-panel {
   margin-top: 16px;
-  align-items: stretch;
-}
-@media (max-width: 900px) {
-  .materials-grid {
-    grid-template-columns: 1fr;
-  }
 }
 @media (max-width: 768px) {
   .list-head-right {
