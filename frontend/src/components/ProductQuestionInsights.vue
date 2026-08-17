@@ -2,7 +2,6 @@
   <div class="insights-card">
     <div class="card-head">
       <h3><Icon name="help" size="15" class="head-icon" /> 问题洞察</h3>
-      <button class="light-btn" :disabled="loading" @click="load">刷新</button>
     </div>
     <div v-if="!productId" class="hint">选择商品后展示该商品的问题洞察。</div>
     <div v-else-if="loading" class="hint">加载中…</div>

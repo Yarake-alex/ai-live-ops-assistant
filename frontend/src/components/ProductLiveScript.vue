@@ -2,10 +2,12 @@
   <div class="script-card">
     <div class="card-head">
       <h3><Icon name="mic" size="15" class="head-icon" /> 直播话术</h3>
-      <button class="primary-btn" :disabled="generating" @click="generate">
+      <button class="primary-btn" :disabled="generating || !!disableHint" @click="generate">
         {{ generating ? "生成中..." : "生成直播话术" }}
       </button>
     </div>
+
+    <div v-if="disableHint" class="alert alert-info gen-gate">{{ disableHint }}</div>
 
     <div v-if="!productId" class="hint">选择商品后可用。</div>
     <template v-else>
@@ -56,6 +58,8 @@ import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },
+  // 前置条件不足时的解释文案：非空时禁用生成按钮并显示提示（V6 IA 收紧）
+  disableHint: { type: String, default: "" },
 });
 
 const generating = ref(false);
@@ -138,6 +142,9 @@ watch(
 </script>
 
 <style scoped>
+.gen-gate {
+  margin-bottom: 10px;
+}
 .status-line {
   color: var(--gray-500);
   font-size: 13px;

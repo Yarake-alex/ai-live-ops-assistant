@@ -1,9 +1,6 @@
 <template>
-  <div class="completeness-card">
-    <div class="card-head">
-      <h3><Icon name="check" size="15" class="head-icon" /> 资料完整度</h3>
-      <button class="light-btn" :disabled="loading" @click="load">刷新</button>
-    </div>
+  <div class="module-section">
+    <h4 class="embedded-title"><Icon name="check" size="14" class="head-icon" /> 资料完整度</h4>
     <div v-if="!productId" class="empty">
       <span class="empty-icon"><Icon name="check" size="28" /></span>
       <span>选择商品后可查看资料完整度。</span>
@@ -73,8 +70,9 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
-.completeness-card .empty {
-  padding: 24px 16px;
+.module-section .empty {
+  padding: 16px;
+  min-height: 120px;
 }
 .score-row {
   display: flex;

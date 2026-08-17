@@ -1,9 +1,5 @@
 <template>
-  <div class="prep-card">
-    <div class="card-head">
-      <h3><Icon name="target" size="15" class="head-icon" /> 开播准备概览</h3>
-      <button class="light-btn" :disabled="loading" @click="load">刷新</button>
-    </div>
+  <div class="prep-strip">
     <div class="prep-items">
       <div class="prep-item">
         <div class="prep-value">{{ score === null ? "—" : score + "%" }}</div>
@@ -29,9 +25,10 @@
 // 阶段 5.7：开播准备概览条（与旧页面一致）：
 // 完整度（readiness.score）、文档数（knowledge/documents 数量）、
 // 高频问题（top_questions 计数和）、未覆盖问题（unanswered_questions 计数和）。
+// V6 IA 收紧：内嵌于「补充商品资料」面板顶部，去除卡片外壳与刷新按钮
+// （随商品切换/资料变更自动重载，key 重挂载由父组件控制）。
 import { ref, watch } from "vue";
 import { apiGet } from "../api/client";
-import Icon from "./Icon.vue";
 
 const props = defineProps({
   productId: { type: Number, default: null },

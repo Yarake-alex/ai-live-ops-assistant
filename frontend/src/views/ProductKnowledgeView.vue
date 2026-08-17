@@ -20,21 +20,60 @@
       <ProductSummary :product="product" :busy="removing" @edit="openEditForm" @remove="onRemoveProduct" />
     </div>
 
-    <h3 class="section-title">商品详情工作区</h3>
-    <div class="product-modules">
-      <div class="module-wide">
-        <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
+    <!-- 商品运营工作区：仅在选中商品后渲染；Tab 切换，按访问加载 -->
+    <template v-if="selectedId">
+      <h3 class="section-title">商品运营工作区</h3>
+      <div class="ops-tabs" role="tablist" aria-label="商品运营工作区">
+        <button
+          v-for="t in TABS"
+          :key="t.key"
+          class="ops-tab"
+          role="tab"
+          :aria-selected="activeTab === t.key"
+          :class="{ active: activeTab === t.key }"
+          @click="activeTab = t.key"
+        >
+          {{ t.label }}
+        </button>
       </div>
-      <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" />
-      <ProductDocuments :product-id="selectedId" @changed="refreshTick++" />
-      <ProductQa v-if="selectedId" :product-id="selectedId" />
-      <ProductQuestionInsights :product-id="selectedId" :key="'ins' + refreshTick" />
-      <div class="module-wide">
-        <ProductOperationSuggestions :product-id="selectedId" :key="'ops' + refreshTick" />
+      <div class="ops-tab-panel" role="tabpanel">
+        <!-- 资料与完整度：开播准备概览 + 完整度/文档合并为单面板 -->
+        <div v-if="activeTab === 'materials'" class="card">
+          <div class="card-head">
+            <h3><Icon name="file" size="15" class="head-icon" /> 补充商品资料</h3>
+          </div>
+          <PrepSummary :product-id="selectedId" :key="'prep' + refreshTick" />
+          <div class="tab-split">
+            <ProductCompleteness :product-id="selectedId" :key="'comp' + refreshTick" />
+            <ProductDocuments
+              :product-id="selectedId"
+              @changed="refreshTick++"
+              @docs="docsCount = $event"
+            />
+          </div>
+        </div>
+
+        <!-- 智能问答：资料问答 + 问题洞察 -->
+        <div v-else-if="activeTab === 'qa'" class="tab-split">
+          <ProductQa :product-id="selectedId" />
+          <ProductQuestionInsights :product-id="selectedId" :key="'ins' + refreshTick" />
+        </div>
+
+        <ProductOperationSuggestions
+          v-else-if="activeTab === 'suggestions'"
+          :product-id="selectedId"
+          :key="'ops' + refreshTick"
+        />
+
+        <ProductLiveScript
+          v-else-if="activeTab === 'script'"
+          :product-id="selectedId"
+          :disable-hint="docsCount === 0 ? '生成直播话术需要商品资料：请先在「资料与完整度」上传资料文档。' : ''"
+        />
+
+        <ProductLiveReview v-else :product-id="selectedId" />
       </div>
-      <ProductLiveScript :product-id="selectedId" />
-      <ProductLiveReview :product-id="selectedId" />
-    </div>
+    </template>
 
     <ProductForm
       v-if="formOpen"
@@ -56,8 +95,8 @@
 // GET /products/{id}/live-scripts、GET /live-scripts/{id}、
 // POST /products/{id}/live-reviews、GET /products/{id}/live-reviews、
 // GET /live-reviews/{id}，返回结构不变。
-// V6 阶段 4：标题区（新增商品归位到右上）、列表/详情双栏（2:3 等高）、
-// CSV 工具栏、下方模块统一网格（左右列对齐、无卡片套卡片）。
+// V6 信息架构收紧：未选中商品时不渲染运营工作区；选中后 Tab 切换（按访问加载），
+// 默认「资料与完整度」；切换商品回到默认 Tab。
 import { ref } from "vue";
 import { apiGet, apiDelete } from "../api/client";
 import { toast, confirmDialog } from "../state/feedback";
@@ -75,14 +114,27 @@ import ProductLiveReview from "../components/ProductLiveReview.vue";
 import ProductForm from "../components/ProductForm.vue";
 import ProductCsvTools from "../components/ProductCsvTools.vue";
 
+const TABS = [
+  { key: "materials", label: "资料与完整度" },
+  { key: "qa", label: "智能问答" },
+  { key: "suggestions", label: "运营建议" },
+  { key: "script", label: "直播话术" },
+  { key: "review", label: "直播复盘" },
+];
+
 const selectedId = ref(null);
 const product = ref(null);
 const selectorRef = ref(null);
 const formOpen = ref(false);
 const editingProduct = ref(null);
+const activeTab = ref("materials");
+// 当前商品资料文档数（由 ProductDocuments 上报）：0 时话术生成前置条件不足
+const docsCount = ref(null);
 
 async function onSelect(id) {
   selectedId.value = id;
+  activeTab.value = "materials";
+  docsCount.value = null;
   try {
     product.value = await apiGet(`/products/${id}`);
   } catch (e) {
@@ -125,6 +177,7 @@ async function onRemoveProduct() {
     await apiDelete(`/products/${selectedId.value}`);
     selectedId.value = null;
     product.value = null;
+    docsCount.value = null;
     selectorRef.value?.reload();
     toast("商品已删除", "success");
   } catch (e) {
@@ -143,26 +196,58 @@ async function onRemoveProduct() {
   gap: 16px;
   align-items: stretch;
 }
-/* 分区标题：将下方模块明确归入「商品详情工作区」，减少碎片感 */
 .section-title {
   font-size: 15px;
   font-weight: 700;
   color: var(--gray-900);
   margin: 20px 0 14px;
 }
-/* 下方模块统一网格：左右列对齐，宽模块占满整行 */
-.product-modules {
+/* 运营工作区 Tab 条：选中态深色文字 + 2px 蓝色底边 */
+.ops-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 16px;
+}
+.ops-tab {
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--gray-600);
+  white-space: nowrap;
+}
+.ops-tab:hover:not(:disabled) {
+  color: var(--gray-900);
+  background: var(--gray-50);
+}
+.ops-tab.active {
+  color: var(--gray-900);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+/* 面板内双栏（补充资料：完整度 | 文档；智能问答：问答 | 洞察） */
+.tab-split {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 16px;
+  gap: 0 24px;
+  border-top: 1px solid var(--gray-100);
+  margin-top: 12px;
+  padding-top: 14px;
   align-items: start;
 }
-.module-wide {
-  grid-column: 1 / -1;
+.card > .tab-split:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
 }
 @media (max-width: 900px) {
   .product-grid,
-  .product-modules {
+  .tab-split {
     grid-template-columns: 1fr;
   }
 }

@@ -1,12 +1,11 @@
 <template>
-  <div class="documents-card">
-    <div class="card-head">
-      <h3><Icon name="book" size="15" class="head-icon" /> 商品资料文档</h3>
+  <div class="module-section">
+    <div class="documents-head">
+      <h4 class="embedded-title"><Icon name="book" size="14" class="head-icon" /> 商品资料文档</h4>
       <div class="head-actions">
         <button class="light-btn" :disabled="busy" @click="reorganize">
           {{ busy === "reorganize" ? "整理中…" : "重新整理资料" }}
         </button>
-        <button class="light-btn" :disabled="busy" @click="load">刷新</button>
       </div>
     </div>
 
@@ -112,7 +111,7 @@ import Icon from "./Icon.vue";
 const props = defineProps({
   productId: { type: Number, default: null },
 });
-const emit = defineEmits(["changed"]);
+const emit = defineEmits(["changed", "docs"]);
 
 const docs = ref([]);
 const loading = ref(false);
@@ -144,6 +143,7 @@ async function load() {
   error.value = false;
   try {
     docs.value = await apiGet(`/products/${props.productId}/knowledge/documents`);
+    emit("docs", docs.value.length);
   } catch (e) {
     error.value = true;
     docs.value = [];
@@ -340,6 +340,14 @@ watch(() => props.productId, load, { immediate: true });
 </script>
 
 <style scoped>
+.documents-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
 .head-actions {
   display: flex;
   gap: 6px;
@@ -350,7 +358,7 @@ watch(() => props.productId, load, { immediate: true });
   font-size: 13px;
   margin-bottom: 6px;
 }
-.documents-card .muted {
+.module-section .muted {
   font-size: 13px;
 }
 .doc-list {

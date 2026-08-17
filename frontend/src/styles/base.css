@@ -264,9 +264,6 @@ label {
 :is(
   .card,
   .qa-card,
-  .prep-card,
-  .completeness-card,
-  .documents-card,
   .insights-card,
   .ops-card,
   .script-card,
@@ -303,6 +300,16 @@ label {
 .head-icon {
   color: var(--gray-500);
   flex-shrink: 0;
+}
+
+/* 面板内嵌模块的小节标题（如「补充商品资料」面板内的资料完整度/商品资料文档） */
+.embedded-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ── badge / tag ── */
@@ -528,9 +535,6 @@ label {
   :is(
     .card,
     .qa-card,
-    .prep-card,
-    .completeness-card,
-    .documents-card,
     .insights-card,
     .ops-card,
     .script-card,

@@ -2,7 +2,6 @@
   <div class="ops-card">
     <div class="card-head">
       <h3><Icon name="bulb" size="15" class="head-icon" /> 运营建议</h3>
-      <button class="light-btn" :disabled="loading" @click="load">刷新</button>
     </div>
     <div v-if="!productId" class="hint">选择商品后展示该商品的运营建议。</div>
     <div v-else-if="loading" class="hint">加载中…</div>

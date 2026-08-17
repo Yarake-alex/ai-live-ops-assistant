@@ -14,7 +14,7 @@
 
     <div v-if="!product" class="empty">
       <span class="empty-icon"><Icon name="box" size="32" /></span>
-      <span>请选择一个商品以查看详情</span>
+      <span>请选择一个商品查看详情并开始运营配置</span>
     </div>
     <template v-else>
       <div class="summary-name">{{ product.name }}</div>
