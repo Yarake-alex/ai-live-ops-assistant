@@ -1,7 +1,7 @@
 <template>
   <div class="qa-card">
     <div class="card-head">
-      <h3>💬 资料问答</h3>
+      <h3><Icon name="chat" size="15" class="head-icon" /> 资料问答</h3>
     </div>
     <textarea
       v-model="question"
@@ -13,10 +13,13 @@
       <button class="primary-btn" :disabled="asking || !question.trim()" @click="ask">基于资料回答</button>
     </div>
 
-    <div class="qa-result">
+    <div class="result-box">
       <div v-if="asking" class="hint">正在检索资料并生成回答...</div>
       <div v-else-if="error" class="hint hint-error">提问失败，请稍后重试。</div>
-      <div v-else-if="!answer" class="hint">上传资料后，可以在这里提问。</div>
+      <div v-else-if="!answer" class="empty">
+        <span class="empty-icon"><Icon name="chat" size="24" /></span>
+        <span>上传资料后，可以在这里提问。</span>
+      </div>
       <template v-else>
         <div class="answer-text">{{ answer }}</div>
 
@@ -45,6 +48,7 @@
 // POST /rag/ask {question} → {answer, sources}，参考资料片段默认折叠展示。
 import { ref } from "vue";
 import { apiPost } from "../api/client";
+import Icon from "./Icon.vue";
 
 const question = ref("");
 const asking = ref(false);
@@ -79,9 +83,6 @@ async function ask() {
 </script>
 
 <style scoped>
-.qa-card {
-  margin-top: 12px;
-}
 textarea {
   min-height: 60px;
 }
@@ -90,12 +91,8 @@ textarea {
   justify-content: flex-end;
   margin: 8px 0;
 }
-.qa-result {
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: var(--gray-50);
-  padding: 10px 12px;
-  min-height: 60px;
+.qa-card .empty {
+  padding: 16px;
 }
 .answer-text {
   font-size: 14px;

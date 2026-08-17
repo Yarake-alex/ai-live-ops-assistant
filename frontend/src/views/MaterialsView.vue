@@ -1,24 +1,46 @@
 <template>
-  <section class="materials-view">
-    <div class="materials-header">
-      <h2>📁 直播素材库</h2>
-      <SearchBox v-model="q" @search="loadDocs" />
+  <section class="materials-view container">
+    <div class="view-head">
+      <div>
+        <h2 class="view-title">直播素材库</h2>
+        <p class="view-desc">上传直播资料用于资料问答，整理后可辅助话术与评论回复</p>
+      </div>
+      <div class="view-actions">
+        <button class="primary-btn" @click="uploadRef?.openPicker()">
+          <Icon name="upload" size="14" /> 上传素材
+        </button>
+      </div>
     </div>
-    <MaterialList
-      :docs="docs"
-      :loading="loading"
-      :error="error"
-      :query="q"
-      :busy="busy"
-      @view-chunks="previewFilename = $event"
-      @delete-doc="onDeleteDoc"
-    />
-    <MaterialChunksPreview :filename="previewFilename" @close="previewFilename = ''" />
-    <div class="materials-bottom">
-      <MaterialUpload @uploaded="loadDocs" />
-      <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
+
+    <!-- 素材列表：单一业务面板，搜索与整理操作随列表归位 -->
+    <div class="card">
+      <div class="card-head">
+        <h3><Icon name="folder" size="15" class="head-icon" /> 素材列表</h3>
+        <div class="list-head-right">
+          <span class="count-badge">{{ docs.length }} 个文件</span>
+          <SearchBox v-model="q" @search="loadDocs" />
+        </div>
+      </div>
+      <MaterialList
+        :docs="docs"
+        :loading="loading"
+        :error="error"
+        :query="q"
+        :busy="busy"
+        @view-chunks="previewFilename = $event"
+        @delete-doc="onDeleteDoc"
+      />
+      <MaterialChunksPreview :filename="previewFilename" @close="previewFilename = ''" />
+      <div class="list-toolbar">
+        <MaterialManage :doc-count="docs.length" @reorganized="loadDocs" @cleared="onCleared" />
+      </div>
     </div>
-    <MaterialQa />
+
+    <!-- 上传与问答：按工作流并列的两个业务面板 -->
+    <div class="materials-grid">
+      <MaterialUpload ref="uploadRef" @uploaded="loadDocs" />
+      <MaterialQa />
+    </div>
   </section>
 </template>
 
@@ -29,8 +51,11 @@
 // GET /rag/documents/{filename}/chunks、DELETE /rag/documents/{filename}、
 // DELETE /rag/documents、POST /rag/reindex、POST /rag/ask，返回结构不变。
 // 旧页面 static/index.html 继续可用。
+// V6 阶段 5：标题区（上传素材归位右上）、列表面板（搜索/预览/整理归位）、
+// 上传区（拖拽/选择容器边界）+ 资料问答并列，页面铺满内容区。
 import { ref, onMounted } from "vue";
 import { apiGet, apiRequest } from "../api/client";
+import Icon from "../components/Icon.vue";
 import SearchBox from "../components/SearchBox.vue";
 import MaterialList from "../components/MaterialList.vue";
 import MaterialUpload from "../components/MaterialUpload.vue";
@@ -40,6 +65,7 @@ import MaterialQa from "../components/MaterialQa.vue";
 
 const previewFilename = ref("");
 const busy = ref(false);
+const uploadRef = ref(null);
 
 async function onDeleteDoc(filename) {
   if (busy.value) return;
@@ -91,28 +117,29 @@ onMounted(loadDocs);
 </script>
 
 <style scoped>
-.materials-view {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 24px 20px;
-}
-.materials-header {
+.list-head-right {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
-.materials-header h2 {
-  margin: 0;
-  font-size: 17px;
-  color: #333;
-}
-.materials-bottom {
+.list-toolbar {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-100);
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.materials-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .materials-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

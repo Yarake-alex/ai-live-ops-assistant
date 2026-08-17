@@ -1,16 +1,26 @@
 <template>
-  <section class="comment-view">
+  <section class="comment-view container">
+    <div class="view-head">
+      <div>
+        <h2 class="view-title">评论助手</h2>
+        <p class="view-desc">输入观众评论，生成主播口吻回复，并回看历史记录</p>
+      </div>
+    </div>
+
     <div class="comment-grid">
-      <!-- Left: Comment input -->
+      <!-- Left: Comment input + result (main, 60%) -->
       <div class="card">
         <div class="card-head">
-          <h3>模拟评论</h3>
+          <h3><Icon name="chat" size="15" class="head-icon" /> 模拟评论</h3>
         </div>
-        <select v-model="productId" @change="onProductChange">
+        <label for="cm-product">选择商品</label>
+        <select id="cm-product" v-model="productId" @change="onProductChange">
           <option value="">请选择商品…</option>
           <option v-for="p in products" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
         </select>
+        <label for="cm-comment">观众评论</label>
         <textarea
+          id="cm-comment"
           v-model="comment"
           placeholder="输入观众评论，例如：多少钱？"
           rows="4"
@@ -20,7 +30,7 @@
           <button
             v-for="example in EXAMPLES"
             :key="example"
-            class="light-btn"
+            class="preset-btn"
             :disabled="generating"
             @click="comment = example"
           >
@@ -29,18 +39,21 @@
         </div>
         <div class="actions-row">
           <button class="primary-btn" :disabled="generating" @click="generate">
-            🎤 生成回复
+            <Icon name="mic" size="14" /> 生成回复
           </button>
         </div>
         <div class="result-box">
           <div v-if="generating" class="hint">AI 正在生成回复...</div>
           <div v-else-if="generateError" class="hint hint-error">生成失败，请稍后重试。</div>
-          <div v-else-if="!record" class="hint">生成的直播间回复会显示在这里。</div>
+          <div v-else-if="!record" class="empty">
+            <span class="empty-icon"><Icon name="chat" size="24" /></span>
+            <span>生成的直播间回复会显示在这里。</span>
+          </div>
           <template v-else>
             <div class="record-meta">
-              <b>{{ statusText(record) }}</b>
+              <span class="tag" :class="statusTagClass(record)">{{ statusText(record) }}</span>
             </div>
-            <div class="muted record-comment">💬 观众评论：{{ record.comment }}</div>
+            <div class="muted record-comment">观众评论：{{ record.comment }}</div>
             <div v-if="record.status !== 'success' && record.error_message" class="muted record-warning">
               {{ record.error_message }}
             </div>
@@ -49,7 +62,7 @@
         </div>
       </div>
 
-      <!-- Right: History -->
+      <!-- Right: History (side, 40%) -->
       <div class="card">
         <div class="card-head">
           <h3>历史评论与回复</h3>
@@ -58,12 +71,23 @@
         <div class="history-box">
           <div v-if="historyLoading" class="hint">加载中…</div>
           <div v-else-if="historyError" class="hint hint-error">历史记录加载失败。</div>
-          <div v-else-if="!productId" class="hint">选择商品后显示该商品的历史评论回复。</div>
-          <div v-else-if="!history.length" class="hint">暂无历史评论回复。</div>
-          <div v-for="item in history" :key="item.id" class="history-item">
+          <div v-else-if="!productId" class="empty">
+            <span class="empty-icon"><Icon name="chat" size="24" /></span>
+            <span>选择商品后显示该商品的历史评论回复。</span>
+          </div>
+          <div v-else-if="!history.length" class="empty">
+            <span class="empty-icon"><Icon name="chat" size="24" /></span>
+            <span>暂无历史评论回复。</span>
+          </div>
+          <div
+            v-for="item in history"
+            :key="item.id"
+            class="row-item history-item"
+            :class="{ active: item.id === viewedId }"
+          >
             <div class="history-top">
-              <b>💬 {{ (item.comment || "").slice(0, 40) }}</b>
-              <span class="status-tag">{{ statusText(item) }}</span>
+              <b>{{ (item.comment || "").slice(0, 40) }}</b>
+              <span class="tag" :class="statusTagClass(item)">{{ statusText(item) }}</span>
             </div>
             <div class="muted history-reply">{{ (item.reply || "（无回复内容）").slice(0, 60) }}</div>
             <div class="history-bottom">
@@ -81,8 +105,11 @@
 // 阶段 5.2：评论助手（与旧页面文案一致）：
 // GET /products 商品下拉、POST /products/{id}/comment-replies 生成回复、
 // GET /products/{id}/comment-replies 历史列表、GET /comment-replies/{id} 查看详情。
+// V6 阶段 5：稳定双栏（主栏 60% 输入+结果 / 侧栏 40% 历史）；
+// 预设问题改紧凑 tag；结果与历史加状态 badge；历史「查看」当前项高亮。
 import { ref, onMounted } from "vue";
 import { apiGet, apiPost } from "../api/client";
+import Icon from "../components/Icon.vue";
 
 const EXAMPLES = ["多少钱？", "适合学生吗？", "有没有优惠？", "质量怎么样？", "敏感肌能用吗？"];
 
@@ -96,11 +123,18 @@ const record = ref(null);
 const historyLoading = ref(false);
 const historyError = ref(false);
 const history = ref([]);
+const viewedId = ref(null);
 
 function statusText(r) {
   if (r.status === "fallback") return "本地兜底";
   if (r.status === "failed") return "生成失败";
   return "生成成功";
+}
+
+function statusTagClass(r) {
+  if (r.status === "fallback") return "tag-warning";
+  if (r.status === "failed") return "tag-danger";
+  return "tag-success";
 }
 
 function createdText(r) {
@@ -128,6 +162,7 @@ function onProductChange() {
   record.value = null;
   generateError.value = false;
   history.value = [];
+  viewedId.value = null;
   if (productId.value) {
     loadHistory();
   }
@@ -148,6 +183,7 @@ async function generate() {
   try {
     const data = await apiPost(`/products/${productId.value}/comment-replies`, { comment: text });
     record.value = data;
+    viewedId.value = null;
     await loadHistory();
   } catch (e) {
     generateError.value = true;
@@ -175,6 +211,7 @@ async function viewDetail(id) {
   try {
     const data = await apiGet(`/comment-replies/${id}`);
     record.value = data;
+    viewedId.value = id;
   } catch (e) {
     // 忽略，保持原展示
   }
@@ -184,16 +221,12 @@ onMounted(loadProducts);
 </script>
 
 <style scoped>
-.comment-view {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 24px 20px;
-}
+/* 稳定双栏：主栏（输入+结果）60%，侧栏（历史）40%；窄屏自动堆叠 */
 .comment-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: stretch;
 }
 @media (max-width: 900px) {
   .comment-grid {
@@ -211,23 +244,31 @@ textarea {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+/* 预设问题：紧凑可点击 tag，不挤压文本域 */
+.preset-btn {
+  min-height: 0;
+  padding: 3px 10px;
+  font-size: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-pill);
+  color: var(--gray-600);
+}
+.preset-btn:hover:not(:disabled) {
+  border-color: var(--primary-border);
+  color: var(--primary);
+  background: var(--primary-soft);
 }
 .actions-row {
   margin-bottom: 10px;
 }
-.result-box {
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: var(--gray-50);
-  padding: 10px 12px;
-  min-height: 120px;
+.comment-view .empty {
+  padding: 16px;
 }
 .record-meta {
   margin-bottom: 8px;
-}
-.record-meta b {
-  font-size: 13px;
 }
 .record-comment {
   font-size: 13px;
@@ -243,15 +284,19 @@ textarea {
   word-break: break-all;
 }
 .history-box {
-  max-height: 56vh;
+  max-height: 60vh;
   overflow-y: auto;
 }
 .history-item {
-  border-bottom: 1px solid #f3f4f6;
-  padding: 10px 4px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
 }
-.history-item:last-child {
-  border-bottom: none;
+.history-item.active {
+  background: var(--primary-soft);
+  border-radius: var(--radius-sm);
+  padding-left: 8px;
+  padding-right: 8px;
 }
 .history-top {
   display: flex;

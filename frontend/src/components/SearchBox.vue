@@ -1,6 +1,6 @@
 <template>
   <div class="search-box">
-    <span class="search-box-icon">🔍</span>
+    <span class="search-box-icon"><Icon name="search" size="14" /></span>
     <input
       v-model="model"
       type="text"
@@ -15,6 +15,7 @@
 <script setup>
 // 与旧页面交互一致：输入 400ms 防抖搜索、Enter 立即搜索、× 清空并立即显示全部。
 import { computed } from "vue";
+import Icon from "./Icon.vue";
 
 const props = defineProps({ modelValue: String });
 const emit = defineEmits(["update:modelValue", "search"]);
@@ -54,7 +55,8 @@ function clear() {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 13px;
+  display: inline-flex;
+  color: var(--gray-400);
   pointer-events: none;
 }
 .search-box input {

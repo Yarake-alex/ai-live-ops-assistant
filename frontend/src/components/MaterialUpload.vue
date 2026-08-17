@@ -1,5 +1,9 @@
 <template>
-  <div class="material-upload">
+  <div class="card upload-card">
+    <div class="card-head">
+      <h3><Icon name="upload" size="15" class="head-icon" /> 上传素材</h3>
+      <span class="muted">支持 PDF / TXT / MD / CSV，可一次多选</span>
+    </div>
     <input
       ref="fileInput"
       type="file"
@@ -8,17 +12,25 @@
       style="display: none"
       @change="onFileSelected"
     />
-    <button class="upload-btn" :disabled="uploading" @click="openPicker">
-      {{ uploading ? "上传中…" : "上传素材" }}
-    </button>
+    <div
+      class="drop-zone"
+      :class="{ dragging }"
+      @click="openPicker"
+      @dragover.prevent="dragging = true"
+      @dragleave.prevent="dragging = false"
+      @drop.prevent="onDrop"
+    >
+      <Icon name="upload" size="22" class="drop-icon" />
+      <div class="drop-text">点击选择文件，或将文件拖拽到此处</div>
+    </div>
     <div class="upload-status">{{ statusText }}</div>
 
     <!-- 上传确认弹窗：与旧页面流程一致 -->
-    <div v-if="confirmVisible" class="confirm-overlay" @click.self="cancel">
-      <div class="confirm-box">
-        <div class="confirm-head">
+    <div v-if="confirmVisible" class="modal-overlay" @click.self="cancel">
+      <div class="modal-box confirm-box">
+        <div class="modal-head">
           <h3>确认上传直播素材</h3>
-          <button class="close-btn" @click="cancel">✕</button>
+          <button class="close-btn" @click="cancel"><Icon name="x" size="14" /></button>
         </div>
         <div class="confirm-body">
           <div class="count-line">本次选择 {{ pendingFiles.length }} 个文件</div>
@@ -47,13 +59,16 @@
 // 阶段 3.2：迁移直播素材上传确认（与旧页面流程一致）：
 // 选文件 → 确认弹窗（同批重复拦截 / 同名覆盖提醒）→ 逐个 FormData 上传 POST /rag/upload。
 // 单个文件失败不影响后续文件；上传成功后通知父组件刷新列表。
+// V6：上传区面板化（拖拽/选择容器边界）；对外暴露 openPicker 供页面标题区「上传素材」调用。
 import { ref } from "vue";
 import { apiRequest, SessionExpiredError } from "../api/client";
+import Icon from "./Icon.vue";
 
 const emit = defineEmits(["uploaded"]);
 
 const fileInput = ref(null);
 const uploading = ref(false);
+const dragging = ref(false);
 const statusText = ref("尚未选择素材文件");
 
 const confirmVisible = ref(false);
@@ -76,8 +91,18 @@ function openPicker() {
   fileInput.value?.click();
 }
 
-async function onFileSelected(event) {
-  const files = Array.from(event.target.files || []);
+defineExpose({ openPicker });
+
+function onFileSelected(event) {
+  handleFiles(Array.from(event.target.files || []));
+}
+
+function onDrop(event) {
+  dragging.value = false;
+  handleFiles(Array.from(event.dataTransfer.files || []));
+}
+
+async function handleFiles(files) {
   updateStatusText(files);
   if (!files.length) return;
 
@@ -155,41 +180,39 @@ async function confirmUpload() {
 </script>
 
 <style scoped>
-.material-upload {
-  margin-top: 12px;
+.upload-card {
+  display: flex;
+  flex-direction: column;
+}
+.drop-zone {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--gray-50);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.drop-zone:hover,
+.drop-zone.dragging {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.drop-icon {
+  color: var(--gray-400);
+}
+.drop-text {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-top: 6px;
 }
 .upload-status {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 12px;
-  color: #777;
-}
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
+  color: var(--gray-500);
 }
 .confirm-box {
   width: min(520px, calc(100vw - 32px));
-  max-height: 85vh;
-  overflow-y: auto;
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-.confirm-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.confirm-head h3 {
-  margin: 0;
-  font-size: 15px;
 }
 .count-line {
   font-size: 13px;
@@ -199,7 +222,7 @@ async function confirmUpload() {
   max-height: 180px;
   overflow-y: auto;
   font-size: 12px;
-  color: #777;
+  color: var(--gray-500);
   margin-bottom: 8px;
 }
 .file-row {

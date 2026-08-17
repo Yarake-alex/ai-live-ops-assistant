@@ -63,7 +63,11 @@ function timeInfo(c) {
 
 <style scoped>
 .chunks-preview {
-  margin-top: 10px;
+  margin-top: 12px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: #fbfcfd;
 }
 .preview-head {
   display: flex;
@@ -81,14 +85,14 @@ function timeInfo(c) {
   overflow-y: auto;
 }
 .chunk {
-  background: #f8f9fa;
+  background: var(--gray-50);
   padding: 8px;
   margin: 6px 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.9em;
 }
 .chunk-meta {
-  color: #777;
+  color: var(--gray-500);
   font-size: 0.8em;
   margin-bottom: 4px;
 }

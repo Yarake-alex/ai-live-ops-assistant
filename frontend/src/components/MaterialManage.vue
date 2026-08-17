@@ -1,7 +1,7 @@
 <template>
   <div class="material-manage">
     <button class="outline-btn" :disabled="busy" @click="reorganize">
-      {{ busy === "reindex" ? "整理中…" : "🔄 重新整理素材" }}
+      <Icon name="refresh" size="13" /> {{ busy === "reindex" ? "整理中…" : "重新整理素材" }}
     </button>
     <button class="danger-btn" :disabled="busy" @click="clearAll">清空全部</button>
   </div>
@@ -12,6 +12,7 @@
 // 文案与旧页面一致：确认提示、整理中禁用、成功/暂不可用提示；操作后通知父组件刷新。
 import { ref } from "vue";
 import { apiRequest } from "../api/client";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   docCount: { type: Number, default: 0 },
@@ -72,6 +73,5 @@ async function clearAll() {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 12px;
 }
 </style>
