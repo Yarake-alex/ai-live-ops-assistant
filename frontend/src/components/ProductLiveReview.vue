@@ -46,9 +46,12 @@
 // 阶段 4.7：商品直播复盘（与旧页面文案一致）：
 // POST /products/{id}/live-reviews 生成、GET /products/{id}/live-reviews 历史列表、
 // GET /live-reviews/{id} 查看历史复盘。
+// V6：生成状态按 productId 保存到模块级 generationTasks，
+// 切换 tab 卸载组件后仍能恢复「生成中」，后台完成后同步结果并刷新历史。
 import { ref, watch } from "vue";
 import { apiGet, apiPost } from "../api/client";
 import { toast } from "../state/feedback";
+import { getGeneration, startGeneration, finishGeneration } from "../state/generationTasks";
 import Icon from "./Icon.vue";
 import AiResultContent from "./AiResultContent.vue";
 
@@ -79,15 +82,20 @@ async function generate() {
     toast("请先选择商品", "error");
     return;
   }
+  // 生成中禁止重复发起（按钮已禁用，此处再兜底一次）
+  if (generating.value || getGeneration("liveReview", props.productId)?.pending) return;
   generating.value = true;
   generateError.value = false;
+  startGeneration("liveReview", props.productId);
   try {
     const data = await apiPost(`/products/${props.productId}/live-reviews`);
     record.value = data;
-    await loadHistory();
+    // 完成状态写入模块级任务（由任务 watcher 统一刷新历史）
+    finishGeneration("liveReview", props.productId, { result: data });
   } catch (e) {
     generateError.value = true;
     record.value = null;
+    finishGeneration("liveReview", props.productId, { error: true });
   } finally {
     generating.value = false;
   }
@@ -120,10 +128,34 @@ async function viewHistory(id) {
 watch(
   () => props.productId,
   (id) => {
+    generating.value = false;
     record.value = null;
     generateError.value = false;
     history.value = [];
     if (id) loadHistory();
+  },
+  { immediate: true }
+);
+
+// 生成任务状态同步（跨 tab 切换保持，按 productId 隔离）：
+// 挂载时恢复「生成中」或已完成结果；后台请求完成后同步 UI 并刷新历史。
+watch(
+  () => getGeneration("liveReview", props.productId),
+  (task) => {
+    if (!task) return;
+    if (task.pending) {
+      if (!generating.value) generating.value = true;
+      return;
+    }
+    generating.value = false;
+    if (task.error) {
+      generateError.value = true;
+      record.value = null;
+    } else if (task.result) {
+      generateError.value = false;
+      record.value = task.result;
+      loadHistory();
+    }
   },
   { immediate: true }
 );
