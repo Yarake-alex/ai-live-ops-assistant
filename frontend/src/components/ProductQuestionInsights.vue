@@ -68,7 +68,8 @@
 // GET /products/{id}/question-insights →
 // top_questions / category_counts / recent_questions / unanswered_questions。
 // V6：展示顺序调整为运营工作流（最近问题 → 高频问题 → 分类统计 → 未覆盖问题），
-// 内容区限高内部滚动，各列表最多直接展示 5 条；接口与返回结构不变。
+// 各列表最多直接展示 5 条；接口与返回结构不变。
+// V6 联动：商品资料问答成功后父组件通过 key 重挂载本组件以刷新洞察。
 import { ref, computed, watch } from "vue";
 import { apiGet } from "../api/client";
 import Icon from "./Icon.vue";
@@ -133,14 +134,27 @@ watch(() => props.productId, load, { immediate: true });
 .insights-card .empty {
   padding: 24px 16px;
 }
-/* 洞察内容区：限高内部滚动，浅背景 + 轻边框给出清楚边界 */
+/* 卡片纵向弹性布局：内容区占据剩余高度并内部滚动，
+   与左侧资料问答卡片等高对齐（桌面端由父组件固定 560px 卡高） */
+.insights-card {
+  display: flex;
+  flex-direction: column;
+}
+/* 洞察内容区：浅背景 + 轻边框给出清楚边界 */
 .insights-body {
-  max-height: 420px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   background: var(--gray-50);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-sm);
   padding: 4px 10px;
+}
+/* 窄屏上下堆叠时无固定卡高，用 max-height 兜底 */
+@media (max-width: 900px) {
+  .insights-body {
+    max-height: 420px;
+  }
 }
 .section {
   margin-bottom: 10px;

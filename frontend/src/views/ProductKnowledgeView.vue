@@ -60,8 +60,8 @@
 
         <!-- 智能问答：资料问答 + 问题洞察 -->
         <div v-else-if="activeTab === 'qa'" class="tab-split">
-          <ProductQa :product-id="selectedId" />
-          <ProductQuestionInsights :product-id="selectedId" :key="'ins' + refreshTick" />
+          <ProductQa :product-id="selectedId" @answered="insightsTick++" />
+          <ProductQuestionInsights :product-id="selectedId" :key="'ins' + refreshTick + '-' + insightsTick" />
         </div>
 
         <ProductOperationSuggestions
@@ -173,6 +173,8 @@ const removing = ref(false);
 
 // 资料文档上传/删除/整理后，用 key 重挂载联动刷新完整度/概览/洞察/运营建议
 const refreshTick = ref(0);
+// 问答成功后单独刷新问题洞察（key 重挂载），避免连带重挂载概览/完整度
+const insightsTick = ref(0);
 
 async function onRemoveProduct() {
   if (!selectedId.value || removing.value) return;
@@ -257,6 +259,13 @@ async function onRemoveProduct() {
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 0 24px;
   align-items: start;
+}
+/* 桌面端：资料问答与问题洞察两张卡等高（560px），内容在卡内滚动 */
+@media (min-width: 901px) {
+  .tab-split :deep(.qa-card),
+  .tab-split :deep(.insights-card) {
+    height: 560px;
+  }
 }
 @media (max-width: 900px) {
   .product-grid,

@@ -33,7 +33,7 @@
 <script setup>
 // 阶段 4.3：商品资料问答（本地快答与知识库问答共用同一接口，与旧页面一致）：
 // POST /products/{id}/knowledge/ask {question} → {answer, sources}。
-// 问题洞察与运营建议的联动刷新留待后续阶段迁移。
+// V6：提问成功后 emit answered，父组件据此刷新问题洞察（失败不触发）。
 import { ref, watch } from "vue";
 import { apiPost } from "../api/client";
 import { toast } from "../state/feedback";
@@ -43,6 +43,7 @@ import AiResultContent from "./AiResultContent.vue";
 const props = defineProps({
   productId: { type: Number, default: null },
 });
+const emit = defineEmits(["answered"]);
 
 const question = ref("");
 const asking = ref(false);
@@ -68,6 +69,8 @@ async function ask() {
     const data = await apiPost(`/products/${props.productId}/knowledge/ask`, { question: q });
     answer.value = data.answer || "";
     sources.value = data.sources || [];
+    // 仅在提问成功后通知父组件刷新问题洞察
+    emit("answered");
   } catch (e) {
     error.value = true;
     answer.value = "";
@@ -105,10 +108,22 @@ watch(
 .qa-card .empty {
   padding: 16px;
 }
-/* 回答结果区限高内部滚动（420-520px 区间），长回答不再拉长页面 */
+/* 卡片纵向弹性布局：结果区占据剩余高度并内部滚动，
+   与右侧问题洞察卡片等高对齐（桌面端由父组件固定 560px 卡高） */
+.qa-card {
+  display: flex;
+  flex-direction: column;
+}
 .qa-card .result-box {
-  max-height: 480px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+/* 窄屏上下堆叠时无固定卡高，用 max-height 兜底，避免长回答拉长页面 */
+@media (max-width: 900px) {
+  .qa-card .result-box {
+    max-height: 480px;
+  }
 }
 .answer-sources {
   color: var(--gray-500);
