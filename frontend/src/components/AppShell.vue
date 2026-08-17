@@ -15,8 +15,12 @@
             <span v-if="isAdmin" class="tag tag-primary">管理员</span>
           </span>
           <template v-if="session.user">
-            <button class="header-btn" @click="cpVisible = true">修改密码</button>
-            <button class="header-btn logout-btn" @click="onLogout">退出登录</button>
+            <button class="header-btn" @click="cpVisible = true">
+              <Icon name="lock" size="14" /><span>修改密码</span>
+            </button>
+            <button class="header-btn logout-btn" @click="onLogout">
+              <Icon name="logout" size="14" /><span>退出登录</span>
+            </button>
           </template>
         </div>
       </div>
@@ -50,6 +54,7 @@
 import { computed, ref } from "vue";
 import { session, logout } from "../state/session";
 import ChangePasswordModal from "./ChangePasswordModal.vue";
+import Icon from "./Icon.vue";
 
 const props = defineProps({
   view: { type: String, default: "dashboard" },
@@ -201,5 +206,26 @@ async function onLogout() {
 
 .app-shell-main {
   flex: 1;
+}
+
+/* ── 窄屏顶栏：降级为图标按钮 + 隐藏次要品牌信息，防止溢出 ── */
+@media (max-width: 480px) {
+  .brand-sub {
+    display: none;
+  }
+  .user-chip .tag {
+    display: none;
+  }
+  .header-btn span {
+    display: none;
+  }
+  .header-btn {
+    padding: 8px 10px;
+  }
+}
+@media (max-width: 360px) {
+  .brand-title {
+    display: none;
+  }
 }
 </style>
